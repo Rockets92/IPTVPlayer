@@ -29,6 +29,7 @@ class GuideOverlay extends StatefulWidget {
 class _GuideOverlayState extends State<GuideOverlay> {
   final _chScroll = ScrollController();
   final _progScroll = ScrollController();
+  final _focus = FocusNode(debugLabel: 'guide');
   int _ch = 0;
   int _prog = 0;
   bool _inProgrammes = false;
@@ -43,13 +44,17 @@ class _GuideOverlayState extends State<GuideOverlay> {
     final cur = context.read<TunerController>().current;
     final i = cur == null ? 0 : _channels.indexOf(cur);
     _ch = i < 0 ? 0 : i;
-    WidgetsBinding.instance.addPostFrameCallback((_) => _revealChannel(animate: false));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _focus.requestFocus();
+      _revealChannel(animate: false);
+    });
   }
 
   @override
   void dispose() {
     _chScroll.dispose();
     _progScroll.dispose();
+    _focus.dispose();
     super.dispose();
   }
 
@@ -63,13 +68,20 @@ class _GuideOverlayState extends State<GuideOverlay> {
   void _revealChannel({bool animate = true}) {
     if (!_chScroll.hasClients) return;
     final pos = _chScroll.position;
-    final target = (_ch * _rowExtent - pos.viewportDimension / 2 + _rowExtent / 2)
-        .clamp(0.0, pos.maxScrollExtent);
+    final target =
+        (_ch * _rowExtent - pos.viewportDimension / 2 + _rowExtent / 2).clamp(
+          0.0,
+          pos.maxScrollExtent,
+        );
     final perf = context.read<PerformanceProfile>();
     if (!animate || perf.isLight || (target - pos.pixels).abs() > 2000) {
       _chScroll.jumpTo(target);
     } else {
-      _chScroll.animateTo(target, duration: perf.fast, curve: Curves.easeOutCubic);
+      _chScroll.animateTo(
+        target,
+        duration: perf.fast,
+        curve: Curves.easeOutCubic,
+      );
     }
   }
 
@@ -124,15 +136,19 @@ class _GuideOverlayState extends State<GuideOverlay> {
   }
 
   KeyEventResult _onKey(FocusNode node, KeyEvent e) {
-    if (e is! KeyDownEvent && e is! KeyRepeatEvent) return KeyEventResult.ignored;
+    if (e is! KeyDownEvent && e is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
     final k = e.logicalKey;
     if (k == LogicalKeyboardKey.arrowUp) {
       _inProgrammes ? _moveProgramme(-1) : _moveChannel(-1);
     } else if (k == LogicalKeyboardKey.arrowDown) {
       _inProgrammes ? _moveProgramme(1) : _moveChannel(1);
-    } else if (k == LogicalKeyboardKey.pageUp || k == LogicalKeyboardKey.channelUp) {
+    } else if (k == LogicalKeyboardKey.pageUp ||
+        k == LogicalKeyboardKey.channelUp) {
       _moveChannel(-8);
-    } else if (k == LogicalKeyboardKey.pageDown || k == LogicalKeyboardKey.channelDown) {
+    } else if (k == LogicalKeyboardKey.pageDown ||
+        k == LogicalKeyboardKey.channelDown) {
       _moveChannel(8);
     } else if (k == LogicalKeyboardKey.arrowRight) {
       if (_programmes().isNotEmpty) setState(() => _inProgrammes = true);
@@ -170,7 +186,7 @@ class _GuideOverlayState extends State<GuideOverlay> {
     final selected = channels[_ch];
 
     return Focus(
-      autofocus: true,
+      focusNode: _focus,
       onKeyEvent: _onKey,
       child: Padding(
         padding: EdgeInsets.all(narrow ? 12 : 28),
@@ -189,7 +205,9 @@ class _GuideOverlayState extends State<GuideOverlay> {
                       const SizedBox(width: 18),
                       Text(
                         dayLong(now),
-                        style: AppText.body.copyWith(color: Palette.textTertiary),
+                        style: AppText.body.copyWith(
+                          color: Palette.textTertiary,
+                        ),
                       ),
                       const Spacer(),
                       if (app.epgLoading)
@@ -197,14 +215,22 @@ class _GuideOverlayState extends State<GuideOverlay> {
                           padding: const EdgeInsets.only(right: 18),
                           child: Text(
                             app.epgStatus ?? '',
-                            style: AppText.label.copyWith(color: Palette.textTertiary),
+                            style: AppText.label.copyWith(
+                              color: Palette.textTertiary,
+                            ),
                           ),
                         ),
-                      Text(hm(now), style: AppText.clock.copyWith(fontSize: 26)),
+                      Text(
+                        hm(now),
+                        style: AppText.clock.copyWith(fontSize: 26),
+                      ),
                     ],
                   ),
                 ),
-                Container(height: 1, color: Colors.white.withValues(alpha: 0.08)),
+                Container(
+                  height: 1,
+                  color: Colors.white.withValues(alpha: 0.08),
+                ),
                 Expanded(
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -234,13 +260,19 @@ class _GuideOverlayState extends State<GuideOverlay> {
                           ),
                         ),
                       ),
-                      Container(width: 1, color: Colors.white.withValues(alpha: 0.08)),
+                      Container(
+                        width: 1,
+                        color: Colors.white.withValues(alpha: 0.08),
+                      ),
                       Expanded(
                         child: _Schedule(
                           channel: selected,
                           programmes: app.epg
                               .forChannel(selected.id)
-                              .where((p) => p.end > now.millisecondsSinceEpoch ~/ 1000)
+                              .where(
+                                (p) =>
+                                    p.end > now.millisecondsSinceEpoch ~/ 1000,
+                              )
                               .toList(),
                           now: now,
                           focusedIndex: _inProgrammes ? _prog : -1,
@@ -255,7 +287,10 @@ class _GuideOverlayState extends State<GuideOverlay> {
                     ],
                   ),
                 ),
-                Container(height: 1, color: Colors.white.withValues(alpha: 0.08)),
+                Container(
+                  height: 1,
+                  color: Colors.white.withValues(alpha: 0.08),
+                ),
                 const Padding(
                   padding: EdgeInsets.fromLTRB(32, 14, 32, 18),
                   child: Wrap(
@@ -306,7 +341,13 @@ class _Schedule extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(32, 24, 32, 12),
           child: Row(
             children: [
-              ChannelLogo(channel: channel, width: 96, height: 64, radius: 14, padding: 9),
+              ChannelLogo(
+                channel: channel,
+                width: 96,
+                height: 64,
+                radius: 14,
+                padding: 9,
+              ),
               const SizedBox(width: 20),
               Expanded(
                 child: Column(
@@ -314,7 +355,10 @@ class _Schedule extends StatelessWidget {
                   children: [
                     Text(
                       '${channel.number}',
-                      style: AppText.mono.copyWith(color: Palette.textTertiary, fontSize: 14),
+                      style: AppText.mono.copyWith(
+                        color: Palette.textTertiary,
+                        fontSize: 14,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(
@@ -354,14 +398,18 @@ class _Schedule extends StatelessWidget {
                         if (prevDay != null && prevDay != day)
                           Padding(
                             padding: const EdgeInsets.fromLTRB(14, 18, 14, 8),
-                            child: Text(day.toUpperCase(), style: AppText.overline),
+                            child: Text(
+                              day.toUpperCase(),
+                              style: AppText.overline,
+                            ),
                           ),
                         _ProgrammeTile(
                           programme: p,
                           now: now,
                           focused: i == focusedIndex,
                           // Senza focus esplicito si mostra il dettaglio del programma in onda.
-                          expanded: i == focusedIndex || (focusedIndex < 0 && i == 0),
+                          expanded:
+                              i == focusedIndex || (focusedIndex < 0 && i == 0),
                           onTap: () => onTapProgramme(i),
                         ),
                       ],
@@ -411,7 +459,10 @@ class _ProgrammeTile extends StatelessWidget {
         ),
         child: CustomPaint(
           foregroundPainter: focused
-              ? GlassEdgePainter(radius: 16, accent: Palette.accent.withValues(alpha: 0.75))
+              ? GlassEdgePainter(
+                  radius: 16,
+                  accent: Palette.accent.withValues(alpha: 0.75),
+                )
               : null,
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -443,7 +494,9 @@ class _ProgrammeTile extends StatelessWidget {
                         const SizedBox(width: 12),
                         Text(
                           durationLabel(p.duration),
-                          style: AppText.mono.copyWith(color: Palette.textTertiary),
+                          style: AppText.mono.copyWith(
+                            color: Palette.textTertiary,
+                          ),
                         ),
                       ],
                     ),
@@ -453,14 +506,20 @@ class _ProgrammeTile extends StatelessWidget {
                         children: [
                           Text(
                             'IN ONDA',
-                            style: AppText.overline.copyWith(color: Palette.accent),
+                            style: AppText.overline.copyWith(
+                              color: Palette.accent,
+                            ),
                           ),
                           const SizedBox(width: 12),
-                          Expanded(child: EpgProgress(value: p.progressAt(now))),
+                          Expanded(
+                            child: EpgProgress(value: p.progressAt(now)),
+                          ),
                           const SizedBox(width: 12),
                           Text(
                             remaining(p.remainingAt(now)),
-                            style: AppText.mono.copyWith(color: Palette.textTertiary),
+                            style: AppText.mono.copyWith(
+                              color: Palette.textTertiary,
+                            ),
                           ),
                         ],
                       ),
@@ -469,7 +528,9 @@ class _ProgrammeTile extends StatelessWidget {
                       duration: perf.fast,
                       curve: Curves.easeOutCubic,
                       alignment: Alignment.topCenter,
-                      child: expanded && (p.description != null || p.category != null)
+                      child:
+                          expanded &&
+                              (p.description != null || p.category != null)
                           ? Padding(
                               padding: const EdgeInsets.only(top: 10),
                               child: Column(

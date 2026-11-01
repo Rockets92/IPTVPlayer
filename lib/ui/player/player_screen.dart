@@ -82,7 +82,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
     // Primo avvio senza cache: la lista arriva dopo, si parte appena c'è.
     if (_tuner.current == null && app.channels.isNotEmpty) _tuner.start();
     final status = app.epgStatus;
-    if (status != _lastEpgStatus && status == 'Guida aggiornata' && _lastEpgStatus != null) {
+    if (status != _lastEpgStatus &&
+        status == 'Guida aggiornata' &&
+        _lastEpgStatus != null) {
       _showToast('Guida TV aggiornata');
     }
     _lastEpgStatus = status;
@@ -134,7 +136,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
   }
 
   KeyEventResult _onKey(FocusNode node, KeyEvent e) {
-    if (e is! KeyDownEvent && e is! KeyRepeatEvent) return KeyEventResult.ignored;
+    if (e is! KeyDownEvent && e is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
     // Con un pannello aperto i tasti appartengono al pannello (e alla
     // navigazione direzionale del focus).
     if (_panel != _Panel.none) return KeyEventResult.ignored;
@@ -178,7 +182,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
       _tuner.previousChannel();
     } else if (k == LogicalKeyboardKey.keyF || k == LogicalKeyboardKey.f11) {
       _toggleFullscreen();
-    } else if (k == LogicalKeyboardKey.audioVolumeMute || k == LogicalKeyboardKey.keyK) {
+    } else if (k == LogicalKeyboardKey.audioVolumeMute ||
+        k == LogicalKeyboardKey.keyK) {
       _tuner.toggleMute();
       _showToast(_tuner.muted ? 'Audio disattivato' : 'Audio attivato');
     } else if (isBackKey(k)) {
@@ -194,7 +199,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
     if (!_cursorVisible) setState(() => _cursorVisible = true);
     _cursorTimer?.cancel();
     _cursorTimer = Timer(const Duration(seconds: 3), () {
-      if (mounted && _panel == _Panel.none) setState(() => _cursorVisible = false);
+      if (mounted && _panel == _Panel.none) {
+        setState(() => _cursorVisible = false);
+      }
     });
   }
 
@@ -239,7 +246,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
                       if (_panel != _Panel.none) return _close();
                       tuner.toggleBanner();
                     },
-                    onDoubleTap: _isDesktop ? _toggleFullscreen : () => _open(_Panel.guide),
+                    onDoubleTap: _isDesktop
+                        ? _toggleFullscreen
+                        : () => _open(_Panel.guide),
                     onLongPress: () => _open(_Panel.list),
                     onVerticalDragEnd: (d) {
                       final v = d.primaryVelocity ?? 0;
@@ -254,7 +263,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
                 IgnorePointer(
                   child: AnimatedOpacity(
                     duration: perf.medium,
-                    opacity: tuner.bannerVisible || _panel != _Panel.none ? 1 : 0,
+                    opacity: tuner.bannerVisible || _panel != _Panel.none
+                        ? 1
+                        : 0,
                     child: DecoratedBox(
                       decoration: BoxDecoration(
                         gradient: _panel == _Panel.none
@@ -322,17 +333,24 @@ class _PlayerScreenState extends State<PlayerScreen> {
                           : key == const ValueKey(_Panel.settings)
                           ? 0.06
                           : 0.0;
-                      final dy = key == const ValueKey(_Panel.guide) ? 0.03 : 0.0;
+                      final dy = key == const ValueKey(_Panel.guide)
+                          ? 0.03
+                          : 0.0;
                       return FadeTransition(
                         opacity: a,
                         child: SlideTransition(
-                          position: Tween(begin: Offset(dx, dy), end: Offset.zero).animate(a),
+                          position: Tween(
+                            begin: Offset(dx, dy),
+                            end: Offset.zero,
+                          ).animate(a),
                           child: child,
                         ),
                       );
                     },
                     child: switch (_panel) {
-                      _Panel.none => const SizedBox.shrink(key: ValueKey(_Panel.none)),
+                      _Panel.none => const SizedBox.shrink(
+                        key: ValueKey(_Panel.none),
+                      ),
                       _Panel.list => ChannelListOverlay(
                         key: const ValueKey(_Panel.list),
                         onClose: _close,
@@ -362,10 +380,15 @@ class _PlayerScreenState extends State<PlayerScreen> {
                         offset: const Offset(0, -0.4),
                         child: Glass(
                           radius: 20,
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 12,
+                          ),
                           child: Text(
                             _toast ?? '',
-                            style: AppText.label.copyWith(color: Palette.textPrimary),
+                            style: AppText.label.copyWith(
+                              color: Palette.textPrimary,
+                            ),
                           ),
                         ),
                       ),
@@ -383,7 +406,11 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
 /// Comparsa con dissolvenza e leggero scorrimento; nessun costo quando nascosto.
 class _Reveal extends StatelessWidget {
-  const _Reveal({required this.visible, required this.child, this.offset = Offset.zero});
+  const _Reveal({
+    required this.visible,
+    required this.child,
+    this.offset = Offset.zero,
+  });
   final bool visible;
   final Widget child;
   final Offset offset;

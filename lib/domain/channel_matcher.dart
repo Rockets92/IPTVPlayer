@@ -36,12 +36,8 @@ class ChannelMatcher {
       }
       final keys = <String>{for (final n in m.allNames) NameNormalizer.key(n)}
         ..remove('');
-      final candidates = <XtreamLiveStream>[
-        for (final k in keys) ...?byKey[k],
-      ];
-      candidates.sort(
-        (a, b) => _score(b.name).compareTo(_score(a.name)),
-      );
+      final candidates = <XtreamLiveStream>[for (final k in keys) ...?byKey[k]];
+      candidates.sort((a, b) => _score(b.name).compareTo(_score(a.name)));
       for (final c in candidates) {
         if (!picked.contains(c)) picked.add(c);
       }
@@ -61,7 +57,10 @@ class ChannelMatcher {
           name: m.name,
           group: m.group,
           logoUrl: m.logo ?? picked.first.icon,
-          epgIds: [...m.epgIds, ...providerEpg.where((e) => !m.epgIds.contains(e))],
+          epgIds: [
+            ...m.epgIds,
+            ...providerEpg.where((e) => !m.epgIds.contains(e)),
+          ],
           nameKeys: keys.toList(),
           sources: [
             for (final s in picked)
@@ -104,7 +103,10 @@ class ChannelMatcher {
   /// Rimuove prefissi tecnici dai nomi non mappati ("IT: ", "|IT| ").
   static String _clean(String name) {
     final s = name.replaceFirst(
-      RegExp(r'^\s*(?:[\[\(|]\s*)?(?:it|ita)\s*(?:[\]\)|:\-]\s*)+', caseSensitive: false),
+      RegExp(
+        r'^\s*(?:[\[\(|]\s*)?(?:it|ita)\s*(?:[\]\)|:\-]\s*)+',
+        caseSensitive: false,
+      ),
       '',
     );
     return s.trim().isEmpty ? name.trim() : s.trim();

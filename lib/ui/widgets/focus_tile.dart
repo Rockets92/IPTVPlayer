@@ -82,49 +82,48 @@ class _FocusTileState extends State<FocusTile> {
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: widget.onSelect,
-          child: AnimatedContainer(
-            duration: perf.fast,
-            curve: Curves.easeOutCubic,
-            padding: widget.padding,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(widget.radius),
-              gradient: _focused
-                  ? LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Colors.white.withValues(alpha: 0.20),
-                        Colors.white.withValues(alpha: 0.08),
-                      ],
-                    )
-                  : null,
-              color: _focused
-                  ? null
-                  : _hover
-                  ? Colors.white.withValues(alpha: 0.07)
-                  : widget.selected
-                  ? Colors.white.withValues(alpha: 0.05)
-                  : Colors.transparent,
-              boxShadow: _focused && !perf.isLight
-                  ? [
-                      BoxShadow(
-                        color: Palette.accent.withValues(alpha: 0.18),
-                        blurRadius: 24,
-                        spreadRadius: -4,
-                      ),
-                    ]
-                  : null,
-            ),
-            foregroundDecoration: null,
-            child: CustomPaint(
-              foregroundPainter: _focused
-                  ? GlassEdgePainter(
-                      radius: widget.radius,
-                      accent: Palette.accent.withValues(alpha: 0.85),
-                    )
-                  : (active
-                        ? GlassEdgePainter(radius: widget.radius, intensity: 0.5)
-                        : null),
+          child: CustomPaint(
+            foregroundPainter: _focused
+                ? GlassEdgePainter(
+                    radius: widget.radius,
+                    accent: Palette.accent.withValues(alpha: 0.85),
+                  )
+                : (active
+                      ? GlassEdgePainter(radius: widget.radius, intensity: 0.5)
+                      : null),
+            child: AnimatedContainer(
+              duration: perf.fast,
+              curve: Curves.easeOutCubic,
+              padding: widget.padding,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(widget.radius),
+                gradient: _focused
+                    ? LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Colors.white.withValues(alpha: 0.20),
+                          Colors.white.withValues(alpha: 0.08),
+                        ],
+                      )
+                    : null,
+                color: _focused
+                    ? null
+                    : _hover
+                    ? Colors.white.withValues(alpha: 0.07)
+                    : widget.selected
+                    ? Colors.white.withValues(alpha: 0.05)
+                    : Colors.transparent,
+                boxShadow: _focused && !perf.isLight
+                    ? [
+                        BoxShadow(
+                          color: Palette.accent.withValues(alpha: 0.18),
+                          blurRadius: 24,
+                          spreadRadius: -4,
+                        ),
+                      ]
+                    : null,
+              ),
               child: widget.child,
             ),
           ),

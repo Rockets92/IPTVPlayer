@@ -45,7 +45,9 @@ class EpgRepository {
   static EpgSchedule? _readCache(String path, String signature) {
     final json = jsonDecode(File(path).readAsStringSync());
     if (json is! Map || json['sig'] != signature) return null;
-    final fetchedAt = DateTime.fromMillisecondsSinceEpoch(json['fetchedAt'] as int);
+    final fetchedAt = DateTime.fromMillisecondsSinceEpoch(
+      json['fetchedAt'] as int,
+    );
     final data = (json['data'] as Map).cast<String, Object?>();
     final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     final map = <String, List<EpgProgramme>>{};

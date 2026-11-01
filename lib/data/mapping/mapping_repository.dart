@@ -14,7 +14,8 @@ import 'channel_mapping.dart';
 /// L'ultima versione remota valida viene salvata in cache così l'app
 /// parte anche offline.
 class MappingRepository {
-  MappingRepository({http.Client? httpClient}) : _http = httpClient ?? http.Client();
+  MappingRepository({http.Client? httpClient})
+    : _http = httpClient ?? http.Client();
 
   static const bundledAsset = 'assets/channels/sky_italia.json';
 
@@ -41,7 +42,9 @@ class MappingRepository {
         return mapping.withOrigin(isRemote ? 'remota' : 'file locale');
       } catch (_) {
         final cached = await _readCache();
-        if (cached != null) return cached.withOrigin('cache (sorgente non raggiungibile)');
+        if (cached != null) {
+          return cached.withOrigin('cache (sorgente non raggiungibile)');
+        }
       }
     }
     final text = await rootBundle.loadString(bundledAsset);

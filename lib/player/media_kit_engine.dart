@@ -35,16 +35,25 @@ class MediaKitEngine implements PlaybackEngine {
     _subs.addAll([
       _player.stream.playing.listen((p) {
         if (p) {
-          _set(_state.value.copyWith(status: PlaybackStatus.playing, clearError: true));
+          _set(
+            _state.value.copyWith(
+              status: PlaybackStatus.playing,
+              clearError: true,
+            ),
+          );
         }
       }),
       _player.stream.buffering.listen((b) {
         _set(_state.value.copyWith(buffering: b));
       }),
       _player.stream.width.listen((w) => _set(_state.value.copyWith(width: w))),
-      _player.stream.height.listen((h) => _set(_state.value.copyWith(height: h))),
+      _player.stream.height.listen(
+        (h) => _set(_state.value.copyWith(height: h)),
+      ),
       _player.stream.error.listen((e) {
-        if (_state.value.status == PlaybackStatus.idle) return;
+        // libmpv segnala come "errore" anche problemi non bloccanti (es.
+        // dispositivo audio assente): conta solo se il canale non è partito.
+        if (_state.value.status != PlaybackStatus.connecting) return;
         _set(_state.value.copyWith(status: PlaybackStatus.failed, error: e));
       }),
       _player.stream.completed.listen((done) {
@@ -84,8 +93,7 @@ class MediaKitEngine implements PlaybackEngine {
       'demuxer-max-back-bytes': _perf.isLight ? '1MiB' : '8MiB',
       'demuxer-readahead-secs': _perf.isLight ? '4' : '8',
       'network-timeout': '12',
-      'stream-lavf-o':
-          'reconnect=1,reconnect_streamed=1,reconnect_on_network_error=1,reconnect_delay_max=4',
+      'stream-lavf-o': 'reconnect=1,reconnect_streamed=1,reconnect_on_network_error=1,reconnect_delay_max=4',
       'user-agent': 'IPTVPlayer/0.1',
       'keep-open': 'no',
       'audio-display': 'no',
@@ -100,7 +108,12 @@ class MediaKitEngine implements PlaybackEngine {
   @override
   Future<void> open(String url) async {
     await _ready;
-    _set(const PlaybackSnapshot(status: PlaybackStatus.connecting, buffering: true));
+    _set(
+      const PlaybackSnapshot(
+        status: PlaybackStatus.connecting,
+        buffering: true,
+      ),
+    );
     await _player.open(Media(url), play: true);
   }
 

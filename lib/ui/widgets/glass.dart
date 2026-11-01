@@ -141,5 +141,7 @@ class GlassEdgePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(GlassEdgePainter old) =>
-      old.radius != radius || old.intensity != intensity || old.accent != accent;
+      old.radius != radius ||
+      old.intensity != intensity ||
+      old.accent != accent;
 }

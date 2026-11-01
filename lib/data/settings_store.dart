@@ -65,13 +65,16 @@ class SettingsStore {
       : _prefs.setString(_kAccount, jsonEncode(a.toJson()));
 
   String? get lastChannelId => _prefs.getString(_kLastChannel);
-  Future<void> setLastChannelId(String id) => _prefs.setString(_kLastChannel, id);
+  Future<void> setLastChannelId(String id) =>
+      _prefs.setString(_kLastChannel, id);
 
   /// Sorgente della mappatura: vuoto = integrata, altrimenti URL o percorso.
   String get mappingSource => _prefs.getString(_kMapping) ?? '';
-  Future<void> setMappingSource(String v) => _prefs.setString(_kMapping, v.trim());
+  Future<void> setMappingSource(String v) =>
+      _prefs.setString(_kMapping, v.trim());
 
-  List<String> get extraEpgSources => _prefs.getStringList(_kExtraEpg) ?? const [];
+  List<String> get extraEpgSources =>
+      _prefs.getStringList(_kExtraEpg) ?? const [];
   Future<void> setExtraEpgSources(List<String> v) => _prefs.setStringList(
     _kExtraEpg,
     v.map((e) => e.trim()).where((e) => e.isNotEmpty).toList(),
@@ -95,7 +98,8 @@ class SettingsStore {
     (f) => f.name == _prefs.getString(_kFormat),
     orElse: () => StreamFormat.ts,
   );
-  Future<void> setStreamFormat(StreamFormat f) => _prefs.setString(_kFormat, f.name);
+  Future<void> setStreamFormat(StreamFormat f) =>
+      _prefs.setString(_kFormat, f.name);
 
   Future<void> clearAccount() async {
     await _prefs.remove(_kCreds);

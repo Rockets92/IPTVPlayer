@@ -19,15 +19,14 @@ class XtreamClient {
   static const _timeout = Duration(seconds: 20);
   static const _headers = {'User-Agent': 'IPTVPlayer/0.1', 'Accept': '*/*'};
 
-  Uri _api([Map<String, String> extra = const {}]) => Uri.parse(
-    '${credentials.serverUrl}/player_api.php',
-  ).replace(
-    queryParameters: {
-      'username': credentials.username,
-      'password': credentials.password,
-      ...extra,
-    },
-  );
+  Uri _api([Map<String, String> extra = const {}]) =>
+      Uri.parse('${credentials.serverUrl}/player_api.php').replace(
+        queryParameters: {
+          'username': credentials.username,
+          'password': credentials.password,
+          ...extra,
+        },
+      );
 
   Future<String> _get(Uri uri) async {
     final http.Response res;
@@ -44,7 +43,9 @@ class XtreamClient {
       throw const XtreamException('Credenziali non valide o account bloccato.');
     }
     if (res.statusCode >= 400) {
-      throw XtreamException('Il server ha risposto con errore ${res.statusCode}.');
+      throw XtreamException(
+        'Il server ha risposto con errore ${res.statusCode}.',
+      );
     }
     return utf8.decode(res.bodyBytes, allowMalformed: true);
   }

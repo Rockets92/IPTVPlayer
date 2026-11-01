@@ -40,8 +40,12 @@ class XtreamCredentials {
     if (uri == null || uri.host.isEmpty) return s;
     final segments = uri.pathSegments.where((p) => p.isNotEmpty).toList();
     if (segments.isNotEmpty &&
-        const {'player_api.php', 'get.php', 'xmltv.php', 'panel_api.php'}
-            .contains(segments.last)) {
+        const {
+          'player_api.php',
+          'get.php',
+          'xmltv.php',
+          'panel_api.php',
+        }.contains(segments.last)) {
       segments.removeLast();
     }
     final path = segments.isEmpty ? '' : '/${segments.join('/')}';

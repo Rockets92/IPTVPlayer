@@ -133,10 +133,11 @@ Future<Map<String, List<EpgProgramme>>> parseXmltv(
   String? capturing; // 'title' | 'desc' | 'category' | 'display-name'
   final text = StringBuffer();
 
-  await for (final e in maybeGunzip(bytes)
-      .transform(const Utf8Decoder(allowMalformed: true))
-      .toXmlEvents()
-      .flatten()) {
+  await for (final e
+      in maybeGunzip(bytes)
+          .transform(const Utf8Decoder(allowMalformed: true))
+          .toXmlEvents()
+          .flatten()) {
     if (e is XmlStartElementEvent) {
       switch (e.name) {
         case 'channel':
@@ -272,7 +273,10 @@ Future<Map<String, List<EpgProgramme>>> fetchAndParseXmltv(
     final request = await client.getUrl(Uri.parse(source));
     final response = await request.close().timeout(const Duration(seconds: 30));
     if (response.statusCode != 200) {
-      throw HttpException('HTTP ${response.statusCode}', uri: Uri.parse(source));
+      throw HttpException(
+        'HTTP ${response.statusCode}',
+        uri: Uri.parse(source),
+      );
     }
     return await parseXmltv(response, req);
   } finally {

@@ -7,7 +7,11 @@ import '../../core/performance.dart';
 
 /// Ricostruisce il figlio allo scoccare di ogni minuto (orologio, avanzamento).
 class NowBuilder extends StatefulWidget {
-  const NowBuilder({super.key, required this.builder, this.everySecond = false});
+  const NowBuilder({
+    super.key,
+    required this.builder,
+    this.everySecond = false,
+  });
 
   final Widget Function(BuildContext context, DateTime now) builder;
 

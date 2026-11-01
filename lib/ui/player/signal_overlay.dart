@@ -30,8 +30,11 @@ class SignalOverlay extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (dead)
-                  const Icon(Icons.signal_cellular_connected_no_internet_0_bar_rounded,
-                      color: Palette.textSecondary, size: 26)
+                  const Icon(
+                    Icons.signal_cellular_connected_no_internet_0_bar_rounded,
+                    color: Palette.textSecondary,
+                    size: 26,
+                  )
                 else
                   const _Ring(size: 24),
                 const SizedBox(width: 18),
@@ -45,7 +48,9 @@ class SignalOverlay extends StatelessWidget {
                       dead
                           ? 'Premi OK per riprovare o cambia canale'
                           : 'Proviamo una sorgente alternativa',
-                      style: AppText.label.copyWith(color: Palette.textTertiary),
+                      style: AppText.label.copyWith(
+                        color: Palette.textTertiary,
+                      ),
                     ),
                   ],
                 ),

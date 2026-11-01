@@ -41,7 +41,12 @@ class ZapBanner extends StatelessWidget {
             compact ? 16 : 24,
           ),
           child: compact
-              ? _Compact(channel: channel, now: now, current: current, next: next)
+              ? _Compact(
+                  channel: channel,
+                  now: now,
+                  current: current,
+                  next: next,
+                )
               : _Wide(
                   channel: channel,
                   now: now,
@@ -80,7 +85,7 @@ class _Wide extends StatelessWidget {
         children: [
           // Numero canale: l'elemento più "decoder" di tutti.
           SizedBox(
-            width: 132,
+            width: 150,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
@@ -88,14 +93,20 @@ class _Wide extends StatelessWidget {
                 FittedBox(
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerLeft,
-                  child: Text('${channel.number}', style: AppText.channelNumber),
+                  child: Text(
+                    '${channel.number}',
+                    style: AppText.channelNumber,
+                  ),
                 ),
                 const SizedBox(height: 10),
-                Text(
-                  channel.group.toUpperCase(),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppText.overline,
+                Padding(
+                  padding: const EdgeInsets.only(right: 12),
+                  child: Text(
+                    channel.group.toUpperCase(),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.overline.copyWith(letterSpacing: 1.2),
+                  ),
                 ),
               ],
             ),
@@ -150,7 +161,10 @@ class _Compact extends StatelessWidget {
           children: [
             Text(
               '${channel.number}',
-              style: AppText.channelNumber.copyWith(fontSize: 40, letterSpacing: -1),
+              style: AppText.channelNumber.copyWith(
+                fontSize: 40,
+                letterSpacing: -1,
+              ),
             ),
             const SizedBox(width: 16),
             ChannelLogo(channel: channel, width: 72, height: 48),
@@ -236,7 +250,9 @@ class _NowNext extends StatelessWidget {
     final epgLoading = context.select<AppController, bool>((a) => a.epgLoading);
     if (cur == null && nxt == null) {
       return Text(
-        epgLoading ? 'Caricamento guida…' : 'Informazioni di guida non disponibili',
+        epgLoading
+            ? 'Caricamento guida…'
+            : 'Informazioni di guida non disponibili',
         style: AppText.body.copyWith(color: Palette.textTertiary),
       );
     }
@@ -247,7 +263,10 @@ class _NowNext extends StatelessWidget {
         if (cur != null) ...[
           Row(
             children: [
-              Text('ORA', style: AppText.overline.copyWith(color: Palette.accent)),
+              Text(
+                'ORA',
+                style: AppText.overline.copyWith(color: Palette.accent),
+              ),
               const SizedBox(width: 10),
               Text(
                 timeRange(cur.startTime, cur.endTime),
@@ -410,7 +429,11 @@ class _ClockColumn extends StatelessWidget {
 
 /// Azioni rapide per mouse e tocco (con telecomando si usano i tasti).
 class _RoundAction extends StatefulWidget {
-  const _RoundAction({required this.icon, required this.tooltip, required this.onTap});
+  const _RoundAction({
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+  });
   final IconData icon;
   final String tooltip;
   final VoidCallback onTap;

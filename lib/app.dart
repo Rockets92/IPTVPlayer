@@ -39,7 +39,10 @@ class _Root extends StatelessWidget {
       child: switch (phase) {
         AppPhase.booting => const _Splash(key: ValueKey('boot')),
         AppPhase.setup => const SetupScreen(key: ValueKey('setup')),
-        AppPhase.loading => const _Splash(key: ValueKey('loading'), showStatus: true),
+        AppPhase.loading => const _Splash(
+          key: ValueKey('loading'),
+          showStatus: true,
+        ),
         AppPhase.failed => const _Failure(key: ValueKey('failed')),
         AppPhase.ready => const PlayerScreen(key: ValueKey('player')),
       },
@@ -62,7 +65,10 @@ class _Splash extends StatelessWidget {
             children: [
               Text(
                 Brand.name,
-                style: AppText.display.copyWith(fontSize: 40, letterSpacing: -1.2),
+                style: AppText.display.copyWith(
+                  fontSize: 40,
+                  letterSpacing: -1.2,
+                ),
               ),
               const SizedBox(height: 28),
               const SizedBox(
@@ -77,7 +83,10 @@ class _Splash extends StatelessWidget {
               AnimatedOpacity(
                 duration: const Duration(milliseconds: 200),
                 opacity: showStatus ? 1 : 0,
-                child: Text(msg, style: AppText.label.copyWith(color: Palette.textTertiary)),
+                child: Text(
+                  msg,
+                  style: AppText.label.copyWith(color: Palette.textTertiary),
+                ),
               ),
             ],
           ),

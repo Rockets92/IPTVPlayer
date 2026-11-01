@@ -52,7 +52,9 @@ class NumberEntry extends StatelessWidget {
                       alignment: Alignment.centerRight,
                       child: Text(
                         'Nessun canale',
-                        style: AppText.label.copyWith(color: Palette.textTertiary),
+                        style: AppText.label.copyWith(
+                          color: Palette.textTertiary,
+                        ),
                       ),
                     )
                   : Row(
@@ -69,12 +71,16 @@ class NumberEntry extends StatelessWidget {
                         ConstrainedBox(
                           constraints: const BoxConstraints(maxWidth: 220),
                           child: Text(
-                            exact ? target.name : '${target.number} · ${target.name}',
+                            exact
+                                ? target.name
+                                : '${target.number} · ${target.name}',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: AppText.headline.copyWith(
                               fontSize: 15,
-                              color: exact ? Palette.textPrimary : Palette.textSecondary,
+                              color: exact
+                                  ? Palette.textPrimary
+                                  : Palette.textSecondary,
                             ),
                           ),
                         ),

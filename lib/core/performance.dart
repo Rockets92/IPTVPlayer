@@ -70,15 +70,23 @@ class PerformanceProfile {
     }
     switch (mode) {
       case PerformanceMode.full:
-        return const PerformanceProfile(PerformanceTier.full, reason: 'Scelta manuale');
+        return const PerformanceProfile(
+          PerformanceTier.full,
+          reason: 'Scelta manuale',
+        );
       case PerformanceMode.light:
-        return const PerformanceProfile(PerformanceTier.light, reason: 'Scelta manuale');
+        return const PerformanceProfile(
+          PerformanceTier.light,
+          reason: 'Scelta manuale',
+        );
       case PerformanceMode.auto:
         break;
     }
     if (!kIsWeb && Platform.isAndroid) {
       try {
-        final info = await _channel.invokeMapMethod<String, Object?>('memoryInfo');
+        final info = await _channel.invokeMapMethod<String, Object?>(
+          'memoryInfo',
+        );
         final total = (info?['totalMem'] as num?)?.toInt() ?? 0;
         final lowRam = info?['isLowRamDevice'] == true;
         final gb = total / (1 << 30);

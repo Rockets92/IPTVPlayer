@@ -177,14 +177,13 @@ class AppController extends ChangeNotifier {
   }
 
   void _rebuild(List<XtreamLiveStream> streams, Map<String, String> cats) {
-    channels = ChannelMatcher(
-      preferLighterStreams: perf.preferLighterStreams,
-    ).build(
-      mapping: mapping!,
-      streams: streams,
-      categoryNames: cats,
-      showUnmapped: settings.showUnmapped,
-    );
+    channels = ChannelMatcher(preferLighterStreams: perf.preferLighterStreams)
+        .build(
+          mapping: mapping!,
+          streams: streams,
+          categoryNames: cats,
+          showUnmapped: settings.showUnmapped,
+        );
   }
 
   Future<void> _refreshStreamsQuietly() async {
@@ -238,7 +237,8 @@ class AppController extends ChangeNotifier {
   List<String> _epgSources() => [
     ...?mapping?.epgSources.map((s) => s.url),
     ...settings.extraEpgSources,
-    if (settings.useProviderEpg && _client != null) _client!.xmltvUri.toString(),
+    if (settings.useProviderEpg && _client != null)
+      _client!.xmltvUri.toString(),
   ];
 
   Future<void> refreshEpg() => _refreshEpg(force: true);
@@ -328,7 +328,8 @@ class AppController extends ChangeNotifier {
     } catch (_) {}
   }
 
-  Future<(List<XtreamLiveStream>, Map<String, String>)?> _readStreamCache() async {
+  Future<(List<XtreamLiveStream>, Map<String, String>)?>
+  _readStreamCache() async {
     try {
       final f = await _streamCacheFile();
       if (!await f.exists()) return null;

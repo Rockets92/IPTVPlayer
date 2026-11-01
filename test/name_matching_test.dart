@@ -18,7 +18,10 @@ void main() {
 
     test('mantiene le varianti significative', () {
       expect(NameNormalizer.key('IT: Sky Uno +1 HD'), 'skyunoplus1');
-      expect(NameNormalizer.key('Sky Uno'), isNot(NameNormalizer.key('Sky Uno +1')));
+      expect(
+        NameNormalizer.key('Sky Uno'),
+        isNot(NameNormalizer.key('Sky Uno +1')),
+      );
       expect(NameNormalizer.key('Sky Cinema Uno +24'), 'skycinemaunoplus24');
     });
 
@@ -28,7 +31,10 @@ void main() {
     });
 
     test('accenti e simboli', () {
-      expect(NameNormalizer.key('Crime+Investigation'), 'crimeplusinvestigation');
+      expect(
+        NameNormalizer.key('Crime+Investigation'),
+        'crimeplusinvestigation',
+      );
       expect(NameNormalizer.key('Caccia & Pesca'), 'cacciaandpesca');
     });
   });
@@ -40,9 +46,14 @@ void main() {
     expect(fhd, greaterThan(hd));
     expect(
       NameNormalizer.qualityScore('Rai 1 HD', preferLighter: true),
-      greaterThan(NameNormalizer.qualityScore('Rai 1 FHD', preferLighter: true)),
+      greaterThan(
+        NameNormalizer.qualityScore('Rai 1 FHD', preferLighter: true),
+      ),
     );
-    expect(NameNormalizer.qualityScore('Rai 1 4K', preferLighter: true), lessThan(uhd));
+    expect(
+      NameNormalizer.qualityScore('Rai 1 4K', preferLighter: true),
+      lessThan(uhd),
+    );
   });
 
   group('ChannelMatcher', () {
@@ -52,20 +63,41 @@ void main() {
       'logoBaseUrl': 'https://logo/',
       'unmappedChannels': {'show': true, 'startNumber': 1000},
       'channels': [
-        {'number': 101, 'name': 'Rai 1', 'group': 'Intrattenimento', 'logo': 'rai1.png', 'epgId': 'Rai1.it', 'aliases': ['Rai Uno']},
+        {
+          'number': 101,
+          'name': 'Rai 1',
+          'group': 'Intrattenimento',
+          'logo': 'rai1.png',
+          'epgId': 'Rai1.it',
+          'aliases': ['Rai Uno'],
+        },
         {'number': 108, 'name': 'Sky Uno', 'group': 'Intrattenimento'},
         {'number': 109, 'name': 'Sky Uno +1', 'group': 'Intrattenimento'},
         {'number': 200, 'name': 'Canale Assente', 'group': 'Sport'},
-        {'number': 301, 'name': 'Sky Cinema Uno', 'group': 'Cinema', 'streamId': 77},
+        {
+          'number': 301,
+          'name': 'Sky Cinema Uno',
+          'group': 'Cinema',
+          'streamId': 77,
+        },
       ],
     });
     const streams = [
       XtreamLiveStream(streamId: 1, name: 'IT: RAI UNO SD', categoryId: '1'),
-      XtreamLiveStream(streamId: 2, name: 'IT: Rai 1 FHD', categoryId: '1', epgChannelId: 'rai1.prov'),
+      XtreamLiveStream(
+        streamId: 2,
+        name: 'IT: Rai 1 FHD',
+        categoryId: '1',
+        epgChannelId: 'rai1.prov',
+      ),
       XtreamLiveStream(streamId: 3, name: 'IT: Sky Uno HD', categoryId: '2'),
       XtreamLiveStream(streamId: 4, name: 'IT: Sky Uno +1', categoryId: '2'),
       XtreamLiveStream(streamId: 5, name: 'IT: Canale Locale', categoryId: '3'),
-      XtreamLiveStream(streamId: 77, name: 'Cinema 1 (nome strano)', categoryId: '4'),
+      XtreamLiveStream(
+        streamId: 77,
+        name: 'Cinema 1 (nome strano)',
+        categoryId: '4',
+      ),
     ];
 
     test('ordine, numerazione e scelta della sorgente migliore', () {
@@ -98,17 +130,25 @@ void main() {
   });
 
   test('la lista integrata Sky è valida', () {
-    final json = jsonDecode(File('assets/channels/sky_italia.json').readAsStringSync());
+    final json = jsonDecode(
+      File('assets/channels/sky_italia.json').readAsStringSync(),
+    );
     final m = ChannelMapping.fromJson((json as Map).cast());
     expect(m.channels.length, greaterThan(100));
     expect(m.channels.first.number, 100);
     expect(m.channels.map((c) => c.number).toSet().length, m.channels.length);
-    expect(m.channels.firstWhere((c) => c.number == 101).logo, startsWith('https://'));
+    expect(
+      m.channels.firstWhere((c) => c.number == 101).logo,
+      startsWith('https://'),
+    );
   });
 
   group('XtreamCredentials', () {
     test('normalizza il server', () {
-      expect(XtreamCredentials.normalizeServer('dominio.tv:8080/'), 'http://dominio.tv:8080');
+      expect(
+        XtreamCredentials.normalizeServer('dominio.tv:8080/'),
+        'http://dominio.tv:8080',
+      );
       expect(
         XtreamCredentials.normalizeServer('https://dominio.tv/player_api.php'),
         'https://dominio.tv',

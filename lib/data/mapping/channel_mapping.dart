@@ -5,7 +5,11 @@ import '../json_utils.dart';
 /// Fonte EPG esterna (XMLTV, anche .gz).
 @immutable
 class EpgSourceConfig {
-  const EpgSourceConfig({required this.id, required this.name, required this.url});
+  const EpgSourceConfig({
+    required this.id,
+    required this.name,
+    required this.url,
+  });
   final String id;
   final String name;
   final String url;
@@ -154,7 +158,8 @@ class ChannelMapping {
       epgSources: sources is List
           ? [
               for (final s in sources)
-                if (s is Map) EpgSourceConfig.fromJson(s.cast<String, Object?>()),
+                if (s is Map)
+                  EpgSourceConfig.fromJson(s.cast<String, Object?>()),
             ].where((s) => s.url.isNotEmpty).toList()
           : const [],
       showUnmapped: unmapped is Map ? asBool(unmapped['show'] ?? true) : true,

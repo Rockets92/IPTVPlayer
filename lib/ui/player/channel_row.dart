@@ -57,31 +57,31 @@ class _ChannelRowState extends State<ChannelRow> {
         onTap: widget.onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-          child: AnimatedContainer(
-            duration: perf.fast,
-            curve: Curves.easeOutCubic,
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              gradient: f
-                  ? LinearGradient(
-                      colors: [
-                        Colors.white.withValues(alpha: 0.20),
-                        Colors.white.withValues(alpha: 0.07),
-                      ],
-                    )
-                  : null,
-              color: f
-                  ? null
-                  : Colors.white.withValues(alpha: _hover ? 0.06 : 0),
-            ),
-            child: CustomPaint(
-              foregroundPainter: f
-                  ? GlassEdgePainter(
-                      radius: 16,
-                      accent: Palette.accent.withValues(alpha: 0.75),
-                    )
-                  : null,
+          child: CustomPaint(
+            foregroundPainter: f
+                ? GlassEdgePainter(
+                    radius: 16,
+                    accent: Palette.accent.withValues(alpha: 0.75),
+                  )
+                : null,
+            child: AnimatedContainer(
+              duration: perf.fast,
+              curve: Curves.easeOutCubic,
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                gradient: f
+                    ? LinearGradient(
+                        colors: [
+                          Colors.white.withValues(alpha: 0.20),
+                          Colors.white.withValues(alpha: 0.07),
+                        ],
+                      )
+                    : null,
+                color: f
+                    ? null
+                    : Colors.white.withValues(alpha: _hover ? 0.06 : 0),
+              ),
               child: Row(
                 children: [
                   SizedBox(
@@ -95,7 +95,13 @@ class _ChannelRowState extends State<ChannelRow> {
                       ),
                     ),
                   ),
-                  ChannelLogo(channel: c, width: 58, height: 40, radius: 10, padding: 5),
+                  ChannelLogo(
+                    channel: c,
+                    width: 58,
+                    height: 40,
+                    radius: 10,
+                    padding: 5,
+                  ),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(
@@ -111,7 +117,9 @@ class _ChannelRowState extends State<ChannelRow> {
                                 overflow: TextOverflow.ellipsis,
                                 style: AppText.headline.copyWith(
                                   fontSize: 15.5,
-                                  color: f ? Palette.textPrimary : const Color(0xE6FFFFFF),
+                                  color: f
+                                      ? Palette.textPrimary
+                                      : const Color(0xE6FFFFFF),
                                 ),
                               ),
                             ),
@@ -125,7 +133,9 @@ class _ChannelRowState extends State<ChannelRow> {
                                   color: Palette.accent,
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Palette.accent.withValues(alpha: 0.8),
+                                      color: Palette.accent.withValues(
+                                        alpha: 0.8,
+                                      ),
                                       blurRadius: 8,
                                     ),
                                   ],
@@ -141,7 +151,9 @@ class _ChannelRowState extends State<ChannelRow> {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: AppText.label.copyWith(
-                              color: f ? Palette.textSecondary : Palette.textTertiary,
+                              color: f
+                                  ? Palette.textSecondary
+                                  : Palette.textTertiary,
                             ),
                           ),
                           const SizedBox(height: 6),

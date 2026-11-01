@@ -21,6 +21,7 @@ class TunerController extends ChangeNotifier {
   static const digitTimeout = Duration(milliseconds: 1700);
   static const bannerDuration = Duration(seconds: 5);
   static const connectTimeout = Duration(seconds: 16);
+  static const stallTimeout = Duration(seconds: 20);
 
   List<Channel> get channels => app.channels;
 
@@ -57,6 +58,7 @@ class TunerController extends ChangeNotifier {
   Timer? _zapTimer;
   Timer? _digitTimer;
   Timer? _watchdog;
+  Timer? _stall;
   Timer? _retryTimer;
   bool _disposed = false;
 
@@ -234,8 +236,11 @@ class TunerController extends ChangeNotifier {
     if (_retries == 0 && _sourceIndex == 0) signalMessage = null;
     _attempt++;
     final src = c.sources[_sourceIndex.clamp(0, c.sources.length - 1)];
+    _stall?.cancel();
+    _stall = null;
     _watchdog?.cancel();
     _watchdog = Timer(connectTimeout, () {
+      _watchdog = null;
       if (engine.state.value.status == PlaybackStatus.connecting) _fail();
     });
     unawaited(engine.open(app.streamUrl(src)).catchError((_) => _fail()));
@@ -247,10 +252,22 @@ class TunerController extends ChangeNotifier {
     switch (s.status) {
       case PlaybackStatus.playing:
         _watchdog?.cancel();
+        _watchdog = null;
         _retries = 0;
         if (signalMessage != null) {
           signalMessage = null;
           _notify();
+        }
+        // Buffering prolungato a canale avviato = segnale bloccato.
+        if (s.buffering) {
+          _stall ??= Timer(stallTimeout, () {
+            _stall = null;
+            final now = engine.state.value;
+            if (now.status == PlaybackStatus.playing && now.buffering) _fail();
+          });
+        } else {
+          _stall?.cancel();
+          _stall = null;
         }
       case PlaybackStatus.failed:
         _fail();
@@ -264,6 +281,9 @@ class TunerController extends ChangeNotifier {
     if (_failedAttempt == _attempt) return;
     _failedAttempt = _attempt;
     _watchdog?.cancel();
+    _watchdog = null;
+    _stall?.cancel();
+    _stall = null;
     final c = current;
     if (c == null) return;
     // 1) stream alternativo dello stesso canale
@@ -293,7 +313,14 @@ class TunerController extends ChangeNotifier {
     _disposed = true;
     engine.state.removeListener(_onPlayback);
     app.removeListener(_onAppChanged);
-    for (final t in [_bannerTimer, _zapTimer, _digitTimer, _watchdog, _retryTimer]) {
+    for (final t in [
+      _bannerTimer,
+      _zapTimer,
+      _digitTimer,
+      _watchdog,
+      _stall,
+      _retryTimer,
+    ]) {
       t?.cancel();
     }
     super.dispose();

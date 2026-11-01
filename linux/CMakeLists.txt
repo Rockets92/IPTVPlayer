@@ -72,6 +72,10 @@ set_target_properties(${BINARY_NAME}
 
 # Generated plugin build rules, which manage building the plugins and adding
 # them to the application.
+# media_kit: si usa mimalloc di sistema (pacchetto libmimalloc-dev, opzionale)
+# invece di scaricare il sorgente da GitHub, il cui archivio ha cambiato
+# checksum e fa fallire la build.
+set(MIMALLOC_USE_STATIC_LIBS OFF)
 include(flutter/generated_plugins.cmake)
 
 

@@ -49,7 +49,10 @@ class _ChannelListOverlayState extends State<ChannelListOverlay> {
     final current = context.read<TunerController>().current;
     final i = current == null ? 0 : _items.indexOf(current);
     _sel = i < 0 ? 0 : i;
-    WidgetsBinding.instance.addPostFrameCallback((_) => _reveal(animate: false));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _focus.requestFocus();
+      _reveal(animate: false);
+    });
   }
 
   @override
@@ -63,13 +66,20 @@ class _ChannelListOverlayState extends State<ChannelListOverlay> {
   void _reveal({bool animate = true}) {
     if (!_scroll.hasClients) return;
     final pos = _scroll.position;
-    final target = (_sel * _rowExtent - pos.viewportDimension / 2 + _rowExtent / 2)
-        .clamp(0.0, pos.maxScrollExtent);
+    final target =
+        (_sel * _rowExtent - pos.viewportDimension / 2 + _rowExtent / 2).clamp(
+          0.0,
+          pos.maxScrollExtent,
+        );
     final perf = context.read<PerformanceProfile>();
     if (!animate || perf.isLight || (target - pos.pixels).abs() > 2000) {
       _scroll.jumpTo(target);
     } else {
-      _scroll.animateTo(target, duration: perf.fast, curve: Curves.easeOutCubic);
+      _scroll.animateTo(
+        target,
+        duration: perf.fast,
+        curve: Curves.easeOutCubic,
+      );
     }
   }
 
@@ -88,7 +98,9 @@ class _ChannelListOverlayState extends State<ChannelListOverlay> {
       final i = current == null ? -1 : _items.indexOf(current);
       _sel = i < 0 ? 0 : i;
     });
-    WidgetsBinding.instance.addPostFrameCallback((_) => _reveal(animate: false));
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _reveal(animate: false),
+    );
   }
 
   void _tune(Channel c) {
@@ -109,15 +121,19 @@ class _ChannelListOverlayState extends State<ChannelListOverlay> {
   }
 
   KeyEventResult _onKey(FocusNode node, KeyEvent e) {
-    if (e is! KeyDownEvent && e is! KeyRepeatEvent) return KeyEventResult.ignored;
+    if (e is! KeyDownEvent && e is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
     final k = e.logicalKey;
     if (k == LogicalKeyboardKey.arrowUp) {
       _move(-1);
     } else if (k == LogicalKeyboardKey.arrowDown) {
       _move(1);
-    } else if (k == LogicalKeyboardKey.pageUp || k == LogicalKeyboardKey.channelUp) {
+    } else if (k == LogicalKeyboardKey.pageUp ||
+        k == LogicalKeyboardKey.channelUp) {
       _move(-8);
-    } else if (k == LogicalKeyboardKey.pageDown || k == LogicalKeyboardKey.channelDown) {
+    } else if (k == LogicalKeyboardKey.pageDown ||
+        k == LogicalKeyboardKey.channelDown) {
       _move(8);
     } else if (k == LogicalKeyboardKey.arrowLeft) {
       _setGroup(_group - 1);
@@ -168,11 +184,16 @@ class _ChannelListOverlayState extends State<ChannelListOverlay> {
                       crossAxisAlignment: CrossAxisAlignment.baseline,
                       textBaseline: TextBaseline.alphabetic,
                       children: [
-                        Text('Canali', style: AppText.display.copyWith(fontSize: 26)),
+                        Text(
+                          'Canali',
+                          style: AppText.display.copyWith(fontSize: 26),
+                        ),
                         const Spacer(),
                         Text(
                           '${items.length}',
-                          style: AppText.mono.copyWith(color: Palette.textTertiary),
+                          style: AppText.mono.copyWith(
+                            color: Palette.textTertiary,
+                          ),
                         ),
                       ],
                     ),
@@ -189,7 +210,12 @@ class _ChannelListOverlayState extends State<ChannelListOverlay> {
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                         stops: [0, 0.03, 0.95, 1],
-                        colors: [Colors.transparent, Colors.black, Colors.black, Colors.transparent],
+                        colors: [
+                          Colors.transparent,
+                          Colors.black,
+                          Colors.black,
+                          Colors.transparent,
+                        ],
                       ).createShader(r),
                       blendMode: BlendMode.dstIn,
                       child: NowBuilder(

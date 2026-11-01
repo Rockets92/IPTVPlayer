@@ -14,7 +14,11 @@ import '../widgets/glass_field.dart';
 
 /// Impostazioni (tasto M): pannello laterale navigabile con il telecomando.
 class SettingsPanel extends StatefulWidget {
-  const SettingsPanel({super.key, required this.onClose, required this.onToast});
+  const SettingsPanel({
+    super.key,
+    required this.onClose,
+    required this.onToast,
+  });
   final VoidCallback onClose;
   final ValueChanged<String> onToast;
 
@@ -24,6 +28,19 @@ class SettingsPanel extends StatefulWidget {
 
 class _SettingsPanelState extends State<SettingsPanel> {
   bool _dialogOpen = false;
+  final _first = FocusNode(debugLabel: 'settings-first');
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _first.requestFocus());
+  }
+
+  @override
+  void dispose() {
+    _first.dispose();
+    super.dispose();
+  }
 
   AppController get _app => context.read<AppController>();
   SettingsStore get _s => _app.settings;
@@ -52,9 +69,10 @@ class _SettingsPanelState extends State<SettingsPanel> {
       transitionBuilder: (context, a, _, child) => FadeTransition(
         opacity: a,
         child: ScaleTransition(
-          scale: Tween(begin: 0.97, end: 1.0).animate(
-            CurvedAnimation(parent: a, curve: Curves.easeOutCubic),
-          ),
+          scale: Tween(
+            begin: 0.97,
+            end: 1.0,
+          ).animate(CurvedAnimation(parent: a, curve: Curves.easeOutCubic)),
           child: child,
         ),
       ),
@@ -100,7 +118,9 @@ class _SettingsPanelState extends State<SettingsPanel> {
   KeyEventResult _onKey(FocusNode node, KeyEvent e) {
     if (_dialogOpen || e is! KeyDownEvent) return KeyEventResult.ignored;
     final k = e.logicalKey;
-    if (isBackKey(k) || k == LogicalKeyboardKey.keyM || k == LogicalKeyboardKey.contextMenu) {
+    if (isBackKey(k) ||
+        k == LogicalKeyboardKey.keyM ||
+        k == LogicalKeyboardKey.contextMenu) {
       widget.onClose();
       return KeyEventResult.handled;
     }
@@ -123,7 +143,8 @@ class _SettingsPanelState extends State<SettingsPanel> {
         child: Align(
           alignment: Alignment.centerRight,
           child: Padding(
-            padding: const EdgeInsets.all(12) + const EdgeInsets.only(right: 12),
+            padding:
+                const EdgeInsets.all(12) + const EdgeInsets.only(right: 12),
             child: SizedBox(
               width: panelW,
               child: Glass(
@@ -134,31 +155,11 @@ class _SettingsPanelState extends State<SettingsPanel> {
                   children: [
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 14),
-                      child: Text('Impostazioni', style: AppText.display.copyWith(fontSize: 26)),
-                    ),
-                    const _Section('Abbonamento'),
-                    _InfoRow('Server', app.credentials?.serverUrl ?? '—'),
-                    _InfoRow('Utente', app.credentials?.username ?? '—'),
-                    if (acct != null)
-                      _InfoRow(
-                        'Scadenza',
-                        acct.expiresAt == null
-                            ? 'Illimitato'
-                            : '${dayLong(acct.expiresAt!)} ${acct.expiresAt!.year}',
+                      child: Text(
+                        'Impostazioni',
+                        style: AppText.display.copyWith(fontSize: 26),
                       ),
-                    if (acct?.maxConnections != null)
-                      _InfoRow('Connessioni', '${acct!.maxConnections} max'),
-                    _ActionRow(
-                      autofocus: true,
-                      icon: Icons.logout_rounded,
-                      title: 'Cambia account',
-                      subtitle: 'Torna alla schermata di configurazione',
-                      onSelect: () async {
-                        widget.onClose();
-                        await app.logout();
-                      },
                     ),
-
                     const _Section('Lista canali'),
                     _InfoRow(
                       'In uso',
@@ -168,14 +169,18 @@ class _SettingsPanelState extends State<SettingsPanel> {
                     ),
                     _InfoRow('Canali', '${app.channels.length}'),
                     _ActionRow(
+                      focusNode: _first,
                       icon: Icons.link_rounded,
                       title: 'Sorgente lista',
-                      subtitle: s.mappingSource.isEmpty ? 'Integrata (ordine Sky)' : s.mappingSource,
+                      subtitle: s.mappingSource.isEmpty
+                          ? 'Integrata (ordine Sky)'
+                          : s.mappingSource,
                       onSelect: _editMapping,
                     ),
                     _ToggleRow(
                       title: 'Mostra canali non in lista',
-                      subtitle: 'Gli altri canali del provider, dal numero ${mapping?.unmappedStartNumber ?? 1000}',
+                      subtitle:
+                          'Gli altri canali del provider, dal numero ${mapping?.unmappedStartNumber ?? 1000}',
                       value: s.showUnmapped ?? mapping?.showUnmapped ?? true,
                       onChanged: (v) async {
                         await s.setShowUnmapped(v);
@@ -222,7 +227,8 @@ class _SettingsPanelState extends State<SettingsPanel> {
                     ),
                     _ToggleRow(
                       title: 'Usa la guida del provider',
-                      subtitle: 'Completa i canali non coperti dalle fonti esterne',
+                      subtitle:
+                          'Completa i canali non coperti dalle fonti esterne',
                       value: s.useProviderEpg,
                       onChanged: (v) async {
                         await s.setUseProviderEpg(v);
@@ -234,11 +240,16 @@ class _SettingsPanelState extends State<SettingsPanel> {
                     _ChoiceRow<StreamFormat>(
                       title: 'Formato stream',
                       value: s.streamFormat,
-                      options: const {StreamFormat.ts: 'MPEG-TS', StreamFormat.hls: 'HLS'},
+                      options: const {
+                        StreamFormat.ts: 'MPEG-TS',
+                        StreamFormat.hls: 'HLS',
+                      },
                       onChanged: (v) async {
                         await s.setStreamFormat(v);
                         setState(() {});
-                        widget.onToast('Formato ${v.label}: attivo dal prossimo cambio canale');
+                        widget.onToast(
+                          'Formato ${v.label}: attivo dal prossimo cambio canale',
+                        );
                       },
                     ),
                     _ChoiceRow<PerformanceMode>(
@@ -260,13 +271,37 @@ class _SettingsPanelState extends State<SettingsPanel> {
                       '${perf.isLight ? 'Leggero' : 'Completo'} · ${perf.reason}',
                     ),
 
+                    const _Section('Abbonamento'),
+                    _InfoRow('Server', app.credentials?.serverUrl ?? '—'),
+                    _InfoRow('Utente', app.credentials?.username ?? '—'),
+                    if (acct != null)
+                      _InfoRow(
+                        'Scadenza',
+                        acct.expiresAt == null
+                            ? 'Illimitato'
+                            : '${dayLong(acct.expiresAt!)} ${acct.expiresAt!.year}',
+                      ),
+                    if (acct?.maxConnections != null)
+                      _InfoRow('Connessioni', '${acct!.maxConnections} max'),
+                    _ActionRow(
+                      icon: Icons.logout_rounded,
+                      title: 'Cambia account',
+                      subtitle: 'Torna alla schermata di configurazione',
+                      onSelect: () async {
+                        widget.onClose();
+                        await app.logout();
+                      },
+                    ),
+
                     const _Section('Comandi'),
                     const _Shortcuts(),
                     const SizedBox(height: 18),
                     Center(
                       child: Text(
                         '${Brand.name} 0.1',
-                        style: AppText.label.copyWith(color: Palette.textTertiary),
+                        style: AppText.label.copyWith(
+                          color: Palette.textTertiary,
+                        ),
                       ),
                     ),
                   ],
@@ -310,7 +345,10 @@ class _InfoRow extends StatelessWidget {
       children: [
         SizedBox(
           width: 130,
-          child: Text(label, style: AppText.label.copyWith(color: Palette.textTertiary)),
+          child: Text(
+            label,
+            style: AppText.label.copyWith(color: Palette.textTertiary),
+          ),
         ),
         Expanded(
           child: Text(
@@ -334,20 +372,20 @@ class _ActionRow extends StatelessWidget {
     required this.title,
     required this.onSelect,
     this.subtitle,
-    this.autofocus = false,
+    this.focusNode,
   });
 
+  final FocusNode? focusNode;
   final IconData icon;
   final String title;
   final String? subtitle;
   final VoidCallback onSelect;
-  final bool autofocus;
 
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 2),
     child: FocusTile(
-      autofocus: autofocus,
+      focusNode: focusNode,
       onSelect: onSelect,
       child: Row(
         children: [
@@ -370,7 +408,11 @@ class _ActionRow extends StatelessWidget {
               ],
             ),
           ),
-          const Icon(Icons.chevron_right_rounded, size: 20, color: Palette.textTertiary),
+          const Icon(
+            Icons.chevron_right_rounded,
+            size: 20,
+            color: Palette.textTertiary,
+          ),
         ],
       ),
     ),
@@ -443,7 +485,13 @@ class _Switch extends StatelessWidget {
         decoration: const BoxDecoration(
           shape: BoxShape.circle,
           color: Colors.white,
-          boxShadow: [BoxShadow(color: Color(0x40000000), blurRadius: 4, offset: Offset(0, 1))],
+          boxShadow: [
+            BoxShadow(
+              color: Color(0x40000000),
+              blurRadius: 4,
+              offset: Offset(0, 1),
+            ),
+          ],
         ),
       ),
     );
@@ -476,7 +524,12 @@ class _ChoiceRow<T> extends StatelessWidget {
         },
         child: Row(
           children: [
-            Expanded(child: Text(title, style: AppText.headline.copyWith(fontSize: 15.5))),
+            Expanded(
+              child: Text(
+                title,
+                style: AppText.headline.copyWith(fontSize: 15.5),
+              ),
+            ),
             Container(
               padding: const EdgeInsets.all(3),
               decoration: BoxDecoration(
@@ -491,16 +544,23 @@ class _ChoiceRow<T> extends StatelessWidget {
                       onTap: () => onChanged(k),
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 180),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(9),
-                          color: k == value ? Colors.white.withValues(alpha: 0.92) : null,
+                          color: k == value
+                              ? Colors.white.withValues(alpha: 0.92)
+                              : null,
                         ),
                         child: Text(
                           options[k]!,
                           style: AppText.label.copyWith(
                             fontWeight: FontWeight.w600,
-                            color: k == value ? Palette.ink : Palette.textSecondary,
+                            color: k == value
+                                ? Palette.ink
+                                : Palette.textSecondary,
                           ),
                         ),
                       ),
@@ -539,7 +599,13 @@ class _Shortcuts extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 5),
             child: Row(
               children: [
-                SizedBox(width: 64, child: Align(alignment: Alignment.centerLeft, child: KeyCap(k))),
+                SizedBox(
+                  width: 64,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: KeyCap(k),
+                  ),
+                ),
                 Expanded(child: Text(t, style: AppText.label)),
               ],
             ),

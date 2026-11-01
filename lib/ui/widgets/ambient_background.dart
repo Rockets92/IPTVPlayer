@@ -76,9 +76,8 @@ class _AuroraPainter extends CustomPainter {
         c,
         r,
         Paint()
-          ..shader = RadialGradient(
-            colors: [color, color.withValues(alpha: 0)],
-          ).createShader(Rect.fromCircle(center: c, radius: r)),
+          ..shader = RadialGradient(colors: [color, color.withValues(alpha: 0)])
+              .createShader(Rect.fromCircle(center: c, radius: r)),
       );
     }
 

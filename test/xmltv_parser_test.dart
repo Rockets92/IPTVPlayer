@@ -32,14 +32,24 @@ const _xml = '''<?xml version="1.0" encoding="UTF-8"?>
 void main() {
   test('parseXmltvTime gestisce il fuso', () {
     final t = parseXmltvTime('20261101180000 +0100')!;
-    expect(DateTime.fromMillisecondsSinceEpoch(t * 1000, isUtc: true),
-        DateTime.utc(2026, 11, 1, 17));
-    expect(parseXmltvTime('202611011800'), DateTime.utc(2026, 11, 1, 18).millisecondsSinceEpoch ~/ 1000);
+    expect(
+      DateTime.fromMillisecondsSinceEpoch(t * 1000, isUtc: true),
+      DateTime.utc(2026, 11, 1, 17),
+    );
+    expect(
+      parseXmltvTime('202611011800'),
+      DateTime.utc(2026, 11, 1, 18).millisecondsSinceEpoch ~/ 1000,
+    );
   });
 
   XmltvRequest req({Set<String> skip = const {}}) => XmltvRequest(
-    idIndex: const {'rai1.it': ['m101']},
-    nameIndex: const {'skyuno': ['m108'], 'rai1': ['m101']},
+    idIndex: const {
+      'rai1.it': ['m101'],
+    },
+    nameIndex: const {
+      'skyuno': ['m108'],
+      'rai1': ['m101'],
+    },
     windowStart: DateTime.utc(2026, 11, 1).millisecondsSinceEpoch ~/ 1000,
     windowEnd: DateTime.utc(2026, 11, 3).millisecondsSinceEpoch ~/ 1000,
     skip: skip,

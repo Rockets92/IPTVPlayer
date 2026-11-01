@@ -115,7 +115,9 @@ class _GlassFieldState extends State<GlassField> {
                     autofillHints: widget.autofillHints,
                     autocorrect: false,
                     enableSuggestions: false,
-                    style: AppText.headline.copyWith(fontWeight: FontWeight.w500),
+                    style: AppText.headline.copyWith(
+                      fontWeight: FontWeight.w500,
+                    ),
                     cursorWidth: 2,
                     cursorRadius: const Radius.circular(2),
                     decoration: InputDecoration(
@@ -224,7 +226,9 @@ class _GlassButtonState extends State<GlassButton> {
             boxShadow: widget.primary && !perf.isLight
                 ? [
                     BoxShadow(
-                      color: Palette.accentDeep.withValues(alpha: lit ? 0.55 : 0.35),
+                      color: Palette.accentDeep.withValues(
+                        alpha: lit ? 0.55 : 0.35,
+                      ),
                       blurRadius: lit ? 30 : 20,
                       spreadRadius: -6,
                       offset: const Offset(0, 10),
@@ -232,7 +236,10 @@ class _GlassButtonState extends State<GlassButton> {
                   ]
                 : null,
             border: _focused
-                ? Border.all(color: Colors.white.withValues(alpha: 0.9), width: 2)
+                ? Border.all(
+                    color: Colors.white.withValues(alpha: 0.9),
+                    width: 2,
+                  )
                 : null,
           ),
           child: AnimatedOpacity(
@@ -254,14 +261,18 @@ class _GlassButtonState extends State<GlassButton> {
                         Icon(
                           widget.icon,
                           size: 20,
-                          color: widget.primary ? Palette.ink : Palette.textPrimary,
+                          color: widget.primary
+                              ? Palette.ink
+                              : Palette.textPrimary,
                         ),
                         const SizedBox(width: 10),
                       ],
                       Text(
                         widget.label,
                         style: AppText.headline.copyWith(
-                          color: widget.primary ? Palette.ink : Palette.textPrimary,
+                          color: widget.primary
+                              ? Palette.ink
+                              : Palette.textPrimary,
                         ),
                       ),
                     ],

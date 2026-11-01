@@ -164,7 +164,10 @@ class _SetupScreenState extends State<SetupScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('Collega la tua lista', style: AppText.display.copyWith(fontSize: 26)),
+          Text(
+            'Collega la tua lista',
+            style: AppText.display.copyWith(fontSize: 26),
+          ),
           const SizedBox(height: 8),
           Text(
             'Inserisci i dati Xtream Codes forniti dal tuo provider. '
@@ -222,7 +225,9 @@ class _SetupScreenState extends State<SetupScreen> {
                         Expanded(
                           child: Text(
                             _error!,
-                            style: AppText.body.copyWith(color: const Color(0xFFFFB3B3)),
+                            style: AppText.body.copyWith(
+                              color: const Color(0xFFFFB3B3),
+                            ),
                           ),
                         ),
                       ],
@@ -234,7 +239,10 @@ class _SetupScreenState extends State<SetupScreen> {
           Text(
             'Suggerimento: puoi incollare nel campo Server anche il link M3U '
             'completo, i campi si compilano da soli.',
-            style: AppText.label.copyWith(color: Palette.textTertiary, height: 1.45),
+            style: AppText.label.copyWith(
+              color: Palette.textTertiary,
+              height: 1.45,
+            ),
           ),
         ],
       ),
@@ -297,7 +305,9 @@ class _BrandBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final align = compact ? CrossAxisAlignment.center : CrossAxisAlignment.start;
+    final align = compact
+        ? CrossAxisAlignment.center
+        : CrossAxisAlignment.start;
     return Column(
       crossAxisAlignment: align,
       mainAxisSize: MainAxisSize.min,
@@ -325,11 +335,20 @@ class _BrandBlock extends StatelessWidget {
         ),
         if (!compact) ...[
           const SizedBox(height: 44),
-          const _Feature('Zapping istantaneo', 'Numeri, su e giù, canale precedente: come un decoder.'),
+          const _Feature(
+            'Zapping istantaneo',
+            'Numeri, su e giù, canale precedente: come un decoder.',
+          ),
           const SizedBox(height: 20),
-          const _Feature('La tua numerazione', 'Ordine, loghi e guida TV definiti da un semplice file JSON.'),
+          const _Feature(
+            'La tua numerazione',
+            'Ordine, loghi e guida TV definiti da un semplice file JSON.',
+          ),
           const SizedBox(height: 20),
-          const _Feature('Guida sempre presente', 'In onda ora e dopo, da fonti EPG esterne o dal provider.'),
+          const _Feature(
+            'Guida sempre presente',
+            'In onda ora e dopo, da fonti EPG esterne o dal provider.',
+          ),
         ],
       ],
     );

@@ -18,12 +18,12 @@ class EpgProgramme {
   final String? description;
   final String? category;
 
-  DateTime get startTime =>
-      DateTime.fromMillisecondsSinceEpoch(start * 1000);
+  DateTime get startTime => DateTime.fromMillisecondsSinceEpoch(start * 1000);
   DateTime get endTime => DateTime.fromMillisecondsSinceEpoch(end * 1000);
   Duration get duration => Duration(seconds: end - start);
 
-  bool isLiveAt(int epochSeconds) => start <= epochSeconds && epochSeconds < end;
+  bool isLiveAt(int epochSeconds) =>
+      start <= epochSeconds && epochSeconds < end;
 
   double progressAt(DateTime now) {
     final t = now.millisecondsSinceEpoch / 1000;
