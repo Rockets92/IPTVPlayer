@@ -158,6 +158,21 @@ abstract final class NameNormalizer {
           .map((t) => _numberWords[t] ?? t)
           .toList();
 
+  static final _trailingGroup = RegExp(r'\s*[\(\[][^\(\)\[\]]*[\)\]]\s*$');
+
+  /// Nome senza le etichette finali tra parentesi, che nelle liste indicano
+  /// quasi sempre la fonte: "Sky Cinema Uno FHD ( sat-stella )" →
+  /// "Sky Cinema Uno FHD".
+  static String baseName(String raw) {
+    var s = raw;
+    for (var i = 0; i < 3; i++) {
+      final t = s.replaceFirst(_trailingGroup, '');
+      if (t == s || t.trim().isEmpty) break;
+      s = t;
+    }
+    return s;
+  }
+
   /// Chiave compatta usata per i confronti.
   static String key(String raw) {
     final t = tokens(raw);

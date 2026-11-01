@@ -599,7 +599,8 @@
       "name": "Sky Cinema Collection",
       "group": "Cinema",
       "logo": "sky-cinema-collection-it.png",
-      "epgId": "Sky.Cinema.Collection.it"
+      "epgId": "Sky.Cinema.Collection.it",
+      "aliases": ["Sky Cinema * Collection", "Sky Cinema Collection *"]
     },
     {
       "number": 304,
@@ -656,6 +657,11 @@
       "group": "Cinema",
       "logo": "sky-cinema-due-plus24-it.png",
       "epgId": "Sky.Cinema.Due.Plus24.it"
+    },
+    {
+      "number": 312,
+      "name": "Sky Cinema Stories",
+      "group": "Cinema"
     },
     {
       "number": 321,

@@ -49,7 +49,7 @@ In build si può impostare un URL predefinito con
 | `group` | Categoria per i filtri della lista canali. |
 | `logo` | URL assoluto, oppure nome file relativo a `logoBaseUrl`. Se manca si usa il logo del provider. |
 | `epgId` | Id `<channel id="…">` della guida XMLTV (anche lista di id). |
-| `aliases` | Altri nomi con cui il canale compare nella lista del provider. |
+| `aliases` | Altri nomi con cui il canale compare nella lista del provider. Con `*` si indica una parte variabile, utile per i canali che cambiano nome a tema: `"Sky Cinema * Collection"` abbina anche "Sky Cinema Oscar Collection". |
 | `streamId` | Facoltativo: forza uno stream Xtream preciso (anche lista, per il failover). |
 | `hidden` | Nasconde il canale senza toglierlo dal file. |
 | `epgSources` | Guide XMLTV esterne (anche `.gz`), lette in ordine. |
@@ -63,7 +63,8 @@ In build si può impostare un URL predefinito con
 2. Altrimenti si confrontano nome e alias con i nomi del provider dopo una
    normalizzazione che ignora prefissi (`IT:`, `|IT|`, `[ITA]`), qualità
    (`HD`, `FHD`, `4K`, `HEVC`…) e simboli: `IT: Sky Uno +1 FHD` → `skyunoplus1`.
-3. Si riconoscono anche le copie con un'etichetta di fonte prima o dopo il
+3. L'etichetta finale tra parentesi (`Sky Cinema Uno FHD ( sat-stella )`) viene
+   sempre considerata una fonte. Si riconoscono anche le copie con un'etichetta di fonte prima o dopo il
    nome (`HERMES + SKY UNO`, `SKY UNO | BACKUP`). Un'etichetta conta come
    fonte se è in `preferredSources` oppure accompagna almeno 3 canali diversi;
    le etichette con numeri non contano, così `Sky Uno +1` resta un canale a sé.

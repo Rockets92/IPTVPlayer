@@ -36,10 +36,10 @@ class ChannelMatcher {
     // Nomi del canale in forma di token: ["sky", "cinema", "uno"].
     final names = <List<List<String>>>[
       for (final m in visible)
-        {for (final n in m.allNames) NameNormalizer.tokens(n).join(' '): n}.keys
-            .where((k) => k.isNotEmpty)
-            .map((k) => k.split(' '))
-            .toList(),
+        {
+          for (final n in m.allNames)
+            if (!n.contains('*')) NameNormalizer.tokens(n).join(' '): n,
+        }.keys.where((k) => k.isNotEmpty).map((k) => k.split(' ')).toList(),
     ];
     final byKey = <String, int>{};
     for (var i = 0; i < visible.length; i++) {
@@ -55,11 +55,34 @@ class ChannelMatcher {
         if (byId.containsKey(id)) assigned.putIfAbsent(id, () => i);
       }
     }
-    // 2) Nome identico (dopo la normalizzazione).
+    // 2) Nome identico (dopo la normalizzazione), anche togliendo l'etichetta
+    //    di fonte finale tra parentesi: "Sky Uno FHD ( sat-stella )".
     for (final s in streams) {
       if (assigned.containsKey(s.streamId)) continue;
-      final i = byKey[NameNormalizer.key(s.name)];
+      final i =
+          byKey[NameNormalizer.key(s.name)] ??
+          byKey[NameNormalizer.key(NameNormalizer.baseName(s.name))];
       if (i != null) assigned[s.streamId] = i;
+    }
+    // 2b) Alias con asterisco per i canali che cambiano nome a tema
+    //     ("Sky Cinema * Collection" → "Sky Cinema Oscar Collection").
+    final patterns = <(RegExp, int)>[
+      for (var i = 0; i < visible.length; i++)
+        for (final n in visible[i].allNames)
+          if (n.contains('*')) (_wildcard(n), i),
+    ];
+    if (patterns.isNotEmpty) {
+      for (final s in streams) {
+        if (assigned.containsKey(s.streamId)) continue;
+        final t = NameNormalizer.tokens(NameNormalizer.baseName(s.name))
+            .join(' ');
+        for (final (re, i) in patterns) {
+          if (re.hasMatch(t)) {
+            assigned[s.streamId] = i;
+            break;
+          }
+        }
+      }
     }
     // 3) Nome del canale più un'etichetta di fonte prima o dopo
     //    ("HERMES + SKY UNO", "SKY UNO | BACKUP 2"...).
@@ -196,7 +219,7 @@ class ChannelMatcher {
     // Chiave dell'evento: il nome senza qualità ed etichette di fonte, così
     // "DAZN 1 FHD" e "DAZN 1 ( hermes )" sono lo stesso canale.
     String eventKey(String name) {
-      final t = NameNormalizer.tokens(name);
+      final t = NameNormalizer.tokens(NameNormalizer.baseName(name));
       for (final tag in preferredTags) {
         for (var i = 0; i + tag.length <= t.length; i++) {
           var hit = true;
@@ -305,6 +328,19 @@ class ChannelMatcher {
       if (c != 0) return c;
     }
     return x.length.compareTo(y.length);
+  }
+
+  /// "Sky Cinema * Collection" → ^sky cinema(?: \w+)+ collection$
+  static RegExp _wildcard(String alias) {
+    final raw = alias.split('*');
+    final pieces = [for (final p in raw) NameNormalizer.tokens(p).join(' ')]
+        .where((p) => p.isNotEmpty)
+        .map(RegExp.escape)
+        .toList();
+    const words = r'(?: [a-z0-9]+)*';
+    final lead = alias.trimLeft().startsWith('*') ? r'(?:[a-z0-9]+ )*' : '';
+    final tail = alias.trimRight().endsWith('*') ? words : '';
+    return RegExp('^$lead${pieces.join('$words ')}$tail\$');
   }
 
   /// Il nome del canale più lungo contenuto all'inizio o alla fine dello

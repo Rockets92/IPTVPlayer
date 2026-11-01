@@ -259,6 +259,53 @@ void main() {
     expect(list.map((c) => c.sources.single.streamId), [1, 2, 3, 4]);
   });
 
+  test('fonti tra parentesi diverse e alias con asterisco', () {
+    final mapping = ChannelMapping.fromJson({
+      'dynamicGroups': [],
+      'channels': [
+        {'number': 301, 'name': 'Sky Cinema Uno', 'group': 'Cinema'},
+        {
+          'number': 303,
+          'name': 'Sky Cinema Collection',
+          'group': 'Cinema',
+          'aliases': ['Sky Cinema * Collection'],
+        },
+        {'number': 312, 'name': 'Sky Cinema Stories', 'group': 'Cinema'},
+      ],
+    });
+    final list = const ChannelMatcher().build(
+      mapping: mapping,
+      streams: const [
+        XtreamLiveStream(
+          streamId: 1,
+          name: 'Sky Cinema Uno FHD ( sat-stella )',
+        ),
+        XtreamLiveStream(streamId: 2, name: 'Sky Cinema Uno FHD ( hermes )'),
+        XtreamLiveStream(
+          streamId: 3,
+          name: 'Sky Cinema Oscar Collection FHD ( sat-stella )',
+        ),
+        XtreamLiveStream(
+          streamId: 4,
+          name: 'Sky Cinema Stories FHD ( stellina )',
+        ),
+        XtreamLiveStream(
+          streamId: 5,
+          name: 'Sky Cinema Stories FHD ( sat-stella )',
+        ),
+        XtreamLiveStream(
+          streamId: 6,
+          name: 'Sky Cinema Stories FHD ( garantito )',
+        ),
+        XtreamLiveStream(streamId: 7, name: 'Telepace 3 FHD ( fls )'),
+      ],
+    );
+    expect(list.map((c) => c.number), [301, 303, 312]);
+    expect(list[0].sources.map((s) => s.streamId), [2, 1]);
+    expect(list[1].sources.single.streamId, 3);
+    expect(list[2].sources.length, 3);
+  });
+
   group('Fonti multiple', () {
     final mapping = ChannelMapping.fromJson({
       'dynamicGroups': [],
