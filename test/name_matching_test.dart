@@ -224,6 +224,41 @@ void main() {
     expect(list.any((c) => c.name == 'Canale Locale'), isFalse);
   });
 
+  test('nome del canale tra categoria e fonte', () {
+    final mapping = ChannelMapping.fromJson({
+      'dynamicGroups': [],
+      'channels': [
+        {'number': 301, 'name': 'Sky Cinema Uno', 'group': 'Cinema'},
+        {'number': 302, 'name': 'Sky Cinema Due', 'group': 'Cinema'},
+        {'number': 305, 'name': 'Sky Cinema Action', 'group': 'Cinema'},
+        {'number': 310, 'name': 'Sky Cinema Uno +24', 'group': 'Cinema'},
+      ],
+    });
+    final list = const ChannelMatcher().build(
+      mapping: mapping,
+      streams: const [
+        XtreamLiveStream(
+          streamId: 1,
+          name: 'CINEMA | SKY CINEMA UNO ( hermes )',
+        ),
+        XtreamLiveStream(
+          streamId: 2,
+          name: 'CINEMA | SKY CINEMA DUE ( hermes )',
+        ),
+        XtreamLiveStream(
+          streamId: 3,
+          name: 'CINEMA | Sky Cinema Action HEVC ( hermes )',
+        ),
+        XtreamLiveStream(
+          streamId: 4,
+          name: 'CINEMA | Sky Cinema Uno +24 ( hermes )',
+        ),
+      ],
+    );
+    expect(list.map((c) => c.number), [301, 302, 305, 310]);
+    expect(list.map((c) => c.sources.single.streamId), [1, 2, 3, 4]);
+  });
+
   group('Fonti multiple', () {
     final mapping = ChannelMapping.fromJson({
       'dynamicGroups': [],

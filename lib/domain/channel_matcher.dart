@@ -71,13 +71,17 @@ class ChannelMatcher {
     }
     final tagChannels = <String, Set<int>>{};
     for (final a in affix) {
-      (tagChannels[a.tag] ??= {}).add(a.channel);
-    }
-    for (final a in affix) {
-      final known = preferredTags.any((t) => t.join(' ') == a.tag);
-      if (known || tagChannels[a.tag]!.length >= minTagChannels) {
-        assigned[a.streamId] = a.channel;
+      for (final t in a.tags) {
+        (tagChannels[t] ??= {}).add(a.channel);
       }
+    }
+    final knownTags = {for (final t in preferredTags) t.join(' ')};
+    for (final a in affix) {
+      final ok = a.tags.every(
+        (t) =>
+            knownTags.contains(t) || tagChannels[t]!.length >= minTagChannels,
+      );
+      if (ok) assigned[a.streamId] = a.channel;
     }
 
     final perChannel = <int, List<XtreamLiveStream>>{};
@@ -305,38 +309,44 @@ class ChannelMatcher {
 
   /// Il nome del canale più lungo contenuto all'inizio o alla fine dello
   /// stream; restituisce (indice canale, etichetta rimanente).
-  static (int, String)? _bestAffix(
+  static (int, List<String>)? _bestAffix(
     List<String> stream,
     List<List<List<String>>> names,
   ) {
     if (stream.length < 2) return null;
-    (int, String)? best;
+    (int, List<String>)? best;
     var bestLen = 0;
     for (var i = 0; i < names.length; i++) {
       for (final n in names[i]) {
-        if (n.length >= stream.length || n.length < bestLen) continue;
-        List<String>? rest;
-        if (_startsWith(stream, n)) {
-          rest = stream.sublist(n.length);
-        } else if (_startsWith(stream.reversed.toList(), n.reversed.toList())) {
-          rest = stream.sublist(0, stream.length - n.length);
-        }
-        if (rest == null || !_isSourceTag(rest)) continue;
+        if (n.isEmpty || n.length >= stream.length) continue;
         final len = n.join().length;
-        if (len > bestLen) {
+        if (len <= bestLen) continue;
+        // Il nome del canale può stare all'inizio, alla fine o in mezzo
+        // ("CINEMA | SKY CINEMA UNO ( hermes )"): ciò che resta prima e dopo
+        // deve essere un'etichetta di fonte o di categoria.
+        for (var at = 0; at + n.length <= stream.length; at++) {
+          var hit = true;
+          for (var j = 0; j < n.length; j++) {
+            if (stream[at + j] != n[j]) {
+              hit = false;
+              break;
+            }
+          }
+          if (!hit) continue;
+          final before = stream.sublist(0, at);
+          final after = stream.sublist(at + n.length);
+          final parts = [
+            if (before.isNotEmpty) before,
+            if (after.isNotEmpty) after,
+          ];
+          if (parts.isEmpty || !parts.every(_isSourceTag)) continue;
           bestLen = len;
-          best = (i, rest.join(' '));
+          best = (i, [for (final p in parts) p.join(' ')]);
+          break;
         }
       }
     }
     return best;
-  }
-
-  static bool _startsWith(List<String> a, List<String> b) {
-    for (var i = 0; i < b.length; i++) {
-      if (a[i] != b[i]) return false;
-    }
-    return true;
   }
 
   /// Un'etichetta di fonte contiene parole, non numeri: così "+1", "2" o
@@ -390,8 +400,10 @@ class ChannelMatcher {
 }
 
 class _AffixMatch {
-  const _AffixMatch(this.streamId, this.channel, this.tag);
+  const _AffixMatch(this.streamId, this.channel, this.tags);
   final int streamId;
   final int channel;
-  final String tag;
+
+  /// Etichette prima e/o dopo il nome del canale.
+  final List<String> tags;
 }
