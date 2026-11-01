@@ -1,0 +1,59 @@
+name: iptv_player
+description: "Player IPTV glass per liste Xtream Codes, con zapping stile decoder."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.13.7
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Riproduzione video (libmpv) su Windows, Linux, macOS, Android, iOS.
+  media_kit: ^1.2.6
+  media_kit_video: ^2.0.1
+  media_kit_libs_video: ^1.0.7
+
+  provider: ^6.1.5+1
+  shared_preferences: ^2.5.6
+  path_provider: ^2.1.6
+  http: ^1.6.0
+  xml: ^7.1.0
+  intl: ^0.20.3
+  cached_network_image: ^4.0.6
+  window_manager: ^0.5.2
+  wakelock_plus: ^1.8.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/channels/
+
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Inter-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Inter-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Inter-Bold.ttf
+          weight: 700
+    - family: InterDisplay
+      fonts:
+        - asset: assets/fonts/InterDisplay-Light.ttf
+          weight: 300
+        - asset: assets/fonts/InterDisplay-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/InterDisplay-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/InterDisplay-Bold.ttf
+          weight: 700
