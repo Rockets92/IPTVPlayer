@@ -190,8 +190,43 @@ void main() {
     expect(list[1].sources.single.streamId, 4);
   });
 
+  test('canali evento dall\'800: prima DAZN, poi "eventi", senza doppioni', () {
+    final mapping = ChannelMapping.fromJson({
+      'channels': [
+        {'number': 101, 'name': 'Rai 1', 'group': 'A'},
+        {'number': 214, 'name': 'Zona DAZN', 'group': 'Sport'},
+      ],
+    });
+    final list = const ChannelMatcher().build(
+      mapping: mapping,
+      streams: const [
+        XtreamLiveStream(streamId: 1, name: 'Rai 1 FHD'),
+        XtreamLiveStream(streamId: 2, name: 'Zona DAZN HD'),
+        XtreamLiveStream(streamId: 3, name: 'EVENTI 2 HD'),
+        XtreamLiveStream(streamId: 4, name: 'DAZN 10 FHD'),
+        XtreamLiveStream(streamId: 5, name: 'DAZN 2 HEVC ( hermes )'),
+        XtreamLiveStream(streamId: 6, name: 'DAZN 2 FHD'),
+        XtreamLiveStream(streamId: 7, name: 'Eventi 1 ( hermes )'),
+        XtreamLiveStream(streamId: 8, name: 'Canale Locale'),
+      ],
+    );
+    final ev = list.where((c) => c.group == 'Eventi').toList();
+    expect(ev.map((c) => c.number), [800, 801, 802, 803]);
+    expect(ev.map((c) => c.name), [
+      'DAZN 2',
+      'DAZN 10',
+      'Eventi 1',
+      'EVENTI 2',
+    ]);
+    expect(ev.first.sources.map((s) => s.streamId), [5, 6]);
+    // Zona DAZN resta al suo numero, non finisce negli eventi.
+    expect(list.firstWhere((c) => c.number == 214).sources.single.streamId, 2);
+    expect(list.any((c) => c.name == 'Canale Locale'), isFalse);
+  });
+
   group('Fonti multiple', () {
     final mapping = ChannelMapping.fromJson({
+      'dynamicGroups': [],
       'channels': [
         {'number': 101, 'name': 'Rai 1', 'group': 'A'},
         {'number': 102, 'name': 'Rai 2', 'group': 'A'},

@@ -131,8 +131,28 @@ class ChannelMatcher {
       );
     }
 
+    // Gruppi automatici (es. "Eventi" dall'800): stream non già in lista che
+    // contengono le parole chiave, una volta sola per evento.
+    final dynamicUsed = <int>{};
+    for (final g in mapping.dynamicGroups) {
+      channels.addAll(
+        _dynamicGroup(
+          g,
+          streams,
+          skip: (id) => assigned.containsKey(id) || dynamicUsed.contains(id),
+          used: dynamicUsed,
+          taken: channels.map((c) => c.number).toSet(),
+          preferredTags: preferredTags,
+        ),
+      );
+    }
+
     if (showUnmapped ?? mapping.showUnmapped) {
-      final rest = streams.where((s) => !assigned.containsKey(s.streamId));
+      final rest = streams.where(
+        (s) =>
+            !assigned.containsKey(s.streamId) &&
+            !dynamicUsed.contains(s.streamId),
+      );
       final taken = channels.map((c) => c.number).toSet();
       final seen = <String>{};
       var n = mapping.unmappedStartNumber;
@@ -159,6 +179,128 @@ class ChannelMatcher {
       }
     }
     return channels;
+  }
+
+  List<Channel> _dynamicGroup(
+    DynamicGroup g,
+    List<XtreamLiveStream> streams, {
+    required bool Function(int streamId) skip,
+    required Set<int> used,
+    required Set<int> taken,
+    required List<List<String>> preferredTags,
+  }) {
+    // Chiave dell'evento: il nome senza qualità ed etichette di fonte, così
+    // "DAZN 1 FHD" e "DAZN 1 ( hermes )" sono lo stesso canale.
+    String eventKey(String name) {
+      final t = NameNormalizer.tokens(name);
+      for (final tag in preferredTags) {
+        for (var i = 0; i + tag.length <= t.length; i++) {
+          var hit = true;
+          for (var j = 0; j < tag.length; j++) {
+            if (t[i + j] != tag[j]) {
+              hit = false;
+              break;
+            }
+          }
+          if (hit) {
+            t.removeRange(i, i + tag.length);
+            break;
+          }
+        }
+      }
+      return t.join(' ');
+    }
+
+    final buckets = <String, List<XtreamLiveStream>>{};
+    for (final kw in g.keywords) {
+      final matches =
+          [
+            for (final s in streams)
+              if (!skip(s.streamId) &&
+                  NameNormalizer.fold(s.name).toLowerCase().contains(kw))
+                s,
+          ]..sort(
+            (a, b) =>
+                _naturalCompare(_displayName(a.name), _displayName(b.name)),
+          );
+      for (final s in matches) {
+        used.add(s.streamId);
+        final k = eventKey(s.name);
+        (buckets[k.isEmpty ? 's${s.streamId}' : k] ??= []).add(s);
+      }
+    }
+
+    final out = <Channel>[];
+    var n = g.startNumber;
+    for (final MapEntry(key: k, value: list) in buckets.entries) {
+      while (taken.contains(n)) {
+        n++;
+      }
+      int rank(XtreamLiveStream s) {
+        final p = _preferredRank(s.name, preferredTags);
+        return (p < 0 ? 0 : (preferredTags.length - p) * -100) - _score(s.name);
+      }
+
+      list.sort((a, b) => rank(a).compareTo(rank(b)));
+      final first = list.first;
+      out.add(
+        Channel(
+          id: 'e:$k',
+          number: n++,
+          name: _displayName(first.name),
+          group: g.name,
+          logoUrl: list
+              .map((s) => s.icon)
+              .firstWhere((i) => i != null && i.isNotEmpty, orElse: () => null),
+          epgIds: {
+            for (final s in list)
+              if (s.epgChannelId != null) s.epgChannelId!,
+          }.toList(),
+          nameKeys: [k.replaceAll(' ', '')],
+          sources: [
+            for (final s in list)
+              ChannelSource(
+                streamId: s.streamId,
+                label: s.name.trim(),
+                preferred: _preferredRank(s.name, preferredTags) >= 0,
+              ),
+          ],
+        ),
+      );
+    }
+    return out;
+  }
+
+  /// Nome leggibile senza prefissi, qualità ed etichette di fonte tra
+  /// parentesi: "IT: DAZN 1 HEVC ( hermes )" → "DAZN 1".
+  static String _displayName(String raw) {
+    var s = _clean(NameNormalizer.fold(raw));
+    s = s.replaceAll(RegExp(r'[\(\[][^\)\]]*[\)\]]'), ' ');
+    s = s.replaceAll(
+      RegExp(
+        r'\b(?:fhd|uhd|hd|sd|4k|hevc|h\.?26[45]|1080p?|720p?|50fps)\b',
+        caseSensitive: false,
+      ),
+      ' ',
+    );
+    s = s.replaceAll(RegExp(r'[ᴀ-ᶿʰ-˿⁰-₟]+'), ' ');
+    s = s.replaceAll(RegExp(r'\s+'), ' ').trim();
+    s = s.replaceAll(RegExp(r'^[\-|:•▎\s]+|[\-|:•▎\s]+$'), '');
+    return s.isEmpty ? raw.trim() : s;
+  }
+
+  /// Ordine "naturale": DAZN 2 prima di DAZN 10.
+  static int _naturalCompare(String a, String b) {
+    final re = RegExp(r'(\d+)|(\D+)');
+    final x = re.allMatches(a.toLowerCase()).toList();
+    final y = re.allMatches(b.toLowerCase()).toList();
+    for (var i = 0; i < x.length && i < y.length; i++) {
+      final p = x[i].group(0)!, q = y[i].group(0)!;
+      final np = int.tryParse(p), nq = int.tryParse(q);
+      final c = np != null && nq != null ? np.compareTo(nq) : p.compareTo(q);
+      if (c != 0) return c;
+    }
+    return x.length.compareTo(y.length);
   }
 
   /// Il nome del canale più lungo contenuto all'inizio o alla fine dello

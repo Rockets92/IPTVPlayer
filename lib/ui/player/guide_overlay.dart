@@ -15,6 +15,7 @@ import '../widgets/epg_progress.dart';
 import '../widgets/focus_tile.dart';
 import '../widgets/glass.dart';
 import '../widgets/now.dart';
+import 'channel_list_overlay.dart';
 import 'channel_row.dart';
 
 /// Guida TV a due colonne: canali a sinistra, palinsesto a destra.
@@ -33,10 +34,36 @@ class _GuideOverlayState extends State<GuideOverlay> {
   int _ch = 0;
   int _prog = 0;
   bool _inProgrammes = false;
+  int _group = 0;
 
   static const _rowExtent = ChannelRow.extent + 6;
 
-  List<Channel> get _channels => context.read<AppController>().channels;
+  List<String> get _groups => context.read<AppController>().groups;
+
+  /// Canali della categoria scelta (0 = tutti).
+  List<Channel> get _channels {
+    final all = context.read<AppController>().channels;
+    if (_group == 0 || _group > _groups.length) return all;
+    final g = _groups[_group - 1];
+    return all.where((c) => c.group == g).toList();
+  }
+
+  void _setGroup(int g) {
+    final count = _groups.length + 1;
+    final current = context.read<TunerController>().current;
+    setState(() {
+      _group = (g % count + count) % count;
+      final i = current == null ? -1 : _channels.indexOf(current);
+      _ch = i < 0 ? 0 : i;
+      _prog = 0;
+      _inProgrammes = false;
+    });
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _revealChannel(animate: false),
+    );
+    final list = _channels;
+    if (list.isNotEmpty) context.read<AppController>().ensureEpg(list[_ch]);
+  }
 
   @override
   void initState() {
@@ -155,7 +182,12 @@ class _GuideOverlayState extends State<GuideOverlay> {
     } else if (k == LogicalKeyboardKey.arrowLeft) {
       if (_inProgrammes) {
         setState(() => _inProgrammes = false);
+      } else {
+        _setGroup(_group - 1);
       }
+    } else if (k == LogicalKeyboardKey.keyC ||
+        k == LogicalKeyboardKey.colorF2Yellow) {
+      _setGroup(_group + 1);
     } else if (isSelectKey(k)) {
       _tuneSelected();
     } else if (isBackKey(k)) {
@@ -178,7 +210,8 @@ class _GuideOverlayState extends State<GuideOverlay> {
   Widget build(BuildContext context) {
     final app = context.watch<AppController>();
     final tuner = context.watch<TunerController>();
-    final channels = app.channels;
+    final channels = _channels;
+    final groups = app.groups;
     if (channels.isEmpty) return const SizedBox.shrink();
     if (_ch >= channels.length) _ch = channels.length - 1;
     final size = MediaQuery.sizeOf(context);
@@ -225,6 +258,14 @@ class _GuideOverlayState extends State<GuideOverlay> {
                         style: AppText.clock.copyWith(fontSize: 26),
                       ),
                     ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 0, 18, 14),
+                  child: GroupStrip(
+                    groups: ['Tutti', ...groups],
+                    selected: _group,
+                    onSelect: _setGroup,
                   ),
                 ),
                 Container(
@@ -299,6 +340,7 @@ class _GuideOverlayState extends State<GuideOverlay> {
                     children: [
                       KeyHint('↑↓', 'Canale'),
                       KeyHint('→', 'Palinsesto'),
+                      KeyHint('←', 'Categoria'),
                       KeyHint('OK', 'Guarda'),
                       KeyHint('G', 'Chiudi'),
                     ],

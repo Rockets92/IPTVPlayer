@@ -89,6 +89,38 @@ class MappedChannel {
   }
 }
 
+/// Gruppo di canali creato in automatico dalla lista del provider, per i
+/// canali che cambiano spesso (eventi, partite): tutti gli stream che
+/// contengono una delle parole chiave, numerati da [startNumber].
+@immutable
+class DynamicGroup {
+  const DynamicGroup({
+    required this.name,
+    required this.startNumber,
+    required this.keywords,
+  });
+
+  final String name;
+  final int startNumber;
+
+  /// Parole chiave in ordine: prima tutti i canali della prima, poi della
+  /// seconda, e così via.
+  final List<String> keywords;
+
+  static DynamicGroup? tryFromJson(Map<String, Object?> j) {
+    final name = asNonEmptyString(j['name']);
+    final start = asInt(j['startNumber']);
+    final kw = j['keywords'];
+    if (name == null || start == null || kw is! List) return null;
+    final keywords = kw
+        .map((e) => asString(e).trim().toLowerCase())
+        .where((e) => e.isNotEmpty)
+        .toList();
+    if (keywords.isEmpty) return null;
+    return DynamicGroup(name: name, startNumber: start, keywords: keywords);
+  }
+}
+
 /// Documento di mappatura canali (vedi `assets/channels/sky_italia.json`).
 @immutable
 class ChannelMapping {
@@ -101,6 +133,7 @@ class ChannelMapping {
     this.showUnmapped = false,
     this.unmappedStartNumber = 1000,
     this.preferredSources = defaultPreferredSources,
+    this.dynamicGroups = defaultDynamicGroups,
     this.origin = 'integrata',
   });
 
@@ -108,6 +141,15 @@ class ChannelMapping {
 
   /// Fonti preferite quando un canale è disponibile da più stream.
   static const defaultPreferredSources = ['hermes +', 'hermes'];
+
+  /// Canali evento: prima DAZN, poi quelli con "eventi" nel nome, dall'800.
+  static const defaultDynamicGroups = [
+    DynamicGroup(
+      name: 'Eventi',
+      startNumber: 800,
+      keywords: ['dazn', 'eventi'],
+    ),
+  ];
 
   final String id;
   final String name;
@@ -121,6 +163,9 @@ class ChannelMapping {
   /// che le contiene nel nome diventa la fonte principale del canale.
   final List<String> preferredSources;
 
+  /// Gruppi automatici (es. "Eventi"), fuori dall'elenco fisso dei canali.
+  final List<DynamicGroup> dynamicGroups;
+
   /// Da dove è stata caricata (integrata, remota, file locale, cache).
   final String origin;
 
@@ -133,6 +178,7 @@ class ChannelMapping {
     showUnmapped: showUnmapped,
     unmappedStartNumber: unmappedStartNumber,
     preferredSources: preferredSources,
+    dynamicGroups: dynamicGroups,
     origin: o,
   );
 
@@ -160,6 +206,7 @@ class ChannelMapping {
     final unmapped = j['unmappedChannels'];
     final sources = j['epgSources'];
     final preferred = j['preferredSources'];
+    final dynGroups = j['dynamicGroups'];
     return ChannelMapping(
       id: asString(j['id'], 'custom'),
       name: asString(j['name'], 'Lista personalizzata'),
@@ -179,6 +226,13 @@ class ChannelMapping {
       preferredSources: preferred is List
           ? preferred.map(asString).where((e) => e.isNotEmpty).toList()
           : defaultPreferredSources,
+      dynamicGroups: dynGroups is List
+          ? [
+              for (final g in dynGroups)
+                if (g is Map)
+                  DynamicGroup.tryFromJson(g.cast<String, Object?>()),
+            ].whereType<DynamicGroup>().toList()
+          : defaultDynamicGroups,
     );
   }
 }

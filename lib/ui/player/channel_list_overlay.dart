@@ -198,7 +198,7 @@ class _ChannelListOverlayState extends State<ChannelListOverlay> {
                       ],
                     ),
                   ),
-                  _GroupStrip(
+                  GroupStrip(
                     groups: ['Tutti', ...groups],
                     selected: _group,
                     onSelect: _setGroup,
@@ -266,8 +266,10 @@ class _ChannelListOverlayState extends State<ChannelListOverlay> {
   }
 }
 
-class _GroupStrip extends StatefulWidget {
-  const _GroupStrip({
+/// Striscia di categorie (Tutti, News, Sport, Eventi…).
+class GroupStrip extends StatefulWidget {
+  const GroupStrip({
+    super.key,
     required this.groups,
     required this.selected,
     required this.onSelect,
@@ -278,14 +280,14 @@ class _GroupStrip extends StatefulWidget {
   final ValueChanged<int> onSelect;
 
   @override
-  State<_GroupStrip> createState() => _GroupStripState();
+  State<GroupStrip> createState() => _GroupStripState();
 }
 
-class _GroupStripState extends State<_GroupStrip> {
+class _GroupStripState extends State<GroupStrip> {
   final _keys = <int, GlobalKey>{};
 
   @override
-  void didUpdateWidget(_GroupStrip old) {
+  void didUpdateWidget(GroupStrip old) {
     super.didUpdateWidget(old);
     if (old.selected != widget.selected) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
