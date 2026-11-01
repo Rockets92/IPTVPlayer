@@ -18,6 +18,7 @@ import 'player/media_kit_engine.dart';
 import 'player/playback_engine.dart';
 import 'state/app_controller.dart';
 import 'state/tuner_controller.dart';
+import 'ui/widgets/glass.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -57,6 +58,8 @@ Future<void> main() async {
       systemNavigationBarColor: Palette.ink,
     ),
   );
+
+  if (perf.useBackdropBlur) await GlassGrain.prepare();
 
   final engine = MediaKitEngine(perf);
   final app = AppController(settings: settings, perf: perf);

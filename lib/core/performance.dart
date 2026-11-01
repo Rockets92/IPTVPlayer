@@ -26,7 +26,7 @@ class PerformanceProfile {
 
   /// Blur reale (BackdropFilter). In light si usa un vetro "opaco" equivalente.
   bool get useBackdropBlur => !isLight;
-  double get blurSigma => 30;
+  double get blurSigma => 24;
 
   /// Sfondo animato (setup/caricamento).
   bool get animatedBackground => !isLight;

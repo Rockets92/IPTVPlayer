@@ -7,8 +7,8 @@ abstract final class Palette {
   static const Color deep = Color(0xFF0D1424);
 
   static const Color textPrimary = Color(0xF5FFFFFF);
-  static const Color textSecondary = Color(0xA8E6ECF7);
-  static const Color textTertiary = Color(0x6BD5DEEE);
+  static const Color textSecondary = Color(0xC7E6ECF7);
+  static const Color textTertiary = Color(0x94D5DEEE);
 
   /// Accento freddo, usato con parsimonia: focus, avanzamento, "ORA".
   static const Color accent = Color(0xFF8AC6FF);
