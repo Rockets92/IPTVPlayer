@@ -22,7 +22,7 @@ In build si può impostare un URL predefinito con
   "epgSources": [
     { "id": "epgshare-it", "name": "EPGShare Italia", "url": "https://…/epg_IT.xml.gz" }
   ],
-  "preferredSources": ["hermes +"],
+  "preferredSources": ["hermes +", "hermes"],
   "unmappedChannels": { "show": false, "startNumber": 1000 },
   "channels": [
     {
@@ -50,7 +50,7 @@ In build si può impostare un URL predefinito con
 | `streamId` | Facoltativo: forza uno stream Xtream preciso (anche lista, per il failover). |
 | `hidden` | Nasconde il canale senza toglierlo dal file. |
 | `epgSources` | Guide XMLTV esterne (anche `.gz`), lette in ordine. |
-| `preferredSources` | Etichette di fonte da usare come principali, in ordine (predefinito `["hermes +"]`). |
+| `preferredSources` | Etichette di fonte da usare come principali, in ordine (predefinito `["hermes +", "hermes"]`). |
 | `unmappedChannels` | Con `show: true` mostra anche gli altri canali del provider (senza doppioni) a partire da `startNumber`. Predefinito: spento, si vede solo la lista. |
 
 ## Come avviene l'abbinamento

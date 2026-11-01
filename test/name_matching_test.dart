@@ -169,6 +169,27 @@ void main() {
     expect(list.map((c) => c.sources.single.streamId), [1, 2, 3]);
   });
 
+  test('formato del provider: "Rai 1 HEVC ( hermes )"', () {
+    final mapping = ChannelMapping.fromJson({
+      'channels': [
+        {'number': 101, 'name': 'Rai 1', 'group': 'A'},
+        {'number': 102, 'name': 'Rai 2', 'group': 'A'},
+      ],
+    });
+    final list = const ChannelMatcher().build(
+      mapping: mapping,
+      streams: const [
+        XtreamLiveStream(streamId: 1, name: 'Rai 1 FHD'),
+        XtreamLiveStream(streamId: 2, name: 'Rai 1 HEVC ( hermes )'),
+        XtreamLiveStream(streamId: 3, name: 'Rai 1 ( hermes + )'),
+        XtreamLiveStream(streamId: 4, name: 'Rai 2 HEVC ( hermes )'),
+      ],
+    );
+    expect(list.map((c) => c.number), [101, 102]);
+    expect(list[0].sources.map((s) => s.streamId), [3, 2, 1]);
+    expect(list[1].sources.single.streamId, 4);
+  });
+
   group('Fonti multiple', () {
     final mapping = ChannelMapping.fromJson({
       'channels': [

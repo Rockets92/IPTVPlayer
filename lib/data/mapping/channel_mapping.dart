@@ -107,7 +107,7 @@ class ChannelMapping {
   static const supportedSchema = 1;
 
   /// Fonti preferite quando un canale è disponibile da più stream.
-  static const defaultPreferredSources = ['hermes +'];
+  static const defaultPreferredSources = ['hermes +', 'hermes'];
 
   final String id;
   final String name;
