@@ -75,7 +75,7 @@ class XtreamClient {
       throw XtreamException(
         'Il server non è disponibile in questo momento (errore ${r.statusCode}). '
         'Se dal PC funziona, controlla che l\'indirizzo sia identico '
-        '(http/https e porta) e prova con un\'altra rete.',
+        '(http/https e porta), disattiva la VPN o prova con un\'altra rete.',
       );
     }
     if (r.statusCode >= 400) {
