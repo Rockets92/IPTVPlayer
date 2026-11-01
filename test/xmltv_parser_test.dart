@@ -47,7 +47,7 @@ void main() {
       'rai1.it': ['m101'],
     },
     nameIndex: const {
-      'skyuno': ['m108'],
+      'sky1': ['m108'],
       'rai1': ['m101'],
     },
     windowStart: DateTime.utc(2026, 11, 1).millisecondsSinceEpoch ~/ 1000,

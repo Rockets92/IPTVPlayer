@@ -17,12 +17,12 @@ void main() {
     });
 
     test('mantiene le varianti significative', () {
-      expect(NameNormalizer.key('IT: Sky Uno +1 HD'), 'skyunoplus1');
+      expect(NameNormalizer.key('IT: Sky Uno +1 HD'), 'sky1plus1');
       expect(
         NameNormalizer.key('Sky Uno'),
         isNot(NameNormalizer.key('Sky Uno +1')),
       );
-      expect(NameNormalizer.key('Sky Cinema Uno +24'), 'skycinemaunoplus24');
+      expect(NameNormalizer.key('Sky Cinema Uno +24'), 'skycinema1plus24');
     });
 
     test('non confonde Italia 1 con il prefisso paese', () {
@@ -127,6 +127,46 @@ void main() {
       );
       expect(list.every((c) => c.mapped), isTrue);
     });
+  });
+
+  test('nomi decorati, numeri davanti e numeri in lettere', () {
+    final rai1 = NameNormalizer.key('Rai 1');
+    for (final n in [
+      '𝐑𝐀𝐈 𝟏 𝐅𝐇𝐃',
+      'ʀᴀɪ 1 ᴴᴰ',
+      'ＲＡＩ １',
+      'IT | RAI UNO',
+      '101 - RAI 1 HD',
+      '101 | IT: Rai 1',
+      '🇮🇹 RAI 1',
+      'Ⓡⓐⓘ 1',
+    ]) {
+      expect(NameNormalizer.key(n), rai1, reason: n);
+    }
+    expect(
+      NameNormalizer.key('Sky Cinema Due'),
+      NameNormalizer.key('Sky Cinema 2'),
+    );
+    expect(NameNormalizer.key('Rai 4'), isNot(NameNormalizer.key('Rai 1')));
+  });
+
+  test('prefisso di categoria riconosciuto come etichetta', () {
+    final mapping = ChannelMapping.fromJson({
+      'channels': [
+        {'number': 101, 'name': 'Rai 1', 'group': 'A'},
+        {'number': 102, 'name': 'Rai 2', 'group': 'A'},
+        {'number': 103, 'name': 'Rai 3', 'group': 'A'},
+      ],
+    });
+    final list = const ChannelMatcher().build(
+      mapping: mapping,
+      streams: const [
+        XtreamLiveStream(streamId: 1, name: 'RAI | RAI 1 FHD'),
+        XtreamLiveStream(streamId: 2, name: 'RAI | RAI 2 FHD'),
+        XtreamLiveStream(streamId: 3, name: 'RAI | RAI 3 FHD'),
+      ],
+    );
+    expect(list.map((c) => c.sources.single.streamId), [1, 2, 3]);
   });
 
   group('Fonti multiple', () {

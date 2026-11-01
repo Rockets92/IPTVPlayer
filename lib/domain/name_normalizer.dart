@@ -77,10 +77,70 @@ abstract final class NameNormalizer {
     'ñ': 'n',
   };
 
+  /// Numero di canale del provider davanti al nome: "101 - RAI 1", "05. Rai 3".
+  static final _leadingNumber = RegExp(r'^\s*\d{1,4}\s*[\-|.:)\]▎•]+\s*');
+
+  /// Numeri scritti in lettere, così "Rai Uno" e "Rai 1" coincidono.
+  static const _numberWords = {
+    'uno': '1',
+    'due': '2',
+    'tre': '3',
+    'quattro': '4',
+    'cinque': '5',
+  };
+
+  /// Maiuscoletto Unicode (ʀᴀɪ) → lettere normali.
+  static const _smallCaps = {
+    0x1D00: 'a', 0x0299: 'b', 0x1D04: 'c', 0x1D05: 'd', 0x1D07: 'e', //
+    0xA730: 'f', 0x0262: 'g', 0x029C: 'h', 0x026A: 'i', 0x1D0A: 'j', //
+    0x1D0B: 'k', 0x029F: 'l', 0x1D0D: 'm', 0x0274: 'n', 0x1D0F: 'o', //
+    0x1D18: 'p', 0x01EB: 'q', 0x0280: 'r', 0xA731: 's', 0x1D1B: 't', //
+    0x1D1C: 'u', 0x1D20: 'v', 0x1D21: 'w', 0x028F: 'y', 0x1D22: 'z',
+  };
+
+  /// Riporta a lettere e cifre normali gli alfabeti "decorativi" che molti
+  /// provider usano nei nomi: 𝐑𝐀𝐈, 𝙍𝘼𝙄, ＲＡＩ, Ⓡⓐⓘ, 🅁🄰🄸, ʀᴀɪ, 𝟏.
+  static String fold(String raw) {
+    final b = StringBuffer();
+    for (final cp in raw.runes) {
+      b.write(_foldRune(cp) ?? String.fromCharCode(cp));
+    }
+    return b.toString();
+  }
+
+  static String? _foldRune(int cp) {
+    if (cp < 0x80) return null;
+    final sc = _smallCaps[cp];
+    if (sc != null) return sc;
+    String letter(int i) =>
+        String.fromCharCode(i < 26 ? 0x41 + i : 0x61 + i - 26);
+    // Lettere matematiche (grassetto, corsivo, sans, monospace...).
+    if (cp >= 0x1D400 && cp <= 0x1D6A3) return letter((cp - 0x1D400) % 52);
+    // Cifre matematiche.
+    if (cp >= 0x1D7CE && cp <= 0x1D7FF) return '${(cp - 0x1D7CE) % 10}';
+    // Larghezza piena.
+    if (cp >= 0xFF01 && cp <= 0xFF5E) return String.fromCharCode(cp - 0xFEE0);
+    // Lettere e cifre cerchiate.
+    if (cp >= 0x24B6 && cp <= 0x24E9) return letter(cp - 0x24B6);
+    if (cp >= 0x2460 && cp <= 0x2468) return '${cp - 0x2460 + 1}';
+    if (cp == 0x24EA || cp == 0x24FF) return '0';
+    if (cp >= 0x2776 && cp <= 0x277E) return '${cp - 0x2776 + 1}';
+    // Lettere in quadrato o cerchio pieno (🄰 🅐 🅰).
+    for (final base in const [0x1F130, 0x1F150, 0x1F170]) {
+      if (cp >= base && cp < base + 26) return letter(cp - base);
+    }
+    // Bandiere (🇮🇹): non fanno parte del nome.
+    if (cp >= 0x1F1E6 && cp <= 0x1F1FF) return ' ';
+    return null;
+  }
+
   static String _strip(String raw) {
-    var s = raw.toLowerCase();
+    var s = fold(raw).toLowerCase();
     s = s.replaceAll(_fancy, ' ');
-    s = s.replaceFirst(_prefix, '');
+    for (var i = 0; i < 2; i++) {
+      s = s.replaceFirst(_leadingNumber, '');
+      s = s.replaceFirst(_prefix, '');
+    }
     s = s.replaceAll(_suffixCountry, ' ');
     final b = StringBuffer();
     for (final rune in s.runes) {
@@ -95,6 +155,7 @@ abstract final class NameNormalizer {
       _strip(raw)
           .split(_nonAlnum)
           .where((t) => t.isNotEmpty && !_noise.contains(t))
+          .map((t) => _numberWords[t] ?? t)
           .toList();
 
   /// Chiave compatta usata per i confronti.
@@ -109,7 +170,7 @@ abstract final class NameNormalizer {
 
   /// Punteggio per scegliere lo stream migliore tra più varianti.
   static int qualityScore(String raw, {bool preferLighter = false}) {
-    final s = raw.toLowerCase();
+    final s = fold(raw).toLowerCase();
     var score = 0;
     final has4k = s.contains('4k') || s.contains('uhd') || s.contains('2160');
     final hasFhd = s.contains('fhd') || s.contains('1080');
