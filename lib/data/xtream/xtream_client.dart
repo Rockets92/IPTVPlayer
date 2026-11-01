@@ -17,7 +17,20 @@ class XtreamClient {
   final http.Client _http;
 
   static const _timeout = Duration(seconds: 20);
-  static const _headers = {'User-Agent': 'IPTVPlayer/0.1', 'Accept': '*/*'};
+
+  /// Alcuni pannelli rispondono 503/403 a client che non riconoscono: se
+  /// succede si riprova presentandosi come i player più diffusi.
+  static const _userAgents = [
+    'IPTVPlayer/0.1',
+    'okhttp/4.12.0',
+    'VLC/3.0.21 LibVLC/3.0.21',
+  ];
+  static int _uaIndex = 0;
+
+  /// User-Agent che il server accetta, usato anche per i flussi video.
+  static String get userAgent => _userAgents[_uaIndex];
+
+  static const _transient = {429, 502, 503, 504, 520, 521, 522, 524};
 
   Uri _api([Map<String, String> extra = const {}]) =>
       Uri.parse('${credentials.serverUrl}/player_api.php').replace(
@@ -29,25 +42,48 @@ class XtreamClient {
       );
 
   Future<String> _get(Uri uri) async {
-    final http.Response res;
-    try {
-      res = await _http.get(uri, headers: _headers).timeout(_timeout);
-    } on TimeoutException {
-      throw const XtreamException('Il server non risponde. Riprova tra poco.');
-    } catch (_) {
-      throw const XtreamException(
-        'Impossibile raggiungere il server. Controlla l\'indirizzo e la connessione.',
-      );
+    http.Response? res;
+    // Errori temporanei: nuovi tentativi con attesa crescente, cambiando
+    // User-Agent se il server continua a rifiutare.
+    for (var attempt = 0; attempt < 4; attempt++) {
+      if (attempt > 0) {
+        await Future<void>.delayed(Duration(milliseconds: 700 * attempt));
+      }
+      try {
+        res = await _http
+            .get(uri, headers: {'User-Agent': userAgent, 'Accept': '*/*'})
+            .timeout(_timeout);
+      } on TimeoutException {
+        throw const XtreamException(
+          'Il server non risponde. Riprova tra poco.',
+        );
+      } catch (_) {
+        throw const XtreamException(
+          'Impossibile raggiungere il server. Controlla l\'indirizzo e la connessione.',
+        );
+      }
+      final code = res.statusCode;
+      final rejected = _transient.contains(code) || code == 403;
+      if (!rejected) break;
+      if (attempt >= 1 && _uaIndex < _userAgents.length - 1) _uaIndex++;
     }
-    if (res.statusCode == 401 || res.statusCode == 403) {
+    final r = res!;
+    if (r.statusCode == 401 || r.statusCode == 403) {
       throw const XtreamException('Credenziali non valide o account bloccato.');
     }
-    if (res.statusCode >= 400) {
+    if (_transient.contains(r.statusCode)) {
       throw XtreamException(
-        'Il server ha risposto con errore ${res.statusCode}.',
+        'Il server non è disponibile in questo momento (errore ${r.statusCode}). '
+        'Se dal PC funziona, controlla che l\'indirizzo sia identico '
+        '(http/https e porta) e prova con un\'altra rete.',
       );
     }
-    return utf8.decode(res.bodyBytes, allowMalformed: true);
+    if (r.statusCode >= 400) {
+      throw XtreamException(
+        'Il server ha risposto con errore ${r.statusCode}.',
+      );
+    }
+    return utf8.decode(r.bodyBytes, allowMalformed: true);
   }
 
   /// Verifica le credenziali e restituisce lo stato dell'abbonamento.

@@ -7,6 +7,7 @@ import 'package:media_kit_video/media_kit_video.dart';
 
 import '../core/brand.dart';
 import '../core/performance.dart';
+import '../data/xtream/xtream_client.dart';
 import 'playback_engine.dart';
 
 /// Motore basato su libmpv (media_kit): decodifica hardware su tutte le
@@ -94,7 +95,7 @@ class MediaKitEngine implements PlaybackEngine {
       'demuxer-readahead-secs': _perf.isLight ? '4' : '8',
       'network-timeout': '12',
       'stream-lavf-o': 'reconnect=1,reconnect_streamed=1,reconnect_on_network_error=1,reconnect_delay_max=4',
-      'user-agent': 'IPTVPlayer/0.1',
+      'user-agent': XtreamClient.userAgent,
       'keep-open': 'no',
       'audio-display': 'no',
     };
@@ -114,8 +115,18 @@ class MediaKitEngine implements PlaybackEngine {
         buffering: true,
       ),
     );
+    // Stesso User-Agent accettato dall'API del provider.
+    final p = _player.platform;
+    if (p is NativePlayer && XtreamClient.userAgent != _ua) {
+      _ua = XtreamClient.userAgent;
+      try {
+        await p.setProperty('user-agent', _ua);
+      } catch (_) {}
+    }
     await _player.open(Media(url), play: true);
   }
+
+  String _ua = XtreamClient.userAgent;
 
   @override
   Future<void> stop() async {
