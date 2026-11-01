@@ -154,6 +154,16 @@ class _PlayerScreenState extends State<PlayerScreen> {
         k == LogicalKeyboardKey.channelDown ||
         k == LogicalKeyboardKey.pageDown) {
       _tuner.zap(-1);
+    } else if (k == LogicalKeyboardKey.arrowLeft ||
+        k == LogicalKeyboardKey.arrowRight) {
+      final d = k == LogicalKeyboardKey.arrowRight ? 1 : -1;
+      // Con le informazioni aperte (OK) si sfoglia la guida del canale,
+      // altrimenti si sfogliano gli altri canali senza cambiare il video.
+      if (_tuner.infoMode && _tuner.bannerVisible) {
+        _tuner.stepEpg(d);
+      } else {
+        _tuner.browse(d);
+      }
     } else if (repeat) {
       return KeyEventResult.ignored;
     } else if (digitForKey(k) case final d?) {
@@ -161,11 +171,18 @@ class _PlayerScreenState extends State<PlayerScreen> {
     } else if (isSelectKey(k)) {
       if (_tuner.digits.isNotEmpty) {
         _tuner.commitDigits();
+      } else if (_tuner.browsing && _tuner.bannerVisible) {
+        _tuner.confirmBrowse();
       } else if (_tuner.signalMessage == 'Canale non disponibile') {
         _tuner.retry();
-      } else {
+      } else if (_tuner.infoMode && _tuner.bannerVisible) {
+        // Secondo OK: elenco completo dei canali.
         _open(_Panel.list);
+      } else {
+        _tuner.showInfo();
       }
+    } else if (k == LogicalKeyboardKey.keyL) {
+      _open(_Panel.list);
     } else if (k == LogicalKeyboardKey.keyG || k == LogicalKeyboardKey.guide) {
       _open(_Panel.guide);
     } else if (k == LogicalKeyboardKey.keyS ||
@@ -175,11 +192,12 @@ class _PlayerScreenState extends State<PlayerScreen> {
         k == LogicalKeyboardKey.contextMenu ||
         k == LogicalKeyboardKey.settings) {
       _open(_Panel.settings);
-    } else if (k == LogicalKeyboardKey.keyI ||
-        k == LogicalKeyboardKey.info ||
-        k == LogicalKeyboardKey.arrowLeft ||
-        k == LogicalKeyboardKey.arrowRight) {
-      _tuner.toggleBanner();
+    } else if (k == LogicalKeyboardKey.keyI || k == LogicalKeyboardKey.info) {
+      if (_tuner.infoMode && _tuner.bannerVisible) {
+        _tuner.hideBanner();
+      } else {
+        _tuner.showInfo();
+      }
     } else if (k == LogicalKeyboardKey.backspace ||
         k == LogicalKeyboardKey.keyP ||
         k == LogicalKeyboardKey.mediaLast) {

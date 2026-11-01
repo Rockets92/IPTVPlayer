@@ -20,6 +20,7 @@ class TunerController extends ChangeNotifier {
   static const zapDebounce = Duration(milliseconds: 360);
   static const digitTimeout = Duration(milliseconds: 1700);
   static const bannerDuration = Duration(seconds: 5);
+  static const browseDuration = Duration(seconds: 8);
   static const connectTimeout = Duration(seconds: 16);
   static const stallTimeout = Duration(seconds: 20);
 
@@ -42,9 +43,10 @@ class TunerController extends ChangeNotifier {
   Channel? get current =>
       _current >= 0 && _current < channels.length ? channels[_current] : null;
 
-  /// Canale mostrato nel banner (durante lo zapping rapido può precedere quello in visione).
+  /// Canale mostrato nel banner: quello che si sta sfogliando con ←→,
+  /// oppure durante lo zapping rapido quello che sta per essere sintonizzato.
   Channel? get displayed {
-    final i = _pending ?? _current;
+    final i = _browse ?? _pending ?? _current;
     return i >= 0 && i < channels.length ? channels[i] : null;
   }
 
@@ -104,6 +106,16 @@ class TunerController extends ChangeNotifier {
   }
 
   bool bannerVisible = false;
+
+  /// Canale in anteprima con ←→ (il video resta su quello corrente).
+  int? _browse;
+  bool get browsing => _browse != null;
+
+  /// Banner aperto con OK sul canale corrente: ←→ sfogliano la sua guida.
+  bool infoMode = false;
+
+  /// Programma mostrato rispetto a quello in onda (0 = ora, 1 = il successivo).
+  int epgOffset = 0;
   String digits = '';
   bool muted = false;
 
@@ -152,6 +164,9 @@ class TunerController extends ChangeNotifier {
     final n = channels.length;
     final idx = ((base + delta) % n + n) % n;
     _pending = idx;
+    _browse = null;
+    infoMode = false;
+    epgOffset = 0;
     _showBanner();
     final c = channels[idx];
     unawaited(app.ensureEpg(c));
@@ -222,6 +237,48 @@ class TunerController extends ChangeNotifier {
     _notify();
   }
 
+  /// Anteprima di un altro canale senza cambiare il video (←→).
+  void browse(int delta) {
+    if (channels.isEmpty) return;
+    final base = _browse ?? (_current < 0 ? 0 : _current);
+    final n = channels.length;
+    _browse = ((base + delta) % n + n) % n;
+    infoMode = false;
+    epgOffset = 0;
+    unawaited(app.ensureEpg(channels[_browse!]));
+    _showBanner(duration: browseDuration);
+  }
+
+  /// OK durante l'anteprima: si passa al canale sfogliato.
+  void confirmBrowse() {
+    final b = _browse;
+    if (b == null) return;
+    _browse = null;
+    _tune(b, showBanner: true);
+  }
+
+  /// OK a schermo libero: informazioni sul canale in visione.
+  void showInfo() {
+    _browse = null;
+    _pending = null;
+    infoMode = true;
+    epgOffset = 0;
+    _showBanner(duration: browseDuration);
+  }
+
+  /// ←→ con le informazioni aperte: programma precedente o successivo.
+  void stepEpg(int delta) {
+    final c = current;
+    if (c == null) return;
+    final now = DateTime.now();
+    final list = app.epg.forChannel(c.id);
+    final base = app.epg.indexNear(c.id, now);
+    if (base >= 0) {
+      epgOffset = (epgOffset + delta).clamp(-base, list.length - 1 - base);
+    }
+    _showBanner(duration: browseDuration);
+  }
+
   void toggleBanner() {
     if (bannerVisible) {
       hideBanner();
@@ -236,6 +293,9 @@ class TunerController extends ChangeNotifier {
     _bannerTimer?.cancel();
     if (!bannerVisible) return;
     bannerVisible = false;
+    _browse = null;
+    infoMode = false;
+    epgOffset = 0;
     _notify();
   }
 
@@ -266,6 +326,9 @@ class TunerController extends ChangeNotifier {
   void _tune(int idx, {bool showBanner = false}) {
     _zapTimer?.cancel();
     _pending = null;
+    _browse = null;
+    infoMode = false;
+    epgOffset = 0;
     if (idx == _current && engine.state.value.status != PlaybackStatus.failed) {
       if (showBanner) _showBanner();
       return;

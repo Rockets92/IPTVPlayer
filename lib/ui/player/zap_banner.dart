@@ -10,6 +10,7 @@ import '../../state/tuner_controller.dart';
 import '../format.dart';
 import '../widgets/channel_logo.dart';
 import '../widgets/epg_progress.dart';
+import '../widgets/focus_tile.dart';
 import '../widgets/glass.dart';
 import '../widgets/now.dart';
 
@@ -30,8 +31,20 @@ class ZapBanner extends StatelessWidget {
     return NowBuilder(
       everySecond: false,
       builder: (context, now) {
-        final current = app.epg.nowOn(channel.id, now);
-        final next = app.epg.nextOn(channel.id, now);
+        var current = app.epg.nowOn(channel.id, now);
+        var next = app.epg.nextOn(channel.id, now);
+        // Info aperte con ←→: programma precedente o successivo.
+        var shift = 0;
+        if (tuner.infoMode && tuner.epgOffset != 0) {
+          final list = app.epg.forChannel(channel.id);
+          final base = app.epg.indexNear(channel.id, now);
+          final i = base + tuner.epgOffset;
+          if (base >= 0 && i >= 0 && i < list.length) {
+            current = list[i];
+            next = i + 1 < list.length ? list[i + 1] : null;
+            shift = tuner.epgOffset;
+          }
+        }
         return Glass(
           radius: compact ? 22 : 30,
           padding: EdgeInsets.fromLTRB(
@@ -46,12 +59,14 @@ class ZapBanner extends StatelessWidget {
                   now: now,
                   current: current,
                   next: next,
+                  shift: shift,
                 )
               : _Wide(
                   channel: channel,
                   now: now,
                   current: current,
                   next: next,
+                  shift: shift,
                   onAction: onAction,
                 ),
         );
@@ -68,6 +83,7 @@ class _Wide extends StatelessWidget {
     required this.now,
     required this.current,
     required this.next,
+    required this.shift,
     required this.onAction,
   });
 
@@ -75,6 +91,7 @@ class _Wide extends StatelessWidget {
   final DateTime now;
   final EpgProgramme? current;
   final EpgProgramme? next;
+  final int shift;
   final void Function(BannerAction) onAction;
 
   @override
@@ -128,6 +145,7 @@ class _Wide extends StatelessWidget {
               now: now,
               current: current,
               next: next,
+              shift: shift,
             ),
           ),
           const SizedBox(width: 28),
@@ -144,12 +162,14 @@ class _Compact extends StatelessWidget {
     required this.now,
     required this.current,
     required this.next,
+    required this.shift,
   });
 
   final Channel channel;
   final DateTime now;
   final EpgProgramme? current;
   final EpgProgramme? next;
+  final int shift;
 
   @override
   Widget build(BuildContext context) {
@@ -181,7 +201,13 @@ class _Compact extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 14),
-        _NowNext(now: now, current: current, next: next, compact: true),
+        _NowNext(
+          now: now,
+          current: current,
+          next: next,
+          shift: shift,
+          compact: true,
+        ),
       ],
     );
   }
@@ -193,12 +219,14 @@ class _Programmes extends StatelessWidget {
     required this.now,
     required this.current,
     required this.next,
+    required this.shift,
   });
 
   final Channel channel;
   final DateTime now;
   final EpgProgramme? current;
   final EpgProgramme? next;
+  final int shift;
 
   @override
   Widget build(BuildContext context) {
@@ -221,10 +249,16 @@ class _Programmes extends StatelessWidget {
             ),
             const SizedBox(width: 14),
             if (isLive) const _SignalBadges(),
+            if (tuner.browsing) const _Badge('ANTEPRIMA', accent: true),
+            const Spacer(),
+            if (tuner.browsing)
+              const KeyHint('OK', 'Guarda')
+            else if (tuner.infoMode)
+              const KeyHint('← →', 'Programmi'),
           ],
         ),
         const SizedBox(height: 16),
-        _NowNext(now: now, current: current, next: next),
+        _NowNext(now: now, current: current, next: next, shift: shift),
       ],
     );
   }
@@ -235,12 +269,16 @@ class _NowNext extends StatelessWidget {
     required this.now,
     required this.current,
     required this.next,
+    this.shift = 0,
     this.compact = false,
   });
 
   final DateTime now;
   final EpgProgramme? current;
   final EpgProgramme? next;
+
+  /// Diverso da 0 quando si sfoglia la guida: [current] non è in onda.
+  final int shift;
   final bool compact;
 
   @override
@@ -264,17 +302,28 @@ class _NowNext extends StatelessWidget {
           Row(
             children: [
               Text(
-                'ORA',
-                style: AppText.overline.copyWith(color: Palette.accent),
+                shift == 0
+                    ? 'ORA'
+                    : (cur.endTime.isBefore(now)
+                          ? 'GIÀ ANDATO'
+                          : (cur.startTime.isAfter(now) ? 'PIÙ TARDI' : 'ORA')),
+                style: AppText.overline.copyWith(
+                  color: shift > 0 ? Palette.warm : Palette.accent,
+                ),
               ),
               const SizedBox(width: 10),
               Text(
-                timeRange(cur.startTime, cur.endTime),
+                shift == 0
+                    ? timeRange(cur.startTime, cur.endTime)
+                    : '${relativeDay(cur.startTime, now)}  '
+                          '${timeRange(cur.startTime, cur.endTime)}',
                 style: AppText.mono.copyWith(color: Palette.textTertiary),
               ),
               const Spacer(),
               Text(
-                remaining(cur.remainingAt(now)),
+                shift == 0
+                    ? remaining(cur.remainingAt(now))
+                    : durationLabel(cur.duration),
                 style: AppText.mono.copyWith(color: Palette.textTertiary),
               ),
             ],
@@ -287,13 +336,23 @@ class _NowNext extends StatelessWidget {
             style: AppText.headline.copyWith(fontSize: compact ? 16 : 19),
           ),
           const SizedBox(height: 11),
-          EpgProgress(value: cur.progressAt(now)),
+          if (shift == 0)
+            EpgProgress(value: cur.progressAt(now))
+          else
+            Text(
+              (cur.description ?? '').trim().isEmpty
+                  ? (cur.category ?? '')
+                  : cur.description!.trim(),
+              maxLines: compact ? 1 : 2,
+              overflow: TextOverflow.ellipsis,
+              style: AppText.label.copyWith(color: Palette.textSecondary),
+            ),
         ],
         if (nxt != null) ...[
           SizedBox(height: cur == null ? 0 : 14),
           Row(
             children: [
-              Text('DOPO', style: AppText.overline),
+              Text(shift == 0 ? 'DOPO' : 'POI', style: AppText.overline),
               const SizedBox(width: 10),
               Text(
                 hm(nxt.startTime),
@@ -351,23 +410,29 @@ class _SignalBadges extends StatelessWidget {
 }
 
 class _Badge extends StatelessWidget {
-  const _Badge(this.text, {this.icon});
+  const _Badge(this.text, {this.icon, this.accent = false});
   final String text;
   final IconData? icon;
+  final bool accent;
 
   @override
   Widget build(BuildContext context) {
+    final color = accent ? Palette.accent : Palette.textSecondary;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.28)),
+        border: Border.all(
+          color: accent
+              ? Palette.accent.withValues(alpha: 0.5)
+              : Colors.white.withValues(alpha: 0.28),
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
-            Icon(icon, size: 11, color: Palette.textSecondary),
+            Icon(icon, size: 11, color: color),
             const SizedBox(width: 4),
           ],
           Text(
@@ -375,7 +440,7 @@ class _Badge extends StatelessWidget {
             style: AppText.overline.copyWith(
               fontSize: 10,
               letterSpacing: 0.8,
-              color: Palette.textSecondary,
+              color: color,
             ),
           ),
         ],

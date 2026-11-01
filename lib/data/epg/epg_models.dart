@@ -103,6 +103,18 @@ class EpgSchedule {
     return null;
   }
 
+  /// Indice del programma in onda, altrimenti del primo successivo
+  /// (o dell'ultimo se la guida è tutta nel passato); -1 se non c'è guida.
+  int indexNear(String channelId, DateTime at) {
+    final list = _byChannel[channelId];
+    if (list == null || list.isEmpty) return -1;
+    final t = at.millisecondsSinceEpoch ~/ 1000;
+    final i = _indexAt(list, t);
+    if (i >= 0) return i;
+    final next = list.indexWhere((p) => p.start > t);
+    return next >= 0 ? next : list.length - 1;
+  }
+
   /// Nuova guida con i programmi di [channelId] sostituiti (es. short EPG).
   EpgSchedule withChannel(String channelId, List<EpgProgramme> programmes) {
     final copy = Map<String, List<EpgProgramme>>.of(_byChannel);
