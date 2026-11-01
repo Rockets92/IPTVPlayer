@@ -181,7 +181,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
                       title: 'Mostra canali non in lista',
                       subtitle:
                           'Gli altri canali del provider, dal numero ${mapping?.unmappedStartNumber ?? 1000}',
-                      value: s.showUnmapped ?? mapping?.showUnmapped ?? true,
+                      value: s.showUnmapped ?? mapping?.showUnmapped ?? false,
                       onChanged: (v) async {
                         await s.setShowUnmapped(v);
                         await app.applyMapping();
@@ -583,6 +583,7 @@ class _Shortcuts extends StatelessWidget {
     ('0–9', 'Vai al numero'),
     ('OK', 'Elenco canali'),
     ('G', 'Guida TV'),
+    ('S', 'Fonte del canale'),
     ('I', 'Informazioni'),
     ('⌫', 'Canale precedente'),
     ('M', 'Impostazioni'),

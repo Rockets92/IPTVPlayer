@@ -28,7 +28,11 @@ class TunerController extends ChangeNotifier {
   int _current = -1;
   int? _previous;
   int? _pending;
-  int _sourceIndex = 0;
+
+  /// Ordine in cui provare le fonti del canale corrente: prima quella scelta
+  /// dall'utente (o la principale), poi le altre per il failover.
+  List<int> _order = const [];
+  int _try = 0;
   int _retries = 0;
   String? _currentId;
   int _attempt = 0;
@@ -45,6 +49,59 @@ class TunerController extends ChangeNotifier {
   }
 
   int get currentIndex => _current;
+
+  /// Indice della fonte in uso nel canale corrente.
+  int get sourceIndex {
+    final c = current;
+    if (c == null || c.sources.isEmpty || _order.isEmpty) return 0;
+    return _order[_try.clamp(0, _order.length - 1)].clamp(
+      0,
+      c.sources.length - 1,
+    );
+  }
+
+  ChannelSource? get currentSource {
+    final c = current;
+    return c == null || c.sources.isEmpty ? null : c.sources[sourceIndex];
+  }
+
+  /// Passa a un'altra fonte del canale in visione e la ricorda per la volta
+  /// successiva (anche dopo il riavvio).
+  void selectSource(int index) {
+    final c = current;
+    if (c == null || index < 0 || index >= c.sources.length) return;
+    unawaited(
+      app.settings.setSourceChoice(
+        c.id,
+        index == 0 ? null : c.sources[index].label,
+      ),
+    );
+    if (index == sourceIndex &&
+        engine.state.value.status == PlaybackStatus.playing) {
+      return;
+    }
+    _resetSources(c, start: index);
+    _retries = 0;
+    signalMessage = null;
+    _play();
+  }
+
+  int _preferredSource(Channel c) {
+    final label = app.settings.sourceChoice(c.id);
+    if (label == null) return 0;
+    final i = c.sources.indexWhere((s) => s.label == label);
+    return i < 0 ? 0 : i;
+  }
+
+  void _resetSources(Channel c, {int? start}) {
+    final first = start ?? _preferredSource(c);
+    _order = [
+      first,
+      for (var i = 0; i < c.sources.length; i++)
+        if (i != first) i,
+    ];
+    _try = 0;
+  }
 
   bool bannerVisible = false;
   String digits = '';
@@ -193,7 +250,7 @@ class TunerController extends ChangeNotifier {
 
   void retry() {
     _retries = 0;
-    _sourceIndex = 0;
+    _try = 0;
     _play();
   }
 
@@ -217,7 +274,7 @@ class TunerController extends ChangeNotifier {
     _current = idx;
     final c = channels[idx];
     _currentId = c.id;
-    _sourceIndex = 0;
+    _resetSources(c);
     _retries = 0;
     unawaited(app.settings.setLastChannelId(c.id));
     unawaited(app.ensureEpg(c));
@@ -233,9 +290,11 @@ class TunerController extends ChangeNotifier {
       _notify();
       return;
     }
-    if (_retries == 0 && _sourceIndex == 0) signalMessage = null;
+    // La lista può essere stata ricaricata con fonti diverse.
+    if (_order.length != c.sources.length) _resetSources(c);
+    if (_retries == 0 && _try == 0) signalMessage = null;
     _attempt++;
-    final src = c.sources[_sourceIndex.clamp(0, c.sources.length - 1)];
+    final src = c.sources[sourceIndex];
     _stall?.cancel();
     _stall = null;
     _watchdog?.cancel();
@@ -287,8 +346,8 @@ class TunerController extends ChangeNotifier {
     final c = current;
     if (c == null) return;
     // 1) stream alternativo dello stesso canale
-    if (_sourceIndex + 1 < c.sources.length) {
-      _sourceIndex++;
+    if (_try + 1 < _order.length) {
+      _try++;
       signalMessage = 'Ricerca segnale…';
       _notify();
       _play();
@@ -297,7 +356,7 @@ class TunerController extends ChangeNotifier {
     // 2) nuovi tentativi con attesa crescente
     if (_retries < 3) {
       _retries++;
-      _sourceIndex = 0;
+      _try = 0;
       signalMessage = 'Segnale assente · nuovo tentativo';
       _notify();
       _retryTimer?.cancel();

@@ -22,7 +22,8 @@ In build si può impostare un URL predefinito con
   "epgSources": [
     { "id": "epgshare-it", "name": "EPGShare Italia", "url": "https://…/epg_IT.xml.gz" }
   ],
-  "unmappedChannels": { "show": true, "startNumber": 1000 },
+  "preferredSources": ["hermes +"],
+  "unmappedChannels": { "show": false, "startNumber": 1000 },
   "channels": [
     {
       "number": 101,
@@ -49,7 +50,8 @@ In build si può impostare un URL predefinito con
 | `streamId` | Facoltativo: forza uno stream Xtream preciso (anche lista, per il failover). |
 | `hidden` | Nasconde il canale senza toglierlo dal file. |
 | `epgSources` | Guide XMLTV esterne (anche `.gz`), lette in ordine. |
-| `unmappedChannels` | Mostra gli altri canali del provider a partire da `startNumber`. |
+| `preferredSources` | Etichette di fonte da usare come principali, in ordine (predefinito `["hermes +"]`). |
+| `unmappedChannels` | Con `show: true` mostra anche gli altri canali del provider (senza doppioni) a partire da `startNumber`. Predefinito: spento, si vede solo la lista. |
 
 ## Come avviene l'abbinamento
 
@@ -57,10 +59,18 @@ In build si può impostare un URL predefinito con
 2. Altrimenti si confrontano nome e alias con i nomi del provider dopo una
    normalizzazione che ignora prefissi (`IT:`, `|IT|`, `[ITA]`), qualità
    (`HD`, `FHD`, `4K`, `HEVC`…) e simboli: `IT: Sky Uno +1 FHD` → `skyunoplus1`.
-3. Se più stream corrispondono, sono tutti tenuti come sorgenti alternative
-   (failover automatico), ordinati per qualità. Nel profilo light si
+3. Si riconoscono anche le copie con un'etichetta di fonte prima o dopo il
+   nome (`HERMES + SKY UNO`, `SKY UNO | BACKUP`). Un'etichetta conta come
+   fonte se è in `preferredSources` oppure accompagna almeno 3 canali diversi;
+   le etichette con numeri non contano, così `Sky Uno +1` resta un canale a sé.
+4. Ogni canale compare **una sola volta**: tutti gli stream trovati diventano
+   fonti dello stesso canale. Prima quelle con un'etichetta di
+   `preferredSources`, poi le altre per qualità. Nel profilo light si
    preferisce l'HD al Full HD e si evita il 4K.
-4. I canali della lista che il provider non ha non vengono mostrati: lo
+5. Con il tasto **S** (o il pulsante ⇄ nel banner) si sceglie la fonte del
+   canale in visione; la scelta viene ricordata per quel canale. Se la fonte
+   cade, il player passa da solo alle altre.
+6. I canali della lista che il provider non ha non vengono mostrati: lo
    zapping non incontra canali vuoti.
 
 ## Guida TV

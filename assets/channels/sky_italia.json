@@ -12,8 +12,9 @@
       "url": "https://epgshare01.online/epgshare01/epg_ripper_IT1.xml.gz"
     }
   ],
+  "preferredSources": ["hermes +"],
   "unmappedChannels": {
-    "show": true,
+    "show": false,
     "startNumber": 1000
   },
   "channels": [

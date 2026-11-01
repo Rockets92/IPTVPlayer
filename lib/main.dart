@@ -58,7 +58,6 @@ Future<void> main() async {
     ),
   );
 
-
   final engine = MediaKitEngine(perf);
   final app = AppController(settings: settings, perf: perf);
   final tuner = TunerController(app: app, engine: engine);

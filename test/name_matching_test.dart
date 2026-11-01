@@ -129,6 +129,68 @@ void main() {
     });
   });
 
+  group('Fonti multiple', () {
+    final mapping = ChannelMapping.fromJson({
+      'channels': [
+        {'number': 101, 'name': 'Rai 1', 'group': 'A'},
+        {'number': 102, 'name': 'Rai 2', 'group': 'A'},
+        {'number': 108, 'name': 'Sky Uno', 'group': 'A'},
+        {'number': 109, 'name': 'Sky Uno +1', 'group': 'A'},
+        {'number': 301, 'name': 'Sky Cinema Uno', 'group': 'B'},
+      ],
+    });
+    const streams = [
+      XtreamLiveStream(streamId: 1, name: 'IT: Rai 1 FHD'),
+      XtreamLiveStream(streamId: 2, name: 'HERMES + RAI 1 HD'),
+      XtreamLiveStream(streamId: 3, name: 'IT: Rai 2 HD'),
+      XtreamLiveStream(streamId: 4, name: 'Hermes+ Rai 2'),
+      XtreamLiveStream(streamId: 5, name: 'IT: Sky Uno FHD'),
+      XtreamLiveStream(streamId: 6, name: 'HERMES + SKY UNO'),
+      XtreamLiveStream(streamId: 7, name: 'IT: Sky Uno +1'),
+      XtreamLiveStream(streamId: 8, name: 'DAZN | Sky Cinema Uno'),
+      XtreamLiveStream(streamId: 9, name: 'HERMES + SKY CINEMA UNO 4K'),
+      XtreamLiveStream(streamId: 10, name: 'Sky Uno Mix'),
+    ];
+
+    test('ogni canale compare una volta, con "hermes +" come principale', () {
+      final list = const ChannelMatcher().build(
+        mapping: mapping,
+        streams: streams,
+      );
+      expect(list.map((c) => c.number), [101, 102, 108, 109, 301]);
+      expect(list[0].sources.map((s) => s.streamId), [2, 1]);
+      expect(list[0].sources.first.preferred, isTrue);
+      expect(list[1].sources.map((s) => s.streamId), [4, 3]);
+      expect(list[2].sources.map((s) => s.streamId), [6, 5]);
+      // "+1" è un altro canale, non una fonte di Sky Uno.
+      expect(list[3].sources.single.streamId, 7);
+      expect(list[4].sources.first.streamId, 9);
+    });
+
+    test('lista rigida: niente canali fuori lista per impostazione', () {
+      final list = const ChannelMatcher().build(
+        mapping: mapping,
+        streams: streams,
+      );
+      expect(list.every((c) => c.mapped), isTrue);
+      expect(list.length, 5);
+    });
+
+    test('fuori lista, se attivati, senza doppioni', () {
+      final list = const ChannelMatcher().build(
+        mapping: mapping,
+        streams: const [
+          ...streams,
+          XtreamLiveStream(streamId: 20, name: 'IT: Canale Locale HD'),
+          XtreamLiveStream(streamId: 21, name: 'IT: Canale Locale SD'),
+        ],
+        showUnmapped: true,
+      );
+      final extra = list.where((c) => !c.mapped).map((c) => c.name).toList();
+      expect(extra.where((n) => n.contains('Canale Locale')).length, 1);
+    });
+  });
+
   test('la lista integrata Sky è valida', () {
     final json = jsonDecode(
       File('assets/channels/sky_italia.json').readAsStringSync(),

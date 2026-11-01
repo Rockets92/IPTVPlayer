@@ -60,7 +60,7 @@ class ZapBanner extends StatelessWidget {
   }
 }
 
-enum BannerAction { list, guide, settings }
+enum BannerAction { list, guide, settings, sources }
 
 class _Wide extends StatelessWidget {
   const _Wide({
@@ -328,10 +328,17 @@ class _SignalBadges extends StatelessWidget {
       builder: (context, s, _) {
         final res = s.resolutionBadge;
         final muted = context.select<TunerController, bool>((t) => t.muted);
+        final (src, total) = context.select<TunerController, (int, int)>(
+          (t) => (t.sourceIndex, t.current?.sources.length ?? 0),
+        );
         return Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (res != null) _Badge(res),
+            if (total > 1) ...[
+              if (res != null) const SizedBox(width: 6),
+              _Badge('FONTE ${src + 1}/$total'),
+            ],
             if (muted) ...[
               const SizedBox(width: 6),
               const _Badge('MUTO', icon: Icons.volume_off_rounded),
@@ -414,6 +421,17 @@ class _ClockColumn extends StatelessWidget {
               tooltip: 'Guida (G)',
               onTap: () => onAction(BannerAction.guide),
             ),
+            if ((context.select<TunerController, int>(
+                  (t) => t.current?.sources.length ?? 0,
+                )) >
+                1) ...[
+              const SizedBox(width: 8),
+              _RoundAction(
+                icon: Icons.swap_horiz_rounded,
+                tooltip: 'Fonte (S)',
+                onTap: () => onAction(BannerAction.sources),
+              ),
+            ],
             const SizedBox(width: 8),
             _RoundAction(
               icon: Icons.tune_rounded,

@@ -21,9 +21,10 @@ import 'channel_list_overlay.dart';
 import 'guide_overlay.dart';
 import 'number_entry.dart';
 import 'signal_overlay.dart';
+import 'source_picker.dart';
 import 'zap_banner.dart';
 
-enum _Panel { none, list, guide, settings }
+enum _Panel { none, list, guide, settings, sources }
 
 bool get _isDesktop =>
     !kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS);
@@ -167,6 +168,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
       }
     } else if (k == LogicalKeyboardKey.keyG || k == LogicalKeyboardKey.guide) {
       _open(_Panel.guide);
+    } else if (k == LogicalKeyboardKey.keyS ||
+        k == LogicalKeyboardKey.colorF1Green) {
+      if (_tuner.current != null) _open(_Panel.sources);
     } else if (k == LogicalKeyboardKey.keyM ||
         k == LogicalKeyboardKey.contextMenu ||
         k == LogicalKeyboardKey.settings) {
@@ -209,6 +213,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     BannerAction.list => _open(_Panel.list),
     BannerAction.guide => _open(_Panel.guide),
     BannerAction.settings => _open(_Panel.settings),
+    BannerAction.sources => _open(_Panel.sources),
   };
 
   @override
@@ -357,6 +362,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
                       ),
                       _Panel.guide => GuideOverlay(
                         key: const ValueKey(_Panel.guide),
+                        onClose: _close,
+                      ),
+                      _Panel.sources => SourcePicker(
+                        key: const ValueKey(_Panel.sources),
                         onClose: _close,
                       ),
                       _Panel.settings => SettingsPanel(

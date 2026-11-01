@@ -98,12 +98,16 @@ class ChannelMapping {
     required this.revision,
     required this.channels,
     this.epgSources = const [],
-    this.showUnmapped = true,
+    this.showUnmapped = false,
     this.unmappedStartNumber = 1000,
+    this.preferredSources = defaultPreferredSources,
     this.origin = 'integrata',
   });
 
   static const supportedSchema = 1;
+
+  /// Fonti preferite quando un canale è disponibile da più stream.
+  static const defaultPreferredSources = ['hermes +'];
 
   final String id;
   final String name;
@@ -112,6 +116,10 @@ class ChannelMapping {
   final List<EpgSourceConfig> epgSources;
   final bool showUnmapped;
   final int unmappedStartNumber;
+
+  /// Etichette di fonte da preferire, in ordine (es. "hermes +"): lo stream
+  /// che le contiene nel nome diventa la fonte principale del canale.
+  final List<String> preferredSources;
 
   /// Da dove è stata caricata (integrata, remota, file locale, cache).
   final String origin;
@@ -124,6 +132,7 @@ class ChannelMapping {
     epgSources: epgSources,
     showUnmapped: showUnmapped,
     unmappedStartNumber: unmappedStartNumber,
+    preferredSources: preferredSources,
     origin: o,
   );
 
@@ -150,6 +159,7 @@ class ChannelMapping {
     channels.sort((a, b) => a.number.compareTo(b.number));
     final unmapped = j['unmappedChannels'];
     final sources = j['epgSources'];
+    final preferred = j['preferredSources'];
     return ChannelMapping(
       id: asString(j['id'], 'custom'),
       name: asString(j['name'], 'Lista personalizzata'),
@@ -162,10 +172,13 @@ class ChannelMapping {
                   EpgSourceConfig.fromJson(s.cast<String, Object?>()),
             ].where((s) => s.url.isNotEmpty).toList()
           : const [],
-      showUnmapped: unmapped is Map ? asBool(unmapped['show'] ?? true) : true,
+      showUnmapped: unmapped is Map && asBool(unmapped['show'] ?? false),
       unmappedStartNumber: unmapped is Map
           ? asInt(unmapped['startNumber']) ?? 1000
           : 1000,
+      preferredSources: preferred is List
+          ? preferred.map(asString).where((e) => e.isNotEmpty).toList()
+          : defaultPreferredSources,
     );
   }
 }

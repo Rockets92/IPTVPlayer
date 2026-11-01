@@ -38,6 +38,7 @@ proiettori e box Android da 1 GB di RAM.
 | 0–9 | Vai al numero |
 | OK / Invio | Elenco canali (←→ cambia categoria) |
 | G / Guida | Guida TV |
+| S / tasto verde | Scegli la fonte del canale (se il provider ne ha più di una) |
 | I / ← → | Mostra/nasconde le informazioni |
 | ⌫ / P | Canale precedente |
 | M / Menu | Impostazioni |

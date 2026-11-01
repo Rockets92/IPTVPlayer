@@ -31,6 +31,7 @@ class SettingsStore {
   static const _kShowUnmapped = 'channels.showUnmapped';
   static const _kPerf = 'ui.performanceMode';
   static const _kFormat = 'stream.format';
+  static const _kSources = 'tuner.sourceChoices';
 
   XtreamCredentials? get credentials {
     final raw = _prefs.getString(_kCreds);
@@ -100,6 +101,32 @@ class SettingsStore {
   );
   Future<void> setStreamFormat(StreamFormat f) =>
       _prefs.setString(_kFormat, f.name);
+
+  /// Fonte scelta dall'utente per ogni canale (id canale → nome dello stream).
+  /// Si salva il nome e non l'id dello stream, che il provider può cambiare.
+  Map<String, String> get sourceChoices {
+    final raw = _prefs.getString(_kSources);
+    if (raw == null) return const {};
+    try {
+      return (jsonDecode(raw) as Map).map(
+        (k, v) => MapEntry(k.toString(), v.toString()),
+      );
+    } catch (_) {
+      return const {};
+    }
+  }
+
+  String? sourceChoice(String channelId) => sourceChoices[channelId];
+
+  Future<void> setSourceChoice(String channelId, String? label) {
+    final m = Map<String, String>.of(sourceChoices);
+    if (label == null) {
+      m.remove(channelId);
+    } else {
+      m[channelId] = label;
+    }
+    return _prefs.setString(_kSources, jsonEncode(m));
+  }
 
   Future<void> clearAccount() async {
     await _prefs.remove(_kCreds);
