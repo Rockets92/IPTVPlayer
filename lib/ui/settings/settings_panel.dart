@@ -359,6 +359,21 @@ class _SettingsPanelState extends State<SettingsPanel> {
                         widget.onToast('Applicato al prossimo avvio');
                       },
                     ),
+                    _ChoiceRow<UiScale>(
+                      title: 'Dimensione interfaccia',
+                      value: s.uiScale,
+                      options: const {
+                        UiScale.auto: 'Auto',
+                        UiScale.large: 'Grande',
+                        UiScale.medium: 'Media',
+                        UiScale.small: 'Piccola',
+                      },
+                      onChanged: (v) async {
+                        await s.setUiScale(v);
+                        app.settingsChanged();
+                        setState(() {});
+                      },
+                    ),
                     _InfoRow(
                       'Profilo attivo',
                       '${perf.isLight ? 'Leggero' : 'Completo'} · ${perf.reason}',

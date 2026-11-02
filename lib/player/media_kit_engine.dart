@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -25,12 +26,20 @@ class MediaKitEngine implements PlaybackEngine {
     );
     _video = VideoController(
       _player,
-      configuration: VideoControllerConfiguration(
-        enableHardwareAcceleration: true,
-        // Sui box da 1 GB si limita la texture a 720p: la GPU ringrazia.
-        width: _perf.isLight ? 1280 : null,
-        height: _perf.isLight ? 720 : null,
-      ),
+      configuration: _directSurface
+          // Box e chiavette Android poco potenti: il decoder hardware
+          // disegna direttamente sulla superficie video, senza copie
+          // nella GPU di Flutter (è la via più fluida su Chromecast & co.).
+          ? const VideoControllerConfiguration(
+              vo: 'mediacodec_embed',
+              hwdec: 'mediacodec',
+            )
+          : VideoControllerConfiguration(
+              enableHardwareAcceleration: true,
+              // Sui box da 1 GB si limita la texture a 720p.
+              width: _perf.isLight ? 1280 : null,
+              height: _perf.isLight ? 720 : null,
+            ),
     );
     _ready = _configure();
     _subs.addAll([
@@ -72,6 +81,8 @@ class MediaKitEngine implements PlaybackEngine {
   }
 
   final PerformanceProfile _perf;
+
+  bool get _directSurface => !kIsWeb && Platform.isAndroid && _perf.isLight;
   late final Player _player;
   late final VideoController _video;
   late final Future<void> _ready;
@@ -88,11 +99,31 @@ class MediaKitEngine implements PlaybackEngine {
     if (p is! NativePlayer) return;
     final props = <String, String>{
       // Live: si privilegia la ripartenza rapida rispetto alla cache lunga.
+      // Sui dispositivi leggeri un po' più di scorta evita i piccoli scatti
+      // dovuti alla rete; prima di partire si accumulano ~2 secondi.
       'cache': 'yes',
-      'cache-secs': _perf.isLight ? '6' : '12',
+      'cache-secs': _perf.isLight ? '10' : '12',
       'demuxer-max-bytes': _perf.demuxerMaxBytes,
-      'demuxer-max-back-bytes': _perf.isLight ? '1MiB' : '8MiB',
-      'demuxer-readahead-secs': _perf.isLight ? '4' : '8',
+      'demuxer-max-back-bytes': _perf.isLight ? '2MiB' : '8MiB',
+      'demuxer-readahead-secs': '8',
+      'cache-pause-initial': _perf.isLight ? 'yes' : 'no',
+      'cache-pause-wait': '2',
+      // Se la decodifica resta indietro si saltano fotogrammi invece di
+      // rallentare tutto; il video segue l'audio (niente scatti di ritmo).
+      'framedrop': 'vo',
+      'video-sync': 'audio',
+      'vd-lavc-fast': 'yes',
+      'vd-lavc-skiploopfilter': _perf.isLight ? 'nonkey' : 'default',
+      'vd-lavc-threads': '0',
+      // Ridimensionamento semplice: meno lavoro per GPU modeste.
+      if (_perf.isLight) ...{
+        'scale': 'bilinear',
+        'dscale': 'bilinear',
+        'cscale': 'bilinear',
+        'dither': 'no',
+        'deband': 'no',
+        'interpolation': 'no',
+      },
       'network-timeout': '12',
       'stream-lavf-o': 'reconnect=1,reconnect_streamed=1,reconnect_on_network_error=1,reconnect_delay_max=4',
       'user-agent': XtreamClient.userAgent,

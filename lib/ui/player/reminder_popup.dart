@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../core/theme.dart';
 import '../../state/reminder_controller.dart';
@@ -7,6 +8,70 @@ import '../widgets/focus_tile.dart';
 import '../widgets/glass.dart';
 import '../widgets/glass_field.dart';
 
+/// Mostra l'avviso sopra a tutto, con il focus su "Vai al canale": col
+/// telecomando basta OK. Restituisce true se si va al canale.
+Future<bool> showReminderDialog(BuildContext context, Reminder reminder) async {
+  final go = await showGeneralDialog<bool>(
+    context: context,
+    barrierDismissible: true,
+    barrierLabel: 'Promemoria',
+    barrierColor: Colors.black.withValues(alpha: 0.45),
+    transitionDuration: const Duration(milliseconds: 200),
+    pageBuilder: (context, _, _) => _ReminderDialog(reminder: reminder),
+    transitionBuilder: (context, a, _, child) => FadeTransition(
+      opacity: a,
+      child: ScaleTransition(
+        scale: Tween(
+          begin: 0.97,
+          end: 1.0,
+        ).animate(CurvedAnimation(parent: a, curve: Curves.easeOutCubic)),
+        child: child,
+      ),
+    ),
+  );
+  return go ?? false;
+}
+
+class _ReminderDialog extends StatefulWidget {
+  const _ReminderDialog({required this.reminder});
+  final Reminder reminder;
+
+  @override
+  State<_ReminderDialog> createState() => _ReminderDialogState();
+}
+
+class _ReminderDialogState extends State<_ReminderDialog> {
+  bool _closed = false;
+
+  void _close(bool go) {
+    if (_closed) return;
+    _closed = true;
+    Navigator.of(context).pop(go);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Risolto altrove (dal telefono o scaduto): l'avviso si chiude da solo.
+    final due = context.select<ReminderController, Reminder?>((r) => r.due);
+    if (!identical(due, widget.reminder) && !_closed) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _close(false);
+      });
+    }
+    return Center(
+      child: Material(
+        type: MaterialType.transparency,
+        child: ReminderPopup(
+          reminder: widget.reminder,
+          autofocus: true,
+          onGo: () => _close(true),
+          onDismiss: () => _close(false),
+        ),
+      ),
+    );
+  }
+}
+
 /// Avviso che compare 5 minuti prima di un programma prenotato.
 class ReminderPopup extends StatelessWidget {
   const ReminderPopup({
@@ -14,8 +79,10 @@ class ReminderPopup extends StatelessWidget {
     required this.reminder,
     required this.onGo,
     required this.onDismiss,
+    this.autofocus = false,
   });
 
+  final bool autofocus;
   final Reminder reminder;
   final VoidCallback onGo;
   final VoidCallback onDismiss;
@@ -75,7 +142,11 @@ class ReminderPopup extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: GlassButton(label: 'Vai al canale', onPressed: onGo),
+                  child: GlassButton(
+                    label: 'Vai al canale',
+                    autofocus: autofocus,
+                    onPressed: onGo,
+                  ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -91,7 +162,8 @@ class ReminderPopup extends StatelessWidget {
             const Wrap(
               spacing: 16,
               children: [
-                KeyHint('OK', 'Vai al canale'),
+                KeyHint('← →', 'Scegli'),
+                KeyHint('OK', 'Conferma'),
                 KeyHint('Indietro', 'Continua a guardare'),
               ],
             ),

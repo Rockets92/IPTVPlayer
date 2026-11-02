@@ -65,7 +65,11 @@ class _PlayerScreenState extends State<PlayerScreen> {
         DeviceOrientation.landscapeRight,
       ]);
     }
-    WidgetsBinding.instance.addPostFrameCallback((_) => _tuner.start());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _tuner.start();
+      // Promemoria già scattato prima che il player fosse pronto.
+      _onReminder();
+    });
     context.read<AppController>().addListener(_onApp);
     _reminders.addListener(_onReminder);
     _tuner.addListener(_onTuner);
@@ -74,8 +78,14 @@ class _PlayerScreenState extends State<PlayerScreen> {
   int _pinSeen = 0;
   bool _pinOpen = false;
 
+  /// Azione del banner scelta col telecomando (null: menu non attivo).
+  int? _menu;
+
   /// Canale per adulti protetto: si chiede il PIN.
   Future<void> _onTuner() async {
+    if (_menu != null && !_tuner.bannerVisible && mounted) {
+      setState(() => _menu = null);
+    }
     if (_tuner.pinRequest == _pinSeen || !_tuner.locked || _pinOpen) return;
     _pinSeen = _tuner.pinRequest;
     final c = _tuner.current;
@@ -96,12 +106,38 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   late final ReminderController _reminders = context.read<ReminderController>();
 
-  /// Un promemoria scatta: si chiude ciò che è aperto e l'avviso prende i tasti.
-  void _onReminder() {
-    if (_reminders.due == null || !mounted) return;
-    if (_panel != _Panel.none) setState(() => _panel = _Panel.none);
+  Reminder? _reminderShown;
+
+  /// Un promemoria scatta: si chiude tutto ciò che è aperto (pannelli e
+  /// finestre) e l'avviso compare sopra a tutto, con il focus già su
+  /// "Vai al canale".
+  Future<void> _onReminder() async {
+    final r = _reminders.due;
+    if (r == null || !mounted || identical(r, _reminderShown)) return;
+    _reminderShown = r;
+    if (_panel != _Panel.none || _menu != null) {
+      setState(() {
+        _panel = _Panel.none;
+        _menu = null;
+      });
+    }
     _tuner.hideBanner();
+    final me = ModalRoute.of(context);
+    if (me != null) Navigator.of(context).popUntil((route) => route == me);
+    final go = await showReminderDialog(context, r);
+    _reminderShown = null;
+    if (!mounted) return;
     _rootFocus.requestFocus();
+    if (!identical(_reminders.due, r)) {
+      // Già risolto altrove; se nel frattempo ne è scattato un altro, si mostra.
+      if (_reminders.due != null) _onReminder();
+      return;
+    }
+    if (go) {
+      _acceptReminder();
+    } else {
+      _reminders.resolve();
+    }
   }
 
   void _acceptReminder() {
@@ -168,7 +204,36 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   void _open(_Panel p) {
     _tuner.hideBanner();
-    setState(() => _panel = p);
+    setState(() {
+      _menu = null;
+      _panel = p;
+    });
+  }
+
+  /// Menu del banner col telecomando: ←→ scelgono, OK apre, ↑/Indietro esce.
+  KeyEventResult _onMenuKey(KeyEvent e, LogicalKeyboardKey k) {
+    final actions = bannerActions(_tuner);
+    final i = (_menu ?? 0).clamp(0, actions.length - 1);
+    if (k == LogicalKeyboardKey.arrowLeft ||
+        k == LogicalKeyboardKey.arrowRight) {
+      final d = k == LogicalKeyboardKey.arrowRight ? 1 : -1;
+      setState(() => _menu = (i + d).clamp(0, actions.length - 1));
+      _tuner.holdBanner();
+    } else if (e is KeyRepeatEvent) {
+      return KeyEventResult.handled;
+    } else if (isSelectKey(k)) {
+      setState(() => _menu = null);
+      _onBannerAction(actions[i]);
+    } else if (k == LogicalKeyboardKey.arrowUp || isBackKey(k)) {
+      setState(() => _menu = null);
+      _tuner.holdBanner();
+    } else if (k == LogicalKeyboardKey.arrowDown) {
+      _tuner.holdBanner();
+    } else {
+      setState(() => _menu = null);
+      return KeyEventResult.ignored;
+    }
+    return KeyEventResult.handled;
   }
 
   void _close() {
@@ -223,7 +288,20 @@ class _PlayerScreenState extends State<PlayerScreen> {
     // Con un pannello aperto i tasti appartengono al pannello (e alla
     // navigazione direzionale del focus).
     if (_panel != _Panel.none) return KeyEventResult.ignored;
+    if (_menu != null && _tuner.bannerVisible) {
+      final r = _onMenuKey(e, k);
+      if (r == KeyEventResult.handled) return r;
+    }
     final repeat = e is KeyRepeatEvent;
+    // Informazioni aperte (OK): ↓ entra nel menu (canali, guida, impostazioni…).
+    if (k == LogicalKeyboardKey.arrowDown &&
+        !repeat &&
+        _tuner.infoMode &&
+        _tuner.bannerVisible) {
+      setState(() => _menu = 0);
+      _tuner.holdBanner();
+      return KeyEventResult.handled;
+    }
 
     if (k == LogicalKeyboardKey.arrowUp ||
         k == LogicalKeyboardKey.channelUp ||
@@ -425,7 +503,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
                         child: _Reveal(
                           visible: tuner.bannerVisible && _panel == _Panel.none,
                           offset: const Offset(0, 0.25),
-                          child: ZapBanner(onAction: _onBannerAction),
+                          child: ZapBanner(
+                            onAction: _onBannerAction,
+                            menuIndex: tuner.bannerVisible ? _menu : null,
+                          ),
                         ),
                       ),
                     ),
@@ -500,25 +581,6 @@ class _PlayerScreenState extends State<PlayerScreen> {
                         onToast: _showToast,
                       ),
                     },
-                  ),
-                ),
-
-                // 8. Promemoria in arrivo
-                Positioned(
-                  top: margin,
-                  right: margin,
-                  child: Consumer<ReminderController>(
-                    builder: (context, rc, _) => _Reveal(
-                      visible: rc.due != null,
-                      offset: const Offset(0.2, 0),
-                      child: rc.due == null
-                          ? const SizedBox(width: 420)
-                          : ReminderPopup(
-                              reminder: rc.due!,
-                              onGo: _acceptReminder,
-                              onDismiss: rc.resolve,
-                            ),
-                    ),
                   ),
                 ),
 

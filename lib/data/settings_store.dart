@@ -16,6 +16,9 @@ extension StreamFormatX on StreamFormat {
 /// Canali per adulti (categoria "XXX" del provider).
 enum AdultMode { off, on, pin }
 
+/// Dimensione dell'interfaccia: su TV "auto" la riduce come su un decoder.
+enum UiScale { auto, large, medium, small }
+
 /// Preferenze persistenti.
 class SettingsStore {
   SettingsStore(this._prefs);
@@ -39,6 +42,7 @@ class SettingsStore {
   static const _kFormat = 'stream.format';
   static const _kSources = 'tuner.sourceChoices';
   static const _kAdult = 'channels.adultMode';
+  static const _kUiScale = 'ui.scale';
   static const _kAdultPin = 'channels.adultPin';
 
   XtreamCredentials? get credentials {
@@ -135,6 +139,12 @@ class SettingsStore {
     }
     return _prefs.setString(_kSources, jsonEncode(m));
   }
+
+  UiScale get uiScale => UiScale.values.firstWhere(
+    (m) => m.name == _prefs.getString(_kUiScale),
+    orElse: () => UiScale.auto,
+  );
+  Future<void> setUiScale(UiScale v) => _prefs.setString(_kUiScale, v.name);
 
   /// Predefinito: canali per adulti nascosti.
   AdultMode get adultMode => AdultMode.values.firstWhere(

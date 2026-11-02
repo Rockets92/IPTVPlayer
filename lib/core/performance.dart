@@ -41,7 +41,7 @@ class PerformanceProfile {
   int get epgMaxDescription => isLight ? 220 : 900;
 
   /// Buffer di demuxing per libmpv.
-  String get demuxerMaxBytes => isLight ? '12MiB' : '64MiB';
+  String get demuxerMaxBytes => isLight ? '24MiB' : '64MiB';
   int get playerBufferBytes => isLight ? 8 << 20 : 32 << 20;
 
   /// Cache immagini (loghi) in memoria.

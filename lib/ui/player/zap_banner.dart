@@ -17,9 +17,12 @@ import '../widgets/now.dart';
 
 /// Banner informativo in basso, mostrato a ogni cambio canale.
 class ZapBanner extends StatelessWidget {
-  const ZapBanner({super.key, required this.onAction});
+  const ZapBanner({super.key, required this.onAction, this.menuIndex});
 
   final void Function(BannerAction action) onAction;
+
+  /// Azione evidenziata quando si naviga il menu con le frecce (telecomando).
+  final int? menuIndex;
 
   @override
   Widget build(BuildContext context) {
@@ -67,12 +70,28 @@ class ZapBanner extends StatelessWidget {
             compact ? 16 : 24,
           ),
           child: compact
-              ? _Compact(
-                  channel: channel,
-                  now: now,
-                  current: current,
-                  next: next,
-                  shift: shift,
+              ? Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _Compact(
+                      channel: channel,
+                      now: now,
+                      current: current,
+                      next: next,
+                      shift: shift,
+                    ),
+                    if (menuIndex != null) ...[
+                      const SizedBox(height: 14),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: _ActionRow(
+                          onAction: onAction,
+                          menuIndex: menuIndex,
+                        ),
+                      ),
+                    ],
+                  ],
                 )
               : _Wide(
                   channel: channel,
@@ -81,6 +100,7 @@ class ZapBanner extends StatelessWidget {
                   next: next,
                   shift: shift,
                   onAction: onAction,
+                  menuIndex: menuIndex,
                 ),
         );
       },
@@ -90,6 +110,15 @@ class ZapBanner extends StatelessWidget {
 
 enum BannerAction { list, guide, settings, sources, plusOne }
 
+/// Azioni mostrate nel banner, nell'ordine in cui le si percorre con ←→.
+List<BannerAction> bannerActions(TunerController t) => [
+  BannerAction.list,
+  BannerAction.guide,
+  if (t.canTogglePlusOne) BannerAction.plusOne,
+  if (t.activeSources.length > 1) BannerAction.sources,
+  BannerAction.settings,
+];
+
 class _Wide extends StatelessWidget {
   const _Wide({
     required this.channel,
@@ -98,6 +127,7 @@ class _Wide extends StatelessWidget {
     required this.next,
     required this.shift,
     required this.onAction,
+    this.menuIndex,
   });
 
   final Channel channel;
@@ -106,6 +136,7 @@ class _Wide extends StatelessWidget {
   final EpgProgramme? next;
   final int shift;
   final void Function(BannerAction) onAction;
+  final int? menuIndex;
 
   @override
   Widget build(BuildContext context) {
@@ -162,7 +193,7 @@ class _Wide extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 28),
-          _ClockColumn(now: now, onAction: onAction),
+          _ClockColumn(now: now, onAction: onAction, menuIndex: menuIndex),
         ],
       ),
     );
@@ -283,6 +314,10 @@ class _Programmes extends StatelessWidget {
                 const KeyHint('OK', 'Promemoria'),
             ] else if (tuner.infoMode)
               const KeyHint('← →', 'Programmi'),
+            if (tuner.infoMode && !tuner.browsing) ...[
+              const SizedBox(width: 12),
+              const KeyHint('↓', 'Menu'),
+            ],
           ],
         ),
         const SizedBox(height: 16),
@@ -478,9 +513,14 @@ class _Badge extends StatelessWidget {
 }
 
 class _ClockColumn extends StatelessWidget {
-  const _ClockColumn({required this.now, required this.onAction});
+  const _ClockColumn({
+    required this.now,
+    required this.onAction,
+    this.menuIndex,
+  });
   final DateTime now;
   final void Function(BannerAction) onAction;
+  final int? menuIndex;
 
   @override
   Widget build(BuildContext context) {
@@ -500,54 +540,62 @@ class _ClockColumn extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 18),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _RoundAction(
+        _ActionRow(onAction: onAction, menuIndex: menuIndex),
+      ],
+    );
+  }
+}
+
+/// Pulsanti rapidi: si toccano col mouse o col dito, oppure col telecomando
+/// (↓ dalle informazioni, ←→ per scegliere, OK per aprire).
+class _ActionRow extends StatelessWidget {
+  const _ActionRow({required this.onAction, this.menuIndex});
+  final void Function(BannerAction) onAction;
+  final int? menuIndex;
+
+  @override
+  Widget build(BuildContext context) {
+    final tuner = context.watch<TunerController>();
+    final actions = bannerActions(tuner);
+    final onPlusOne = tuner.timeshift || tuner.current?.baseChannelId != null;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var i = 0; i < actions.length; i++) ...[
+          if (i > 0) const SizedBox(width: 8),
+          switch (actions[i]) {
+            BannerAction.list => _RoundAction(
               icon: Icons.format_list_bulleted_rounded,
-              tooltip: 'Canali (OK)',
+              tooltip: 'Canali',
+              focused: menuIndex == i,
               onTap: () => onAction(BannerAction.list),
             ),
-            const SizedBox(width: 8),
-            _RoundAction(
+            BannerAction.guide => _RoundAction(
               icon: Icons.calendar_view_day_rounded,
-              tooltip: 'Guida (G)',
+              tooltip: 'Guida TV',
+              focused: menuIndex == i,
               onTap: () => onAction(BannerAction.guide),
             ),
-            if (context.select<TunerController, bool>(
-              (t) => t.canTogglePlusOne,
-            )) ...[
-              const SizedBox(width: 8),
-              _RoundAction(
-                label:
-                    context.select<TunerController, bool>(
-                      (t) => t.timeshift || t.current?.baseChannelId != null,
-                    )
-                    ? 'LIVE'
-                    : '+1',
-                tooltip: 'Versione +1 (+)',
-                onTap: () => onAction(BannerAction.plusOne),
-              ),
-            ],
-            if ((context.select<TunerController, int>(
-                  (t) => t.activeSources.length,
-                )) >
-                1) ...[
-              const SizedBox(width: 8),
-              _RoundAction(
-                icon: Icons.swap_horiz_rounded,
-                tooltip: 'Fonte (S)',
-                onTap: () => onAction(BannerAction.sources),
-              ),
-            ],
-            const SizedBox(width: 8),
-            _RoundAction(
+            BannerAction.plusOne => _RoundAction(
+              label: onPlusOne ? 'LIVE' : '+1',
+              tooltip: 'Versione +1',
+              focused: menuIndex == i,
+              onTap: () => onAction(BannerAction.plusOne),
+            ),
+            BannerAction.sources => _RoundAction(
+              icon: Icons.swap_horiz_rounded,
+              tooltip: 'Fonte',
+              focused: menuIndex == i,
+              onTap: () => onAction(BannerAction.sources),
+            ),
+            BannerAction.settings => _RoundAction(
               icon: Icons.tune_rounded,
-              tooltip: 'Impostazioni (M)',
+              tooltip: 'Impostazioni',
+              focused: menuIndex == i,
               onTap: () => onAction(BannerAction.settings),
             ),
-          ],
-        ),
+          },
+        ],
       ],
     );
   }
@@ -560,7 +608,9 @@ class _RoundAction extends StatefulWidget {
     this.label,
     required this.tooltip,
     required this.onTap,
+    this.focused = false,
   });
+  final bool focused;
   final IconData? icon;
   final String? label;
   final String tooltip;
@@ -575,6 +625,65 @@ class _RoundActionState extends State<_RoundAction> {
 
   @override
   Widget build(BuildContext context) {
+    final f = widget.focused;
+    final circle = AnimatedContainer(
+      duration: const Duration(milliseconds: 160),
+      width: f ? 44 : 38,
+      height: f ? 44 : 38,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: f
+            ? Colors.white.withValues(alpha: 0.92)
+            : Colors.white.withValues(alpha: _hover ? 0.18 : 0.08),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+        boxShadow: f
+            ? [
+                BoxShadow(
+                  color: Palette.accent.withValues(alpha: 0.45),
+                  blurRadius: 18,
+                ),
+              ]
+            : null,
+      ),
+      alignment: Alignment.center,
+      child: widget.icon != null
+          ? Icon(
+              widget.icon,
+              size: f ? 20 : 18,
+              color: f ? Palette.ink : Palette.textPrimary,
+            )
+          : Text(
+              widget.label ?? '',
+              style: AppText.overline.copyWith(
+                fontSize: (widget.label ?? '').length > 2 ? 9 : 12,
+                letterSpacing: 0.2,
+                color: f ? Palette.ink : Palette.textPrimary,
+              ),
+            ),
+    );
+    // Col telecomando il nome dell'azione scelta compare sotto il tasto.
+    if (f) {
+      return SizedBox(
+        width: 44,
+        height: 44,
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.center,
+          children: [
+            circle,
+            Positioned(
+              top: -26,
+              child: Text(
+                widget.tooltip,
+                maxLines: 1,
+                softWrap: false,
+                style: AppText.label.copyWith(color: Palette.textPrimary),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     return Tooltip(
       message: widget.tooltip,
       waitDuration: const Duration(milliseconds: 500),
@@ -582,30 +691,7 @@ class _RoundActionState extends State<_RoundAction> {
         cursor: SystemMouseCursors.click,
         onEnter: (_) => setState(() => _hover = true),
         onExit: (_) => setState(() => _hover = false),
-        child: GestureDetector(
-          onTap: widget.onTap,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 160),
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.white.withValues(alpha: _hover ? 0.18 : 0.08),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
-            ),
-            alignment: Alignment.center,
-            child: widget.icon != null
-                ? Icon(widget.icon, size: 18, color: Palette.textPrimary)
-                : Text(
-                    widget.label ?? '',
-                    style: AppText.overline.copyWith(
-                      fontSize: (widget.label ?? '').length > 2 ? 9 : 12,
-                      letterSpacing: 0.2,
-                      color: Palette.textPrimary,
-                    ),
-                  ),
-          ),
-        ),
+        child: GestureDetector(onTap: widget.onTap, child: circle),
       ),
     );
   }

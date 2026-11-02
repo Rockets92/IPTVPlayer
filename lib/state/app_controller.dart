@@ -71,6 +71,9 @@ class AppController extends ChangeNotifier {
     ];
   }
 
+  /// Un'impostazione che cambia l'aspetto (es. dimensione interfaccia).
+  void settingsChanged() => _notify();
+
   void _notify() {
     if (!_disposed) notifyListeners();
   }

@@ -29,11 +29,26 @@ android {
         versionName = flutter.versionName
     }
 
+    // Chiave fissa, se disponibile: ogni build ha la stessa firma e l'app si
+    // aggiorna sopra la precedente senza disinstallarla. In CI il file arriva
+    // dal secret ANDROID_KEYSTORE_BASE64; senza, si usa la chiave di debug.
+    val keystore = file(System.getenv("IPTV_KEYSTORE") ?: "iptv-player.jks")
+    if (keystore.exists()) {
+        signingConfigs {
+            create("fixed") {
+                storeFile = keystore
+                storePassword = System.getenv("IPTV_STORE_PASSWORD")
+                keyAlias = System.getenv("IPTV_KEY_ALIAS") ?: "iptvplayer"
+                keyPassword = System.getenv("IPTV_KEY_PASSWORD")
+                    ?: System.getenv("IPTV_STORE_PASSWORD")
+            }
+        }
+    }
+    val signing = if (keystore.exists()) "fixed" else "debug"
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName(signing)
         }
     }
 }

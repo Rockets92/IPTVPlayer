@@ -59,10 +59,24 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
+      - name: Chiave di firma fissa (dai secret, se presenti)
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/iptv-player.jks"
+            echo "IPTV_KEYSTORE=$RUNNER_TEMP/iptv-player.jks" >> "$GITHUB_ENV"
+          else
+            echo "Secret ANDROID_KEYSTORE_BASE64 assente: firma di debug"
+          fi
       - name: APK completa
+        env:
+          IPTV_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: flutter build apk --release
       - run: mv build/app/outputs/flutter-apk/app-release.apk IPTVPlayer-android.apk
       - name: APK light (proiettori/box da 1 GB, per architettura)
+        env:
+          IPTV_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: flutter build apk --release --split-per-abi --dart-define=FLAVOR=light
       - run: |
           mv build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk IPTVPlayer-android-light-armv7.apk
