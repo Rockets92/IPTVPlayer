@@ -22,6 +22,17 @@ proiettori e box Android da 1 GB di RAM.
   numerazione Sky Italia per i test, leggibile in futuro da un server.
 - **Guida TV** da fonti XMLTV esterne (anche `.gz`), con riempimento dalla
   guida del provider. Parsing in streaming in un isolate, cache su disco.
+- **Liste Xtream e M3U**: al primo avvio si sceglie il tipo. Le M3U
+  usano `group-title` come categoria, `tvg-id`/`tvg-logo` per guida e loghi
+  e la guida dichiarata in `url-tvg` (o un indirizzo XMLTV a scelta); film e
+  serie vengono ignorati.
+- **Smartphone**: l'app apre un piccolo server sulla rete di casa (porta
+  8787, protetto da un codice). Al primo avvio un QR apre sul telefono il
+  modulo per inserire i dati della lista; in Impostazioni → "Configura
+  telecomando" un QR apre il telecomando (PWA salvabile nella schermata Home)
+  con tutti i tasti, CH e volume, elenco canali e guida con promemoria. Su
+  Windows, alla prima apertura, consenti l'accesso alla rete privata quando
+  lo chiede il firewall.
 - **Promemoria**: OK su un programma futuro (banner info o Guida TV) lo
   prenota; 5 minuti prima compare l'avviso per andare al canale.
 - **Canali per adulti**: in Impostazioni → "Abilita canali per adulti"

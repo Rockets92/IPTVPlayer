@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -16,6 +17,7 @@ import 'core/theme.dart';
 import 'data/settings_store.dart';
 import 'player/media_kit_engine.dart';
 import 'player/playback_engine.dart';
+import 'remote/remote_server.dart';
 import 'state/app_controller.dart';
 import 'state/reminder_controller.dart';
 import 'state/tuner_controller.dart';
@@ -63,7 +65,14 @@ Future<void> main() async {
   final app = AppController(settings: settings, perf: perf);
   final tuner = TunerController(app: app, engine: engine);
   final reminders = ReminderController(settings.prefs);
+  final remote = RemoteServer(
+    prefs: settings.prefs,
+    app: app,
+    tuner: tuner,
+    reminders: reminders,
+  );
   app.start();
+  unawaited(remote.start());
 
   runApp(
     MultiProvider(
@@ -73,6 +82,7 @@ Future<void> main() async {
         ChangeNotifierProvider<AppController>.value(value: app),
         ChangeNotifierProvider<TunerController>.value(value: tuner),
         ChangeNotifierProvider<ReminderController>.value(value: reminders),
+        ChangeNotifierProvider<RemoteServer>.value(value: remote),
       ],
       child: const IptvApp(),
     ),

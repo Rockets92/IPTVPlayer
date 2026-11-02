@@ -6,10 +6,11 @@ import 'package:http/http.dart' as http;
 
 import '../epg/epg_models.dart';
 import '../json_utils.dart';
+import '../live_source.dart';
 import 'xtream_models.dart';
 
 /// Client per l'API "player_api.php" dei pannelli Xtream Codes.
-class XtreamClient {
+class XtreamClient implements LiveSource {
   XtreamClient(this.credentials, {http.Client? httpClient})
     : _http = httpClient ?? http.Client();
 
@@ -87,6 +88,7 @@ class XtreamClient {
   }
 
   /// Verifica le credenziali e restituisce lo stato dell'abbonamento.
+  @override
   Future<XtreamAccountInfo> authenticate() async {
     final body = await _get(_api());
     final Object? json;
@@ -111,6 +113,7 @@ class XtreamClient {
     return info;
   }
 
+  @override
   Future<List<XtreamCategory>> liveCategories() async {
     final body = await _get(_api({'action': 'get_live_categories'}));
     final json = jsonDecode(body);
@@ -123,6 +126,7 @@ class XtreamClient {
 
   /// Elenco dei canali live. Il JSON può superare diversi MB: la
   /// decodifica avviene fuori dal thread UI.
+  @override
   Future<List<XtreamLiveStream>> liveStreams() async {
     final body = await _get(_api({'action': 'get_live_streams'}));
     return Isolate.run(() => _parseStreams(body));
@@ -142,6 +146,7 @@ class XtreamClient {
   }
 
   /// EPG XMLTV completa del provider.
+  @override
   Uri get xmltvUri => Uri.parse('${credentials.serverUrl}/xmltv.php').replace(
     queryParameters: {
       'username': credentials.username,
@@ -149,12 +154,14 @@ class XtreamClient {
     },
   );
 
+  @override
   String liveUrl(int streamId, {String extension = 'ts'}) =>
       '${credentials.serverUrl}/live/'
       '${Uri.encodeComponent(credentials.username)}/'
       '${Uri.encodeComponent(credentials.password)}/$streamId.$extension';
 
   /// Guida breve per un singolo canale (fallback quando manca l'XMLTV).
+  @override
   Future<List<EpgProgramme>> shortEpg(int streamId, {int limit = 6}) async {
     final body = await _get(
       _api({
@@ -195,5 +202,6 @@ class XtreamClient {
     }
   }
 
+  @override
   void close() => _http.close();
 }

@@ -135,7 +135,19 @@ class MediaKitEngine implements PlaybackEngine {
   }
 
   @override
-  Future<void> setMuted(bool muted) => _player.setVolume(muted ? 0 : 100);
+  Future<void> setMuted(bool muted) {
+    _muted = muted;
+    return _player.setVolume(muted ? 0 : _volume);
+  }
+
+  bool _muted = false;
+  double _volume = 100;
+
+  @override
+  Future<void> setVolume(double volume) {
+    _volume = volume.clamp(0, 100).toDouble();
+    return _muted ? Future.value() : _player.setVolume(_volume);
+  }
 
   @override
   Widget buildView(BuildContext context) => Video(

@@ -9,10 +9,11 @@ import 'package:path_provider/path_provider.dart';
 import '../core/performance.dart';
 import '../data/epg/epg_models.dart';
 import '../data/epg/epg_repository.dart';
+import '../data/live_source.dart';
+import '../data/m3u/m3u_client.dart';
 import '../data/mapping/channel_mapping.dart';
 import '../data/mapping/mapping_repository.dart';
 import '../data/settings_store.dart';
-import '../data/xtream/xtream_client.dart';
 import '../data/xtream/xtream_models.dart';
 import '../domain/channel.dart';
 import '../domain/channel_matcher.dart';
@@ -26,16 +27,16 @@ class AppController extends ChangeNotifier {
     required this.perf,
     MappingRepository? mappingRepository,
     EpgRepository? epgRepository,
-    XtreamClient Function(XtreamCredentials)? clientFactory,
+    LiveSource Function(XtreamCredentials)? clientFactory,
   }) : _mappingRepo = mappingRepository ?? MappingRepository(),
        _epgRepo = epgRepository ?? EpgRepository(),
-       _clientFactory = clientFactory ?? XtreamClient.new;
+       _clientFactory = clientFactory ?? LiveSource.create;
 
   final SettingsStore settings;
   final PerformanceProfile perf;
   final MappingRepository _mappingRepo;
   final EpgRepository _epgRepo;
-  final XtreamClient Function(XtreamCredentials) _clientFactory;
+  final LiveSource Function(XtreamCredentials) _clientFactory;
 
   AppPhase phase = AppPhase.booting;
   String loadingMessage = '';
@@ -43,7 +44,13 @@ class AppController extends ChangeNotifier {
 
   XtreamCredentials? credentials;
   XtreamAccountInfo? account;
-  XtreamClient? _client;
+  LiveSource? _client;
+
+  /// Indirizzi diretti degli stream (liste M3U).
+  Map<int, String> _directUrls = const {};
+
+  /// Guida dichiarata nell'intestazione della playlist M3U.
+  String? _m3uEpg;
 
   ChannelMapping? mapping;
   List<Channel> channels = const [];
@@ -88,6 +95,7 @@ class AppController extends ChangeNotifier {
     _client = client;
     credentials = c;
     account = info;
+    _m3uEpg = null;
     await settings.setCredentials(c);
     await settings.setAccount(info);
     await _clearStreamCache();
@@ -108,6 +116,8 @@ class AppController extends ChangeNotifier {
     _client = null;
     credentials = null;
     account = null;
+    _m3uEpg = null;
+    _directUrls = const {};
     channels = const [];
     epg = EpgSchedule.empty();
     phase = AppPhase.setup;
@@ -115,6 +125,7 @@ class AppController extends ChangeNotifier {
   }
 
   String streamUrl(ChannelSource s) =>
+      _directUrls[s.streamId] ??
       _client!.liveUrl(s.streamId, extension: settings.streamFormat.extension);
 
   // ---------------------------------------------------------------------------
@@ -156,6 +167,7 @@ class AppController extends ChangeNotifier {
       final cats = results[0] as List<XtreamCategory>;
       final streams = results[1] as List<XtreamLiveStream>;
       final catMap = {for (final c in cats) c.id: c.name};
+      _noteM3uEpg(client);
       _rebuild(streams, catMap);
       unawaited(_writeStreamCache(streams, catMap));
       if (channels.isEmpty) {
@@ -176,7 +188,17 @@ class AppController extends ChangeNotifier {
     }
   }
 
+  void _noteM3uEpg(LiveSource client) {
+    if (client is M3uClient && client.headerEpg != null) {
+      _m3uEpg = client.headerEpg;
+    }
+  }
+
   void _rebuild(List<XtreamLiveStream> streams, Map<String, String> cats) {
+    _directUrls = {
+      for (final s in streams)
+        if (s.url != null) s.streamId: s.url!,
+    };
     channels = ChannelMatcher(preferLighterStreams: perf.preferLighterStreams)
         .build(
           mapping: mapping!,
@@ -199,6 +221,7 @@ class AppController extends ChangeNotifier {
       final streams = results[1] as List<XtreamLiveStream>;
       final catMap = {for (final c in cats) c.id: c.name};
       if (streams.isEmpty) return;
+      _noteM3uEpg(client);
       _rebuild(streams, catMap);
       _notify();
       await _writeStreamCache(streams, catMap);
@@ -238,9 +261,14 @@ class AppController extends ChangeNotifier {
   List<String> _epgSources() => [
     ...?mapping?.epgSources.map((s) => s.url),
     ...settings.extraEpgSources,
-    if (settings.useProviderEpg && _client != null)
-      _client!.xmltvUri.toString(),
+    if (settings.useProviderEpg) ?_providerEpg,
   ];
+
+  String? get _providerEpg {
+    final c = credentials;
+    if (c != null && c.isM3u) return c.epgUrl ?? _m3uEpg;
+    return _client?.xmltvUri?.toString();
+  }
 
   Future<void> refreshEpg() => _refreshEpg(force: true);
 
@@ -321,10 +349,20 @@ class AppController extends ChangeNotifier {
       final path = f.path;
       final rows = [
         for (final s in streams)
-          [s.streamId, s.name, s.icon, s.epgChannelId, s.categoryId, s.number],
+          [
+            s.streamId,
+            s.name,
+            s.icon,
+            s.epgChannelId,
+            s.categoryId,
+            s.number,
+            s.url,
+          ],
       ];
+      final epg = _m3uEpg;
       await Isolate.run(
-        () => File(path).writeAsStringSync(jsonEncode({'c': cats, 's': rows})),
+        () => File(path)
+            .writeAsStringSync(jsonEncode({'c': cats, 's': rows, 'g': epg})),
       );
     } catch (_) {}
   }
@@ -335,7 +373,7 @@ class AppController extends ChangeNotifier {
       final f = await _streamCacheFile();
       if (!await f.exists()) return null;
       final path = f.path;
-      return await Isolate.run(() {
+      final (streams, cats, epg) = await Isolate.run(() {
         final j = jsonDecode(File(path).readAsStringSync()) as Map;
         final cats = (j['c'] as Map).cast<String, String>();
         final streams = [
@@ -347,10 +385,13 @@ class AppController extends ChangeNotifier {
               epgChannelId: r[3] as String?,
               categoryId: r[4] as String?,
               number: r[5] as int?,
+              url: r.length > 6 ? r[6] as String? : null,
             ),
         ];
-        return (streams, cats);
+        return (streams, cats, j['g'] as String?);
       });
+      _m3uEpg ??= epg;
+      return (streams, cats);
     } catch (_) {
       return null;
     }

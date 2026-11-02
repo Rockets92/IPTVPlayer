@@ -13,6 +13,7 @@ import '../widgets/focus_tile.dart';
 import '../widgets/glass.dart';
 import '../widgets/glass_field.dart';
 import '../widgets/pin_dialog.dart';
+import 'remote_setup_dialog.dart';
 
 /// Impostazioni (tasto M): pannello laterale navigabile con il telecomando.
 class SettingsPanel extends StatefulWidget {
@@ -363,17 +364,40 @@ class _SettingsPanelState extends State<SettingsPanel> {
                       '${perf.isLight ? 'Leggero' : 'Completo'} · ${perf.reason}',
                     ),
 
+                    const _Section('Telecomando'),
+                    _ActionRow(
+                      icon: Icons.phone_iphone_rounded,
+                      title: 'Configura telecomando',
+                      subtitle: 'Usa lo smartphone come telecomando, con elenco canali e guida',
+                      onSelect: () async {
+                        _dialogOpen = true;
+                        await showRemoteSetup(context);
+                        _dialogOpen = false;
+                      },
+                    ),
+
                     const _Section('Abbonamento'),
-                    _InfoRow('Server', app.credentials?.serverUrl ?? '—'),
-                    _InfoRow('Utente', app.credentials?.username ?? '—'),
-                    if (acct != null)
+                    _InfoRow(
+                      'Tipo',
+                      app.credentials?.isM3u ?? false
+                          ? 'Playlist M3U'
+                          : 'Xtream Codes',
+                    ),
+                    _InfoRow(
+                      app.credentials?.isM3u ?? false ? 'Playlist' : 'Server',
+                      app.credentials?.serverUrl ?? '—',
+                    ),
+                    if (!(app.credentials?.isM3u ?? false))
+                      _InfoRow('Utente', app.credentials?.username ?? '—'),
+                    if (acct != null && !(app.credentials?.isM3u ?? false))
                       _InfoRow(
                         'Scadenza',
                         acct.expiresAt == null
                             ? 'Illimitato'
                             : '${dayLong(acct.expiresAt!)} ${acct.expiresAt!.year}',
                       ),
-                    if (acct?.maxConnections != null)
+                    if (acct?.maxConnections != null &&
+                        !(app.credentials?.isM3u ?? false))
                       _InfoRow('Connessioni', '${acct!.maxConnections} max'),
                     _ActionRow(
                       icon: Icons.logout_rounded,

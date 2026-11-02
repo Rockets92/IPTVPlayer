@@ -51,6 +51,9 @@ abstract class PlaybackEngine {
   Future<void> open(String url);
   Future<void> stop();
   Future<void> setMuted(bool muted);
+
+  /// Volume 0–100 (indipendente dal muto).
+  Future<void> setVolume(double volume);
   Widget buildView(BuildContext context);
   Future<void> dispose();
 }

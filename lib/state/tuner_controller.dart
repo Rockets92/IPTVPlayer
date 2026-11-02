@@ -402,7 +402,25 @@ class TunerController extends ChangeNotifier {
   /// Mantiene il banner visibile finché l'utente interagisce (es. hover).
   void holdBanner() => _showBanner(duration: const Duration(seconds: 8));
 
+  /// Volume 0–100, a passi di 5 come un televisore.
+  int volume = 100;
+
+  /// Ultima variazione di volume o muto: l'indicatore resta visibile poco.
+  DateTime? volumeChangedAt;
+
+  void changeVolume(int delta) {
+    volume = (volume + delta).clamp(0, 100);
+    if (muted && delta > 0) {
+      muted = false;
+      unawaited(engine.setMuted(false));
+    }
+    unawaited(engine.setVolume(volume.toDouble()));
+    volumeChangedAt = DateTime.now();
+    _notify();
+  }
+
   void toggleMute() {
+    volumeChangedAt = DateTime.now();
     muted = !muted;
     unawaited(engine.setMuted(muted));
     _notify();

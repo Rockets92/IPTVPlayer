@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#05070c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Telecomando">
+<link rel="manifest" href="/manifest.webmanifest?t={{TOKEN}}">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="icon" href="/icon-192.png">
+<title>Telecomando</title>
+<style>
+:root{
+  --bg:#05070c;--ink:#0a0f1a;
+  --glass:rgba(255,255,255,.07);--glass2:rgba(255,255,255,.12);
+  --stroke:rgba(255,255,255,.13);--hi:rgba(255,255,255,.22);
+  --t1:#f2f5fb;--t2:rgba(226,233,246,.74);--t3:rgba(213,222,238,.5);
+  --accent:#8ac6ff;--accent2:#3d7bff;--warm:#ffc27a;
+  --red:#ff5a5f;--green:#3ccf7a;--yellow:#ffd23f;--blue:#4c8dff;
+  --safe-t:env(safe-area-inset-top);--safe-b:env(safe-area-inset-bottom);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--t1);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Inter","Segoe UI",Roboto,sans-serif;
+  -webkit-font-smoothing:antialiased;overscroll-behavior:none}
+body{background:
+  radial-gradient(120% 60% at 20% -10%,rgba(61,123,255,.28),transparent 60%),
+  radial-gradient(90% 50% at 110% 30%,rgba(138,198,255,.14),transparent 60%),
+  var(--bg);background-attachment:fixed}
+button{font:inherit;color:inherit;border:0;background:none;padding:0;cursor:pointer;
+  touch-action:manipulation;user-select:none;-webkit-user-select:none}
+.app{max-width:460px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;
+  padding:calc(var(--safe-t) + 14px) 16px calc(var(--safe-b) + 84px)}
+
+/* Vetro */
+.glass{background:linear-gradient(160deg,rgba(255,255,255,.11),rgba(255,255,255,.04));
+  border:1px solid var(--stroke);border-radius:24px;
+  box-shadow:inset 0 1px 0 var(--hi),0 10px 30px rgba(0,0,0,.35);
+  backdrop-filter:blur(20px) saturate(1.6);-webkit-backdrop-filter:blur(20px) saturate(1.6)}
+
+/* In onda */
+.now{padding:16px 18px;display:flex;gap:14px;align-items:center}
+.num{min-width:58px;height:58px;border-radius:16px;display:grid;place-items:center;
+  font-size:22px;font-weight:600;letter-spacing:-.5px;
+  background:linear-gradient(160deg,rgba(255,255,255,.16),rgba(255,255,255,.05));border:1px solid var(--stroke)}
+.now .info{flex:1;min-width:0}
+.now .name{font-size:17px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.now .ptitle{font-size:14px;color:var(--t2);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar{height:3px;border-radius:2px;background:rgba(255,255,255,.12);margin-top:9px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px}
+.meta{display:flex;justify-content:space-between;font-size:11.5px;color:var(--t3);margin-top:6px;gap:8px}
+.meta span:last-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);flex:none;align-self:flex-start;margin-top:4px}
+.dot.off{background:var(--red);box-shadow:0 0 10px var(--red)}
+.pill{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.6px;padding:2px 6px;border-radius:6px;
+  border:1px solid rgba(255,194,122,.5);color:var(--warm);margin-left:6px;vertical-align:2px}
+
+/* Pagine */
+.page{display:none;flex-direction:column;gap:14px;margin-top:14px}
+.page.on{display:flex}
+
+/* Tasti */
+.key{position:relative;display:grid;place-items:center;border-radius:18px;min-height:52px;
+  background:linear-gradient(170deg,rgba(255,255,255,.13),rgba(255,255,255,.045));
+  border:1px solid var(--stroke);box-shadow:inset 0 1px 0 var(--hi),0 4px 14px rgba(0,0,0,.3);
+  font-size:15px;font-weight:600;transition:transform .08s,background .12s}
+.key:active,.key.down{transform:scale(.95);background:linear-gradient(170deg,rgba(255,255,255,.24),rgba(255,255,255,.1))}
+.key small{display:block;font-size:10.5px;font-weight:600;color:var(--t3);letter-spacing:.4px;margin-top:2px}
+.key svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.row{display:grid;gap:10px}
+.r4{grid-template-columns:repeat(4,1fr)}
+.r3{grid-template-columns:repeat(3,1fr)}
+.lbl{font-size:11px;color:var(--t3);text-align:center;margin-top:5px;font-weight:600;letter-spacing:.3px}
+
+/* D-pad */
+.pad{position:relative;width:min(78vw,300px);aspect-ratio:1;margin:4px auto 0;border-radius:50%;
+  background:radial-gradient(circle at 50% 35%,rgba(255,255,255,.14),rgba(255,255,255,.04) 70%);
+  border:1px solid var(--stroke);box-shadow:inset 0 1px 0 var(--hi),0 16px 40px rgba(0,0,0,.45)}
+.pad button{position:absolute;display:grid;place-items:center;color:var(--t2)}
+.pad .u{top:0;left:30%;width:40%;height:30%}
+.pad .d{bottom:0;left:30%;width:40%;height:30%}
+.pad .l{left:0;top:30%;width:30%;height:40%}
+.pad .r{right:0;top:30%;width:30%;height:40%}
+.pad .u:active,.pad .d:active,.pad .l:active,.pad .r:active,.pad .down{color:var(--t1)}
+.pad svg{width:30px;height:30px;stroke:currentColor;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.pad .ok{left:31%;top:31%;width:38%;height:38%;border-radius:50%;color:var(--t1);font-size:19px;font-weight:700;letter-spacing:.5px;
+  background:linear-gradient(170deg,rgba(255,255,255,.26),rgba(255,255,255,.08));
+  border:1px solid rgba(255,255,255,.2);box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 8px 22px rgba(0,0,0,.45);transition:transform .08s}
+.pad .ok:active,.pad .ok.down{transform:scale(.94)}
+
+/* Rocker CH e VOL */
+.rock{display:grid;grid-template-columns:1fr 1.15fr 1fr;gap:14px;align-items:stretch}
+.rocker{display:flex;flex-direction:column;border-radius:28px;overflow:hidden;padding:0}
+.rocker button{flex:1;min-height:64px;display:grid;place-items:center;font-size:24px;font-weight:500;color:var(--t1)}
+.rocker button:active,.rocker button.down{background:rgba(255,255,255,.12)}
+.rocker .mid{flex:none;font-size:11px;font-weight:700;letter-spacing:1px;color:var(--t3);padding:2px 0;text-align:center}
+.center{display:flex;flex-direction:column;gap:10px}
+.center .key{flex:1}
+
+/* Tasti colorati */
+.colors .key{min-height:40px;border-radius:14px}
+.colors .key i{display:block;width:26px;height:6px;border-radius:3px}
+
+/* Numeri */
+.nums .key{min-height:54px;font-size:21px;font-weight:500}
+
+/* Canali */
+.search{display:flex;gap:10px;align-items:center;padding:0 14px;height:48px;border-radius:16px}
+.search input{flex:1;background:none;border:0;outline:0;color:var(--t1);font-size:16px}
+.search input::placeholder{color:var(--t3)}
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;padding:8px 14px;border-radius:999px;font-size:13.5px;font-weight:600;color:var(--t2);
+  background:var(--glass);border:1px solid var(--stroke)}
+.chip.on{background:rgba(255,255,255,.9);color:var(--ink);border-color:transparent}
+.list{display:flex;flex-direction:column;border-radius:20px;overflow:hidden}
+.ch{display:flex;gap:12px;align-items:center;padding:11px 14px;text-align:left;border-top:1px solid rgba(255,255,255,.06)}
+.ch:first-child{border-top:0}
+.ch:active{background:rgba(255,255,255,.08)}
+.ch.on{background:linear-gradient(90deg,rgba(138,198,255,.18),rgba(138,198,255,.04))}
+.ch .n{width:44px;font-variant-numeric:tabular-nums;font-weight:600;color:var(--t2);font-size:15px}
+.ch .t{flex:1;min-width:0;text-align:left}
+.ch .n{text-align:left}
+.ch .t b{display:block;font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ch .t span{display:block;font-size:12.5px;color:var(--t3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ch .g{flex:none;width:38px;height:38px;border-radius:12px;display:grid;place-items:center;color:var(--t2);background:var(--glass)}
+.ch .g svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.empty{padding:28px;text-align:center;color:var(--t3);font-size:14px}
+
+/* Guida */
+.ghead{display:flex;align-items:center;gap:12px;padding:14px 16px}
+.ghead .name{font-weight:600;font-size:16px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ghead button{font-size:13px;font-weight:600;color:var(--accent)}
+.prog{display:flex;gap:12px;padding:12px 14px;border-top:1px solid rgba(255,255,255,.06);align-items:flex-start}
+.prog:first-child{border-top:0}
+.prog .h{width:46px;font-variant-numeric:tabular-nums;font-size:14px;color:var(--t2);font-weight:600;padding-top:1px}
+.prog .b{flex:1;min-width:0}
+.prog .b b{display:block;font-size:15px;font-weight:600}
+.prog .b p{margin:4px 0 0;font-size:13px;color:var(--t3);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.prog.open .b p{-webkit-line-clamp:unset}
+.prog.live{background:linear-gradient(90deg,rgba(138,198,255,.16),rgba(138,198,255,.02))}
+.prog.past{opacity:.5}
+.prog .bell{flex:none;width:36px;height:36px;border-radius:12px;display:grid;place-items:center;color:var(--t3);background:var(--glass)}
+.prog .bell.on{color:var(--ink);background:var(--warm)}
+.prog .bell svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.tag{font-size:10px;font-weight:700;letter-spacing:.6px;color:var(--accent);margin-left:6px}
+
+/* Barra in basso */
+.tabs{position:fixed;left:0;right:0;bottom:0;padding:8px 16px calc(var(--safe-b) + 8px);
+  display:flex;justify-content:center;pointer-events:none}
+.tabs nav{pointer-events:auto;display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:5px;border-radius:22px;width:100%;max-width:428px}
+.tabs button{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 0;border-radius:17px;
+  font-size:11.5px;font-weight:600;color:var(--t3)}
+.tabs button.on{background:rgba(255,255,255,.14);color:var(--t1)}
+.tabs svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* Avvisi */
+.toast{position:fixed;left:50%;top:calc(var(--safe-t) + 14px);transform:translate(-50%,-220%);opacity:0;transition:transform .25s,opacity .25s;
+  padding:10px 16px;border-radius:14px;font-size:14px;font-weight:600;z-index:9;white-space:nowrap}
+.toast.show{transform:translate(-50%,0);opacity:1}
+.install{padding:14px 16px;font-size:13.5px;color:var(--t2);line-height:1.45;position:relative}
+.install b{color:var(--t1)}
+.install button{position:absolute;right:10px;top:8px;font-size:20px;color:var(--t3);padding:4px 8px}
+.offline{padding:12px 16px;font-size:13.5px;color:#ffb3b3;border-color:rgba(255,90,95,.35)}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="glass now" id="now">
+    <div class="num" id="num">–</div>
+    <div class="info">
+      <div class="name" id="name">Connessione al player…</div>
+      <div class="ptitle" id="prog">&nbsp;</div>
+      <div class="bar"><i id="bar"></i></div>
+      <div class="meta"><span id="time"></span><span id="next"></span></div>
+    </div>
+    <div class="dot off" id="dot"></div>
+  </div>
+
+  <div class="glass offline" id="offline" hidden>Il player non risponde. Controlla che sia acceso e sulla stessa rete Wi-Fi.</div>
+  <div class="glass install" id="install" hidden>
+    <button aria-label="Chiudi" onclick="hideInstall()">×</button>
+    <b>Salva il telecomando come app</b><br>
+    <span id="installText"></span>
+  </div>
+
+  <!-- Telecomando -->
+  <section class="page on" id="p-remote">
+    <div class="row r4">
+      <div><button class="key" data-k="info" style="width:100%"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.01"/></svg></button><div class="lbl">Info</div></div>
+      <div><button class="key" data-k="guide" style="width:100%"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 9h18M8 4v16"/></svg></button><div class="lbl">Guida</div></div>
+      <div><button class="key" data-k="list" style="width:100%"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg></button><div class="lbl">Elenco</div></div>
+      <div><button class="key" data-k="menu" style="width:100%"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></button><div class="lbl">Menu</div></div>
+    </div>
+
+    <div class="pad">
+      <button class="u" data-k="up" data-rep aria-label="Su"><svg viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg></button>
+      <button class="l" data-k="left" data-rep aria-label="Sinistra"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
+      <button class="ok" data-k="ok">OK</button>
+      <button class="r" data-k="right" data-rep aria-label="Destra"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+      <button class="d" data-k="down" data-rep aria-label="Giù"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
+    </div>
+
+    <div class="row r3" style="margin-top:2px">
+      <div><button class="key" data-k="back" style="width:100%"><svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 010 12h-3"/></svg></button><div class="lbl">Indietro</div></div>
+      <div><button class="key" data-k="prev" style="width:100%"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 109-9 9.7 9.7 0 00-6.7 2.8L3 8"/><path d="M3 3v5h5"/></svg></button><div class="lbl">Canale prec.</div></div>
+      <div><button class="key" data-k="mute" style="width:100%" id="muteKey"><svg viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4z"/><path d="M22 9l-6 6M16 9l6 6"/></svg></button><div class="lbl">Muto</div></div>
+    </div>
+
+    <div class="rock">
+      <div class="glass rocker">
+        <button data-k="volup" data-rep aria-label="Volume su">+</button>
+        <div class="mid">VOL</div>
+        <button data-k="voldown" data-rep aria-label="Volume giù">−</button>
+      </div>
+      <div class="center">
+        <button class="key" data-k="source">Fonte<small>tasto verde</small></button>
+        <button class="key" data-k="red">+1<small>un'ora dopo</small></button>
+      </div>
+      <div class="glass rocker">
+        <button data-k="chup" data-rep aria-label="Canale su">+</button>
+        <div class="mid">CH</div>
+        <button data-k="chdown" data-rep aria-label="Canale giù">−</button>
+      </div>
+    </div>
+
+    <div class="row r4 colors">
+      <button class="key" data-k="red" aria-label="Rosso"><i style="background:var(--red)"></i></button>
+      <button class="key" data-k="green" aria-label="Verde"><i style="background:var(--green)"></i></button>
+      <button class="key" data-k="yellow" aria-label="Giallo"><i style="background:var(--yellow)"></i></button>
+      <button class="key" data-k="blue" aria-label="Blu"><i style="background:var(--blue)"></i></button>
+    </div>
+
+    <div class="row r3 nums">
+      <button class="key" data-k="1">1</button><button class="key" data-k="2">2</button><button class="key" data-k="3">3</button>
+      <button class="key" data-k="4">4</button><button class="key" data-k="5">5</button><button class="key" data-k="6">6</button>
+      <button class="key" data-k="7">7</button><button class="key" data-k="8">8</button><button class="key" data-k="9">9</button>
+      <button class="key" data-k="fullscreen"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+      <button class="key" data-k="0">0</button>
+      <button class="key" data-k="ok">OK</button>
+    </div>
+  </section>
+
+  <!-- Canali -->
+  <section class="page" id="p-channels">
+    <label class="glass search">
+      <svg viewBox="0 0 24 24" width="18" height="18" style="stroke:var(--t3);fill:none;stroke-width:2;stroke-linecap:round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="Cerca canale o numero" autocomplete="off">
+    </label>
+    <div class="chips" id="chips"></div>
+    <div class="glass list" id="chlist"><div class="empty">Caricamento…</div></div>
+  </section>
+
+  <!-- Guida -->
+  <section class="page" id="p-guide">
+    <div class="glass ghead">
+      <div class="num" id="gnum" style="min-width:46px;height:46px;font-size:18px;border-radius:14px">–</div>
+      <div class="name" id="gname">Guida TV</div>
+      <button onclick="guideFor(null)">In visione</button>
+    </div>
+    <div class="glass list" id="glist"><div class="empty">Caricamento…</div></div>
+  </section>
+</div>
+
+<div class="tabs">
+  <nav class="glass">
+    <button class="on" data-tab="remote"><svg viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="5"/><circle cx="12" cy="8" r="2"/><path d="M10 14h.01M14 14h.01M10 17h.01M14 17h.01"/></svg>Telecomando</button>
+    <button data-tab="channels"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg>Canali</button>
+    <button data-tab="guide"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 9h18M8 4v16"/></svg>Guida</button>
+  </nav>
+</div>
+<div class="glass toast" id="toast"></div>
+
+<script>
+const T = '{{TOKEN}}';
+const $ = (id) => document.getElementById(id);
+let state = null, channels = [], groups = [], group = null, guideId = null, tab = 'remote';
+let online = null, failures = 0;
+
+const api = async (path, body) => {
+  const url = path + (path.includes('?') ? '&' : '?') + 't=' + encodeURIComponent(T);
+  const r = await fetch(url, body === undefined ? {cache: 'no-store'} : {
+    method: 'POST', cache: 'no-store',
+    headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body),
+  });
+  if (!r.ok) throw new Error(r.status);
+  return r.json();
+};
+
+const setOnline = (ok) => {
+  failures = ok ? 0 : failures + 1;
+  const now = ok || failures < 2;
+  if (now === online) return;
+  online = now;
+  $('dot').classList.toggle('off', !online);
+  $('offline').hidden = online;
+};
+
+const hm = (s) => new Date(s * 1000).toLocaleTimeString('it-IT', {hour: '2-digit', minute: '2-digit'});
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+
+let toastTimer;
+const toast = (msg) => {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 1600);
+};
+
+// --- Stato in onda --------------------------------------------------------
+const render = (s) => {
+  state = s;
+  const c = s.channel;
+  $('num').textContent = c ? c.n : '–';
+  $('name').innerHTML = c ? esc(c.name) + (s.timeshift ? '<span class="pill">+1</span>' : '') + (s.locked ? '<span class="pill">PIN</span>' : '') + (s.browsing ? '<span class="pill">ANTEPRIMA</span>' : '')
+    : (s.phase === 'setup' ? 'Player da configurare' : 'Nessun canale');
+  const n = s.now || {};
+  $('prog').textContent = n.t || (c ? 'Informazioni di guida non disponibili' : '');
+  if (n.s) {
+    const now = Date.now() / 1000;
+    $('bar').style.width = Math.max(0, Math.min(100, (now - n.s) / (n.e - n.s) * 100)) + '%';
+    $('time').textContent = hm(n.s) + ' – ' + hm(n.e);
+  } else {
+    $('bar').style.width = '0';
+    $('time').textContent = '';
+  }
+  $('next').textContent = s.next && s.next.t ? 'Dopo: ' + s.next.t : '';
+  $('muteKey').style.color = s.muted ? 'var(--warm)' : '';
+  if (tab === 'channels') markCurrent();
+};
+
+const poll = async () => {
+  if (document.hidden) return;
+  try { render(await api('/api/state')); setOnline(true); } catch (_) { setOnline(false); }
+};
+
+// --- Tasti ------------------------------------------------------------------
+const send = async (k) => {
+  if (navigator.vibrate) navigator.vibrate(12);
+  try { render(await api('/api/key', {key: k})); setOnline(true); } catch (_) { setOnline(false); }
+};
+
+document.querySelectorAll('[data-k]').forEach((b) => {
+  const k = b.dataset.k;
+  const repeat = b.hasAttribute('data-rep');
+  let hold, rep;
+  const stop = () => { clearTimeout(hold); clearInterval(rep); b.classList.remove('down'); };
+  b.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    b.classList.add('down');
+    send(k);
+    if (repeat) hold = setTimeout(() => { rep = setInterval(() => send(k), 170); }, 420);
+  });
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => b.addEventListener(ev, stop));
+  b.addEventListener('contextmenu', (e) => e.preventDefault());
+});
+
+// --- Schede -------------------------------------------------------------------
+const show = (name) => {
+  tab = name;
+  document.querySelectorAll('.page').forEach((p) => p.classList.toggle('on', p.id === 'p-' + name));
+  document.querySelectorAll('[data-tab]').forEach((b) => b.classList.toggle('on', b.dataset.tab === name));
+  window.scrollTo({top: 0});
+  if (name === 'channels') loadChannels();
+  if (name === 'guide') loadGuide();
+};
+document.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => show(b.dataset.tab)));
+
+// --- Canali -------------------------------------------------------------------
+const loadChannels = async () => {
+  try {
+    const r = await api('/api/channels');
+    channels = r.channels; groups = r.groups;
+    renderChips(); renderChannels();
+  } catch (_) { setOnline(false); }
+};
+
+const renderChips = () => {
+  $('chips').innerHTML = ['Tutti', ...groups].map((g, i) =>
+    `<button class="chip ${(i === 0 && !group) || g === group ? 'on' : ''}" data-g="${i === 0 ? '' : esc(g)}">${esc(g)}</button>`).join('');
+  $('chips').querySelectorAll('.chip').forEach((c) => c.addEventListener('click', () => {
+    group = c.dataset.g || null; renderChips(); renderChannels();
+  }));
+};
+
+const renderChannels = () => {
+  const q = $('q').value.trim().toLowerCase();
+  const list = channels.filter((c) => (!group || c.g === group) &&
+    (!q || c.name.toLowerCase().includes(q) || String(c.n).startsWith(q)));
+  const cur = state && state.current;
+  $('chlist').innerHTML = list.length ? list.map((c) => `
+    <div class="ch ${c.id === cur ? 'on' : ''}" data-id="${esc(c.id)}">
+      <button class="n" data-tune>${c.n}</button>
+      <button class="t" data-tune><b>${esc(c.name)}</b><span>${esc(c.now || c.g)}</span></button>
+      <button class="g" data-guide aria-label="Guida"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 9h18M8 4v16"/></svg></button>
+    </div>`).join('') : '<div class="empty">Nessun canale trovato</div>';
+};
+
+const markCurrent = () => {
+  const cur = state && state.current;
+  $('chlist').querySelectorAll('.ch').forEach((r) => r.classList.toggle('on', r.dataset.id === cur));
+};
+
+$('q').addEventListener('input', renderChannels);
+$('chlist').addEventListener('click', async (e) => {
+  const row = e.target.closest('.ch');
+  if (!row) return;
+  const id = row.dataset.id;
+  if (e.target.closest('[data-guide]')) { guideFor(id); return; }
+  if (navigator.vibrate) navigator.vibrate(12);
+  try {
+    render(await api('/api/tune', {id}));
+    const c = channels.find((x) => x.id === id);
+    toast(c ? c.n + '  ' + c.name : 'Sintonizzato');
+  } catch (_) { setOnline(false); }
+});
+
+// --- Guida ----------------------------------------------------------------------
+const guideFor = (id) => { guideId = id; show('guide'); };
+
+const loadGuide = async () => {
+  try {
+    const r = await api('/api/epg' + (guideId ? '?id=' + encodeURIComponent(guideId) : ''));
+    $('gnum').textContent = r.n ?? '–';
+    $('gname').textContent = r.name || 'Guida TV';
+    const now = Date.now() / 1000;
+    const ps = r.programmes || [];
+    $('glist').innerHTML = ps.length ? ps.map((p) => {
+      const live = p.s <= now && p.e > now, past = p.e <= now, future = p.s > now;
+      return `<div class="prog ${live ? 'live' : ''} ${past ? 'past' : ''}" data-s="${p.s}">
+        <div class="h">${hm(p.s)}</div>
+        <div class="b"><b>${esc(p.t)}${live ? '<span class="tag">IN ONDA</span>' : ''}</b>${p.d ? `<p>${esc(p.d)}</p>` : ''}</div>
+        ${future ? `<button class="bell ${p.r ? 'on' : ''}" data-bell aria-label="Promemoria"><svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 0112 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 003.4 0"/></svg></button>` : ''}
+      </div>`;
+    }).join('') : '<div class="empty">Guida non disponibile per questo canale</div>';
+    $('glist').dataset.id = r.id || '';
+    const live = $('glist').querySelector('.live');
+    if (live) live.scrollIntoView({block: 'center'});
+  } catch (_) { setOnline(false); }
+};
+
+$('glist').addEventListener('click', async (e) => {
+  const row = e.target.closest('.prog');
+  if (!row) return;
+  if (e.target.closest('[data-bell]')) {
+    try {
+      const r = await api('/api/reminder', {id: $('glist').dataset.id, start: Number(row.dataset.s)});
+      if (r.error) { toast(r.error); return; }
+      e.target.closest('[data-bell]').classList.toggle('on', r.reminded);
+      toast(r.reminded ? 'Promemoria: ti avviso 5 minuti prima' : 'Promemoria annullato');
+    } catch (_) { setOnline(false); }
+    return;
+  }
+  row.classList.toggle('open');
+});
+
+// --- Installazione -------------------------------------------------------------
+const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+const hideInstall = () => { $('install').hidden = true; try { localStorage.setItem('noInstall', '1'); } catch (_) {} };
+window.hideInstall = hideInstall;
+window.guideFor = guideFor;
+let noInstall = false;
+try { noInstall = localStorage.getItem('noInstall') === '1'; } catch (_) {}
+if (!standalone && !noInstall) {
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  $('installText').textContent = ios
+    ? 'In Safari tocca Condividi e poi "Aggiungi alla schermata Home".'
+    : 'Nel menu ⋮ del browser scegli "Aggiungi a schermata Home" o "Installa app".';
+  $('install').hidden = false;
+}
+if ('serviceWorker' in navigator && window.isSecureContext) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+
+// --- Avvio ---------------------------------------------------------------------
+poll();
+setInterval(poll, 1500);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) poll(); });
+</script>
+</body>
+</html>

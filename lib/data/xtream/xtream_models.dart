@@ -2,23 +2,41 @@ import 'package:flutter/foundation.dart';
 
 import '../json_utils.dart';
 
+/// Tipo di lista: pannello Xtream Codes o playlist M3U.
+enum ListKind { xtream, m3u }
+
 @immutable
 class XtreamCredentials {
   const XtreamCredentials({
     required this.serverUrl,
-    required this.username,
-    required this.password,
+    this.username = '',
+    this.password = '',
+    this.kind = ListKind.xtream,
+    this.epgUrl,
   });
 
-  /// URL base normalizzato, es. `http://dominio.tv:8080` (senza slash finale).
+  /// Lista M3U: [serverUrl] è l'indirizzo della playlist.
+  const XtreamCredentials.m3u(String playlistUrl, {String? epgUrl})
+    : this(serverUrl: playlistUrl, kind: ListKind.m3u, epgUrl: epgUrl);
+
+  /// Xtream: URL base normalizzato, es. `http://dominio.tv:8080` (senza slash
+  /// finale). M3U: indirizzo completo della playlist.
   final String serverUrl;
   final String username;
   final String password;
+  final ListKind kind;
+
+  /// Guida XMLTV indicata dall'utente (solo M3U).
+  final String? epgUrl;
+
+  bool get isM3u => kind == ListKind.m3u;
 
   Map<String, Object?> toJson() => {
     'serverUrl': serverUrl,
     'username': username,
     'password': password,
+    'kind': kind.name,
+    'epgUrl': ?epgUrl,
   };
 
   factory XtreamCredentials.fromJson(Map<String, Object?> json) =>
@@ -26,6 +44,8 @@ class XtreamCredentials {
         serverUrl: asString(json['serverUrl']),
         username: asString(json['username']),
         password: asString(json['password']),
+        kind: json['kind'] == 'm3u' ? ListKind.m3u : ListKind.xtream,
+        epgUrl: asNonEmptyString(json['epgUrl']),
       );
 
   /// Normalizza ciò che l'utente digita come server.
@@ -74,10 +94,12 @@ class XtreamCredentials {
       other is XtreamCredentials &&
       other.serverUrl == serverUrl &&
       other.username == username &&
-      other.password == password;
+      other.password == password &&
+      other.kind == kind &&
+      other.epgUrl == epgUrl;
 
   @override
-  int get hashCode => Object.hash(serverUrl, username, password);
+  int get hashCode => Object.hash(serverUrl, username, password, kind, epgUrl);
 }
 
 @immutable
@@ -150,6 +172,7 @@ class XtreamLiveStream {
     this.epgChannelId,
     this.categoryId,
     this.number,
+    this.url,
   });
 
   final int streamId;
@@ -158,6 +181,9 @@ class XtreamLiveStream {
   final String? epgChannelId;
   final String? categoryId;
   final int? number;
+
+  /// Indirizzo diretto del flusso (liste M3U).
+  final String? url;
 
   static XtreamLiveStream? tryFromJson(Map<String, Object?> json) {
     final id = asInt(json['stream_id']);

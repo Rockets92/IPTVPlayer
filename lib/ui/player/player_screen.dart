@@ -26,6 +26,7 @@ import 'number_entry.dart';
 import 'reminder_popup.dart';
 import 'signal_overlay.dart';
 import 'source_picker.dart';
+import 'volume_indicator.dart';
 import 'zap_banner.dart';
 
 enum _Panel { none, list, guide, settings, sources }
@@ -294,7 +295,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
     } else if (k == LogicalKeyboardKey.audioVolumeMute ||
         k == LogicalKeyboardKey.keyK) {
       _tuner.toggleMute();
-      _showToast(_tuner.muted ? 'Audio disattivato' : 'Audio attivato');
+    } else if (k == LogicalKeyboardKey.audioVolumeUp) {
+      _tuner.changeVolume(5);
+    } else if (k == LogicalKeyboardKey.audioVolumeDown) {
+      _tuner.changeVolume(-5);
     } else if (isBackKey(k)) {
       _back();
     } else {
@@ -437,6 +441,14 @@ class _PlayerScreenState extends State<PlayerScreen> {
                     offset: const Offset(0.15, 0),
                     child: const NumberEntry(),
                   ),
+                ),
+
+                // 5b. Volume
+                Positioned(
+                  top: margin,
+                  left: 0,
+                  right: 0,
+                  child: const Center(child: VolumeIndicator()),
                 ),
 
                 // 6. Pannelli
