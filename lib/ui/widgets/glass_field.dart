@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/performance.dart';
@@ -102,49 +103,63 @@ class _GlassFieldState extends State<GlassField> {
             child: Row(
               children: [
                 Expanded(
-                  child: TextField(
-                    controller: widget.controller,
-                    focusNode: _node,
-                    enabled: widget.enabled,
-                    autofocus: widget.autofocus,
-                    obscureText: _obscured,
-                    keyboardType: widget.keyboardType,
-                    textInputAction: widget.textInputAction,
-                    onSubmitted: widget.onSubmitted,
-                    onChanged: widget.onChanged,
-                    autofillHints: widget.autofillHints,
-                    autocorrect: false,
-                    enableSuggestions: false,
-                    style: AppText.headline.copyWith(
-                      fontWeight: FontWeight.w500,
-                    ),
-                    cursorWidth: 2,
-                    cursorRadius: const Radius.circular(2),
-                    decoration: InputDecoration(
-                      isCollapsed: true,
-                      border: InputBorder.none,
-                      hintText: widget.hint,
-                      hintStyle: AppText.headline.copyWith(
-                        fontWeight: FontWeight.w400,
-                        color: Palette.textTertiary,
+                  // Col telecomando su/giù passano al campo vicino invece di
+                  // muovere il cursore (i campi sono su una riga sola).
+                  child: Shortcuts(
+                    shortcuts: const {
+                      SingleActivator(LogicalKeyboardKey.arrowDown):
+                          NextFocusIntent(),
+                      SingleActivator(LogicalKeyboardKey.arrowUp):
+                          PreviousFocusIntent(),
+                    },
+                    child: TextField(
+                      controller: widget.controller,
+                      focusNode: _node,
+                      enabled: widget.enabled,
+                      autofocus: widget.autofocus,
+                      obscureText: _obscured,
+                      keyboardType: widget.keyboardType,
+                      textInputAction: widget.textInputAction,
+                      onSubmitted: widget.onSubmitted,
+                      onChanged: widget.onChanged,
+                      autofillHints: widget.autofillHints,
+                      autocorrect: false,
+                      enableSuggestions: false,
+                      style: AppText.headline.copyWith(
+                        fontWeight: FontWeight.w500,
                       ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 18,
-                        vertical: 17,
+                      cursorWidth: 2,
+                      cursorRadius: const Radius.circular(2),
+                      decoration: InputDecoration(
+                        isCollapsed: true,
+                        border: InputBorder.none,
+                        hintText: widget.hint,
+                        hintStyle: AppText.headline.copyWith(
+                          fontWeight: FontWeight.w400,
+                          color: Palette.textTertiary,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 18,
+                          vertical: 17,
+                        ),
                       ),
                     ),
                   ),
                 ),
                 if (widget.obscure)
-                  IconButton(
-                    tooltip: _obscured ? 'Mostra' : 'Nascondi',
-                    onPressed: () => setState(() => _obscured = !_obscured),
-                    icon: Icon(
-                      _obscured
-                          ? Icons.visibility_outlined
-                          : Icons.visibility_off_outlined,
-                      size: 20,
-                      color: Palette.textTertiary,
+                  // Il tasto "mostra" non entra nella navigazione col
+                  // telecomando: si passa dalla password al pulsante.
+                  ExcludeFocus(
+                    child: IconButton(
+                      tooltip: _obscured ? 'Mostra' : 'Nascondi',
+                      onPressed: () => setState(() => _obscured = !_obscured),
+                      icon: Icon(
+                        _obscured
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
+                        size: 20,
+                        color: Palette.textTertiary,
+                      ),
                     ),
                   ),
               ],

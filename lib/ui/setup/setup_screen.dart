@@ -1,4 +1,7 @@
 import 'dart:async';
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -14,6 +17,10 @@ import '../widgets/ambient_background.dart';
 import '../widgets/glass.dart';
 import '../widgets/glass_field.dart';
 import '../widgets/qr_card.dart';
+
+/// Su TV e telefono il campo in primo piano aprirebbe subito la tastiera.
+bool get _desktop =>
+    !kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS);
 
 /// Primo avvio: indirizzo del server Xtream e credenziali.
 class SetupScreen extends StatefulWidget {
@@ -163,8 +170,11 @@ class _SetupScreenState extends State<SetupScreen> {
   @override
   Widget build(BuildContext context) {
     final perf = context.read<PerformanceProfile>();
-    final wide = MediaQuery.sizeOf(context).width >= 980;
+    final size = MediaQuery.sizeOf(context);
+    final landscape = size.width >= 720 && size.width > size.height;
+    final wide = landscape && size.width >= 980 && size.height >= 760;
     final card = _buildCard(perf);
+    if (landscape && !wide) return _buildCompactLandscape(card);
     return Scaffold(
       body: AmbientBackground(
         child: SafeArea(
@@ -215,6 +225,53 @@ class _SetupScreenState extends State<SetupScreen> {
     );
   }
 
+  /// TV e schermi bassi (Chromecast, Android TV): il QR resta sempre in
+  /// vista a sinistra, il modulo scorre a destra seguendo il focus.
+  Widget _buildCompactLandscape(Widget card) {
+    return Scaffold(
+      body: AmbientBackground(
+        child: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1100),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(vertical: 24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const _BrandBlock(features: false),
+                            if (_success == null) ...[
+                              const SizedBox(height: 28),
+                              const _PhoneSetup(qrSize: 150),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 40),
+                    SizedBox(
+                      width: 430,
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(vertical: 24),
+                        child: card,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildCard(PerformanceProfile perf) {
     return Glass(
       radius: 30,
@@ -242,11 +299,12 @@ class _SetupScreenState extends State<SetupScreen> {
           const SizedBox(height: 8),
           Text(
             'Inserisci i dati forniti dal tuo provider, oppure inquadra il '
-            'codice qui sotto e compilali dallo smartphone.',
+            'codice QR e compilali comodamente dallo smartphone.',
             style: AppText.body,
           ),
           const SizedBox(height: 22),
           _KindSwitch(
+            autofocus: !_desktop,
             value: _kind,
             onChanged: (k) => setState(() {
               _kind = k;
@@ -260,7 +318,7 @@ class _SetupScreenState extends State<SetupScreen> {
               hint: 'http://dominio.tv:8080',
               controller: _server,
               keyboardType: TextInputType.url,
-              autofocus: true,
+              autofocus: _desktop,
               autofillHints: const [AutofillHints.url],
               onChanged: _onServerChanged,
               onSubmitted: (_) => _userNode.requestFocus(),
@@ -289,7 +347,7 @@ class _SetupScreenState extends State<SetupScreen> {
               hint: 'https://…/lista.m3u',
               controller: _playlist,
               keyboardType: TextInputType.url,
-              autofocus: true,
+              autofocus: _desktop,
               onSubmitted: (_) => _passNode.requestFocus(),
             ),
             const SizedBox(height: 18),
@@ -406,8 +464,9 @@ class _SetupScreenState extends State<SetupScreen> {
 }
 
 class _BrandBlock extends StatelessWidget {
-  const _BrandBlock({this.compact = false});
+  const _BrandBlock({this.compact = false, this.features = true});
   final bool compact;
+  final bool features;
 
   @override
   Widget build(BuildContext context) {
@@ -439,7 +498,7 @@ class _BrandBlock extends StatelessWidget {
             fontSize: compact ? 17 : 22,
           ),
         ),
-        if (!compact) ...[
+        if (!compact && features) ...[
           const SizedBox(height: 44),
           const _Feature(
             'Zapping istantaneo',
@@ -534,8 +593,13 @@ class BrandMark extends StatelessWidget {
 
 /// Scelta del tipo di lista.
 class _KindSwitch extends StatelessWidget {
-  const _KindSwitch({required this.value, required this.onChanged});
+  const _KindSwitch({
+    required this.value,
+    required this.onChanged,
+    this.autofocus = false,
+  });
   final ListKind value;
+  final bool autofocus;
   final ValueChanged<ListKind> onChanged;
 
   @override
@@ -544,6 +608,7 @@ class _KindSwitch extends StatelessWidget {
       final on = k == value;
       return Expanded(
         child: FocusableActionDetector(
+          autofocus: autofocus && on,
           mouseCursor: SystemMouseCursors.click,
           actions: {
             ActivateIntent: CallbackAction<ActivateIntent>(
@@ -605,7 +670,8 @@ class _KindSwitch extends StatelessWidget {
 
 /// QR per compilare i dati dallo smartphone.
 class _PhoneSetup extends StatelessWidget {
-  const _PhoneSetup();
+  const _PhoneSetup({this.qrSize = 112});
+  final double qrSize;
 
   @override
   Widget build(BuildContext context) {
@@ -617,12 +683,12 @@ class _PhoneSetup extends StatelessWidget {
       child: Row(
         children: [
           if (url != null)
-            QrCode(data: url, size: 112)
+            QrCode(data: url, size: qrSize)
           else
-            const SizedBox(
-              width: 124,
-              height: 124,
-              child: Icon(
+            SizedBox(
+              width: qrSize + 12,
+              height: qrSize + 12,
+              child: const Icon(
                 Icons.wifi_off_rounded,
                 color: Palette.textTertiary,
                 size: 36,
