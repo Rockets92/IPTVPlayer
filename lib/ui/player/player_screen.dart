@@ -10,8 +10,10 @@ import 'package:window_manager/window_manager.dart';
 
 import '../../core/performance.dart';
 import '../../core/theme.dart';
+import '../../data/epg/epg_models.dart';
 import '../../player/playback_engine.dart';
 import '../../state/app_controller.dart';
+import '../../state/reminder_controller.dart';
 import '../../state/tuner_controller.dart';
 import '../keys.dart';
 import '../settings/settings_panel.dart';
@@ -20,6 +22,7 @@ import '../widgets/glass.dart';
 import 'channel_list_overlay.dart';
 import 'guide_overlay.dart';
 import 'number_entry.dart';
+import 'reminder_popup.dart';
 import 'signal_overlay.dart';
 import 'source_picker.dart';
 import 'zap_banner.dart';
@@ -62,11 +65,48 @@ class _PlayerScreenState extends State<PlayerScreen> {
     }
     WidgetsBinding.instance.addPostFrameCallback((_) => _tuner.start());
     context.read<AppController>().addListener(_onApp);
+    _reminders.addListener(_onReminder);
+  }
+
+  late final ReminderController _reminders = context.read<ReminderController>();
+
+  /// Un promemoria scatta: si chiude ciò che è aperto e l'avviso prende i tasti.
+  void _onReminder() {
+    if (_reminders.due == null || !mounted) return;
+    if (_panel != _Panel.none) setState(() => _panel = _Panel.none);
+    _tuner.hideBanner();
+    _rootFocus.requestFocus();
+  }
+
+  void _acceptReminder() {
+    final r = _reminders.due;
+    if (r == null) return;
+    final app = context.read<AppController>();
+    final c = app.channels.where((c) => c.id == r.channelId).firstOrNull;
+    _reminders.resolve();
+    if (c != null) {
+      _tuner.tuneTo(c);
+    } else {
+      _showToast('Canale non più disponibile');
+    }
+  }
+
+  void _toggleReminder(EpgProgramme p) {
+    final c = _tuner.current;
+    if (c == null) return;
+    final on = _reminders.toggle(c, p);
+    _tuner.showBanner(duration: TunerController.browseDuration);
+    _showToast(
+      on
+          ? 'Promemoria impostato: ti avviso 5 minuti prima'
+          : 'Promemoria annullato',
+    );
   }
 
   @override
   void dispose() {
     context.read<AppController>().removeListener(_onApp);
+    _reminders.removeListener(_onReminder);
     WakelockPlus.disable().catchError((_) {});
     if (_isMobile) {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -140,10 +180,22 @@ class _PlayerScreenState extends State<PlayerScreen> {
     if (e is! KeyDownEvent && e is! KeyRepeatEvent) {
       return KeyEventResult.ignored;
     }
+    final k = e.logicalKey;
+    // Avviso di promemoria: OK va al canale, Indietro annulla.
+    if (_reminders.due != null) {
+      if (e is KeyRepeatEvent) return KeyEventResult.handled;
+      if (isSelectKey(k)) {
+        _acceptReminder();
+        return KeyEventResult.handled;
+      }
+      if (isBackKey(k)) {
+        _reminders.resolve();
+        return KeyEventResult.handled;
+      }
+    }
     // Con un pannello aperto i tasti appartengono al pannello (e alla
     // navigazione direzionale del focus).
     if (_panel != _Panel.none) return KeyEventResult.ignored;
-    final k = e.logicalKey;
     final repeat = e is KeyRepeatEvent;
 
     if (k == LogicalKeyboardKey.arrowUp ||
@@ -175,6 +227,11 @@ class _PlayerScreenState extends State<PlayerScreen> {
         _tuner.confirmBrowse();
       } else if (_tuner.signalMessage == 'Canale non disponibile') {
         _tuner.retry();
+      } else if (_tuner.infoMode &&
+          _tuner.bannerVisible &&
+          _tuner.infoProgramme != null) {
+        // Programma futuro nel banner: OK lo prenota (o annulla).
+        _toggleReminder(_tuner.infoProgramme!);
       } else if (_tuner.infoMode && _tuner.bannerVisible) {
         // Secondo OK: elenco completo dei canali.
         _open(_Panel.list);
@@ -405,6 +462,25 @@ class _PlayerScreenState extends State<PlayerScreen> {
                         onToast: _showToast,
                       ),
                     },
+                  ),
+                ),
+
+                // 8. Promemoria in arrivo
+                Positioned(
+                  top: margin,
+                  right: margin,
+                  child: Consumer<ReminderController>(
+                    builder: (context, rc, _) => _Reveal(
+                      visible: rc.due != null,
+                      offset: const Offset(0.2, 0),
+                      child: rc.due == null
+                          ? const SizedBox(width: 420)
+                          : ReminderPopup(
+                              reminder: rc.due!,
+                              onGo: _acceptReminder,
+                              onDismiss: rc.resolve,
+                            ),
+                    ),
                   ),
                 ),
 

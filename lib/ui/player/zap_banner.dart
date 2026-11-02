@@ -6,6 +6,7 @@ import '../../data/epg/epg_models.dart';
 import '../../domain/channel.dart';
 import '../../player/playback_engine.dart';
 import '../../state/app_controller.dart';
+import '../../state/reminder_controller.dart';
 import '../../state/tuner_controller.dart';
 import '../format.dart';
 import '../widgets/channel_logo.dart';
@@ -269,7 +270,18 @@ class _Programmes extends StatelessWidget {
             const Spacer(),
             if (tuner.browsing)
               const KeyHint('OK', 'Guarda')
-            else if (tuner.infoMode)
+            else if (tuner.infoProgramme case final p?) ...[
+              if (context.watch<ReminderController>().isSet(channel.id, p)) ...[
+                const _Badge(
+                  'PRENOTATO',
+                  icon: Icons.notifications_active_rounded,
+                  accent: true,
+                ),
+                const SizedBox(width: 12),
+                const KeyHint('OK', 'Annulla promemoria'),
+              ] else
+                const KeyHint('OK', 'Promemoria'),
+            ] else if (tuner.infoMode)
               const KeyHint('← →', 'Programmi'),
           ],
         ),

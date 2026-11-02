@@ -17,6 +17,7 @@ import 'data/settings_store.dart';
 import 'player/media_kit_engine.dart';
 import 'player/playback_engine.dart';
 import 'state/app_controller.dart';
+import 'state/reminder_controller.dart';
 import 'state/tuner_controller.dart';
 
 Future<void> main() async {
@@ -61,6 +62,7 @@ Future<void> main() async {
   final engine = MediaKitEngine(perf);
   final app = AppController(settings: settings, perf: perf);
   final tuner = TunerController(app: app, engine: engine);
+  final reminders = ReminderController(settings.prefs);
   app.start();
 
   runApp(
@@ -70,6 +72,7 @@ Future<void> main() async {
         Provider<PlaybackEngine>.value(value: engine),
         ChangeNotifierProvider<AppController>.value(value: app),
         ChangeNotifierProvider<TunerController>.value(value: tuner),
+        ChangeNotifierProvider<ReminderController>.value(value: reminders),
       ],
       child: const IptvApp(),
     ),

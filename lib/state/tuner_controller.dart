@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import '../data/epg/epg_models.dart';
 import '../domain/channel.dart';
 import '../player/playback_engine.dart';
 import 'app_controller.dart';
@@ -304,6 +305,19 @@ class TunerController extends ChangeNotifier {
     infoMode = true;
     epgOffset = 0;
     _showBanner(duration: browseDuration);
+  }
+
+  /// Programma futuro mostrato nel banner mentre si sfoglia la guida del
+  /// canale in diretta (per prenotare un promemoria con OK).
+  EpgProgramme? get infoProgramme {
+    final c = current;
+    if (c == null || !infoMode || epgOffset <= 0 || timeshift) return null;
+    final list = app.epg.forChannel(c.id);
+    final base = app.epg.indexNear(c.id, DateTime.now());
+    final i = base + epgOffset;
+    if (base < 0 || i < 0 || i >= list.length) return null;
+    final p = list[i];
+    return p.startTime.isAfter(DateTime.now()) ? p : null;
   }
 
   /// ←→ con le informazioni aperte: programma precedente o successivo.

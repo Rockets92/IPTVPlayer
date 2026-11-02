@@ -22,6 +22,9 @@ class SettingsStore {
 
   final SharedPreferences _prefs;
 
+  /// Accesso diretto per gli archivi che gestiscono da sé i propri dati.
+  SharedPreferences get prefs => _prefs;
+
   static const _kCreds = 'xtream.credentials';
   static const _kAccount = 'xtream.account';
   static const _kLastChannel = 'tuner.lastChannel';

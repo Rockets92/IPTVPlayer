@@ -7,6 +7,7 @@ import '../../core/theme.dart';
 import '../../data/epg/epg_models.dart';
 import '../../domain/channel.dart';
 import '../../state/app_controller.dart';
+import '../../state/reminder_controller.dart';
 import '../../state/tuner_controller.dart';
 import '../format.dart';
 import '../keys.dart';
@@ -156,6 +157,22 @@ class _GuideOverlayState extends State<GuideOverlay> {
     _moveChannel(i - _ch);
   }
 
+  /// OK: su un programma futuro imposta o toglie il promemoria, altrimenti
+  /// sintonizza il canale.
+  void _select() {
+    if (_inProgrammes) {
+      final list = _programmes();
+      if (_prog < list.length) {
+        final p = list[_prog];
+        if (p.startTime.isAfter(DateTime.now())) {
+          context.read<ReminderController>().toggle(_channels[_ch], p);
+          return;
+        }
+      }
+    }
+    _tuneSelected();
+  }
+
   void _tuneSelected() {
     if (_channels.isEmpty) return;
     context.read<TunerController>().tuneTo(_channels[_ch]);
@@ -189,7 +206,7 @@ class _GuideOverlayState extends State<GuideOverlay> {
         k == LogicalKeyboardKey.colorF2Yellow) {
       _setGroup(_group + 1);
     } else if (isSelectKey(k)) {
-      _tuneSelected();
+      _select();
     } else if (isBackKey(k)) {
       if (_inProgrammes) {
         setState(() => _inProgrammes = false);
@@ -332,8 +349,8 @@ class _GuideOverlayState extends State<GuideOverlay> {
                   height: 1,
                   color: Colors.white.withValues(alpha: 0.08),
                 ),
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(32, 14, 32, 18),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(32, 14, 32, 18),
                   child: Wrap(
                     spacing: 22,
                     runSpacing: 8,
@@ -341,7 +358,10 @@ class _GuideOverlayState extends State<GuideOverlay> {
                       KeyHint('↑↓', 'Canale'),
                       KeyHint('→', 'Palinsesto'),
                       KeyHint('←', 'Categoria'),
-                      KeyHint('OK', 'Guarda'),
+                      KeyHint(
+                        'OK',
+                        _inProgrammes && _prog > 0 ? 'Promemoria' : 'Guarda',
+                      ),
                       KeyHint('G', 'Chiudi'),
                     ],
                   ),
@@ -447,6 +467,10 @@ class _Schedule extends StatelessWidget {
                           ),
                         _ProgrammeTile(
                           programme: p,
+                          reminded: context.watch<ReminderController>().isSet(
+                            channel.id,
+                            p,
+                          ),
                           now: now,
                           focused: i == focusedIndex,
                           // Senza focus esplicito si mostra il dettaglio del programma in onda.
@@ -467,6 +491,7 @@ class _Schedule extends StatelessWidget {
 class _ProgrammeTile extends StatelessWidget {
   const _ProgrammeTile({
     required this.programme,
+    required this.reminded,
     required this.now,
     required this.focused,
     required this.expanded,
@@ -474,6 +499,7 @@ class _ProgrammeTile extends StatelessWidget {
   });
 
   final EpgProgramme programme;
+  final bool reminded;
   final DateTime now;
   final bool focused;
   final bool expanded;
@@ -533,6 +559,14 @@ class _ProgrammeTile extends StatelessWidget {
                             style: AppText.headline.copyWith(fontSize: 16.5),
                           ),
                         ),
+                        if (reminded) ...[
+                          const SizedBox(width: 10),
+                          const Icon(
+                            Icons.notifications_active_rounded,
+                            size: 16,
+                            color: Palette.warm,
+                          ),
+                        ],
                         const SizedBox(width: 12),
                         Text(
                           durationLabel(p.duration),
