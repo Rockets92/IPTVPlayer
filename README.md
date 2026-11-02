@@ -41,6 +41,7 @@ proiettori e box Android da 1 GB di RAM.
 | ← → (con le informazioni aperte) | Programmi precedenti e successivi del canale |
 | L | Elenco canali (←→ cambia categoria) |
 | G / Guida | Guida TV |
+| + / tasto rosso | Versione +1 del canale, se il provider la offre (di nuovo per tornare in diretta) |
 | S / tasto verde | Scegli la fonte del canale (se il provider ne ha più di una) |
 | I / Info | Mostra/nasconde le informazioni |
 | ⌫ / P | Canale precedente |

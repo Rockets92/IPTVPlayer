@@ -587,6 +587,7 @@ class _Shortcuts extends StatelessWidget {
     ('L', 'Elenco canali'),
     ('G', 'Guida TV'),
     ('S', 'Fonte del canale'),
+    ('+', 'Versione +1 del canale (tasto rosso)'),
     ('⌫', 'Canale precedente'),
     ('M', 'Impostazioni'),
     ('F', 'Schermo intero'),

@@ -185,6 +185,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
       _open(_Panel.list);
     } else if (k == LogicalKeyboardKey.keyG || k == LogicalKeyboardKey.guide) {
       _open(_Panel.guide);
+    } else if (k == LogicalKeyboardKey.add ||
+        k == LogicalKeyboardKey.numpadAdd ||
+        k == LogicalKeyboardKey.colorF0Red) {
+      _plusOne();
     } else if (k == LogicalKeyboardKey.keyS ||
         k == LogicalKeyboardKey.colorF1Green) {
       if (_tuner.current != null) _open(_Panel.sources);
@@ -227,11 +231,20 @@ class _PlayerScreenState extends State<PlayerScreen> {
     });
   }
 
+  void _plusOne() {
+    if (_tuner.canTogglePlusOne) {
+      _tuner.togglePlusOne();
+    } else {
+      _showToast('Nessuna versione +1 per questo canale');
+    }
+  }
+
   void _onBannerAction(BannerAction a) => switch (a) {
     BannerAction.list => _open(_Panel.list),
     BannerAction.guide => _open(_Panel.guide),
     BannerAction.settings => _open(_Panel.settings),
     BannerAction.sources => _open(_Panel.sources),
+    BannerAction.plusOne => _plusOne(),
   };
 
   @override

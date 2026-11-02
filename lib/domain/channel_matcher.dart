@@ -158,6 +158,65 @@ class ChannelMatcher {
       );
     }
 
+    // Versioni "+1": collegate al canale originale. Se il +1 è già
+    // nell'elenco si collegano i due canali, altrimenti i suoi stream
+    // diventano le fonti del tasto +1 del canale originale.
+    final plusOneUsed = <int>{};
+    {
+      final byTokens = <String, int>{};
+      for (var i = 0; i < channels.length; i++) {
+        byTokens.putIfAbsent(
+          NameNormalizer.tokens(channels[i].name).join(' '),
+          () => i,
+        );
+      }
+      final freeByBase = <String, List<XtreamLiveStream>>{};
+      for (final st in streams) {
+        if (assigned.containsKey(st.streamId)) continue;
+        final t = NameNormalizer.tokens(NameNormalizer.baseName(st.name));
+        if (t.length < 3 || t[t.length - 2] != 'plus' || t.last != '1') {
+          continue;
+        }
+        (freeByBase[t.join(' ')] ??= []).add(st);
+      }
+      for (var i = 0; i < channels.length; i++) {
+        final c = channels[i];
+        final base = NameNormalizer.tokens(c.name);
+        if (base.length >= 2 &&
+            base[base.length - 2] == 'plus' &&
+            base.last == '1') {
+          continue;
+        }
+        final target = [...base, 'plus', '1'].join(' ');
+        final j = byTokens[target];
+        if (j != null && j != i) {
+          channels[i] = c.copyWith(plusOneChannelId: channels[j].id);
+          channels[j] = channels[j].copyWith(baseChannelId: c.id);
+          continue;
+        }
+        final free = freeByBase[target];
+        if (free == null || free.isEmpty) continue;
+        int rank(XtreamLiveStream x) {
+          final p = _preferredRank(x.name, preferredTags);
+          return (p < 0 ? 0 : (preferredTags.length - p) * -100) -
+              _score(x.name);
+        }
+
+        free.sort((a, b) => rank(a).compareTo(rank(b)));
+        plusOneUsed.addAll(free.map((x) => x.streamId));
+        channels[i] = c.copyWith(
+          plusOne: [
+            for (final x in free)
+              ChannelSource(
+                streamId: x.streamId,
+                label: x.name.trim(),
+                preferred: _preferredRank(x.name, preferredTags) >= 0,
+              ),
+          ],
+        );
+      }
+    }
+
     // Gruppi automatici (es. "Eventi" dall'800): stream non già in lista che
     // contengono le parole chiave, una volta sola per evento.
     final dynamicUsed = <int>{};
@@ -166,7 +225,10 @@ class ChannelMatcher {
         _dynamicGroup(
           g,
           streams,
-          skip: (id) => assigned.containsKey(id) || dynamicUsed.contains(id),
+          skip: (id) =>
+              assigned.containsKey(id) ||
+              dynamicUsed.contains(id) ||
+              plusOneUsed.contains(id),
           used: dynamicUsed,
           taken: channels.map((c) => c.number).toSet(),
           preferredTags: preferredTags,
@@ -178,7 +240,8 @@ class ChannelMatcher {
       final rest = streams.where(
         (s) =>
             !assigned.containsKey(s.streamId) &&
-            !dynamicUsed.contains(s.streamId),
+            !dynamicUsed.contains(s.streamId) &&
+            !plusOneUsed.contains(s.streamId),
       );
       final taken = channels.map((c) => c.number).toSet();
       final seen = <String>{};

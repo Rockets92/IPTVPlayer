@@ -47,7 +47,7 @@ class _SourcePickerState extends State<SourcePicker> {
   }
 
   List<ChannelSource> get _sources =>
-      context.read<TunerController>().current?.sources ?? const [];
+      context.read<TunerController>().activeSources;
 
   void _reveal({bool animate = true}) {
     if (!_scroll.hasClients) return;
@@ -108,7 +108,7 @@ class _SourcePickerState extends State<SourcePicker> {
   Widget build(BuildContext context) {
     final tuner = context.watch<TunerController>();
     final channel = tuner.current;
-    final sources = channel?.sources ?? const <ChannelSource>[];
+    final sources = tuner.activeSources;
     final inUse = tuner.sourceIndex;
     final size = MediaQuery.sizeOf(context);
     final panelW = size.width < 600 ? size.width - 24 : 560.0;
@@ -152,7 +152,7 @@ class _SourcePickerState extends State<SourcePicker> {
                           Text(
                             channel == null
                                 ? 'Nessun canale'
-                                : '${channel.number}  ${channel.name}',
+                                : '${channel.number}  ${channel.name}${tuner.timeshift ? ' +1' : ''}',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: AppText.title,

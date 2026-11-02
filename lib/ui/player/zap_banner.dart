@@ -31,17 +31,29 @@ class ZapBanner extends StatelessWidget {
     return NowBuilder(
       everySecond: false,
       builder: (context, now) {
-        var current = app.epg.nowOn(channel.id, now);
-        var next = app.epg.nextOn(channel.id, now);
+        // Sul +1 la guida è quella del canale spostata di un'ora.
+        final shifted = tuner.timeshift && tuner.current?.id == channel.id;
+        final at = shifted ? now.subtract(const Duration(hours: 1)) : now;
+        EpgProgramme? later(EpgProgramme? p) => p == null || !shifted
+            ? p
+            : EpgProgramme(
+                start: p.start + 3600,
+                end: p.end + 3600,
+                title: p.title,
+                description: p.description,
+                category: p.category,
+              );
+        var current = later(app.epg.nowOn(channel.id, at));
+        var next = later(app.epg.nextOn(channel.id, at));
         // Info aperte con ←→: programma precedente o successivo.
         var shift = 0;
         if (tuner.infoMode && tuner.epgOffset != 0) {
           final list = app.epg.forChannel(channel.id);
-          final base = app.epg.indexNear(channel.id, now);
+          final base = app.epg.indexNear(channel.id, at);
           final i = base + tuner.epgOffset;
           if (base >= 0 && i >= 0 && i < list.length) {
-            current = list[i];
-            next = i + 1 < list.length ? list[i + 1] : null;
+            current = later(list[i]);
+            next = i + 1 < list.length ? later(list[i + 1]) : null;
             shift = tuner.epgOffset;
           }
         }
@@ -75,7 +87,7 @@ class ZapBanner extends StatelessWidget {
   }
 }
 
-enum BannerAction { list, guide, settings, sources }
+enum BannerAction { list, guide, settings, sources, plusOne }
 
 class _Wide extends StatelessWidget {
   const _Wide({
@@ -247,6 +259,10 @@ class _Programmes extends StatelessWidget {
                 style: AppText.title.copyWith(fontSize: 25),
               ),
             ),
+            if (isLive && tuner.timeshift) ...[
+              const SizedBox(width: 10),
+              const _Badge('+1', accent: true),
+            ],
             const SizedBox(width: 14),
             if (isLive) const _SignalBadges(),
             if (tuner.browsing) const _Badge('ANTEPRIMA', accent: true),
@@ -388,7 +404,7 @@ class _SignalBadges extends StatelessWidget {
         final res = s.resolutionBadge;
         final muted = context.select<TunerController, bool>((t) => t.muted);
         final (src, total) = context.select<TunerController, (int, int)>(
-          (t) => (t.sourceIndex, t.current?.sources.length ?? 0),
+          (t) => (t.sourceIndex, t.activeSources.length),
         );
         return Row(
           mainAxisSize: MainAxisSize.min,
@@ -486,8 +502,23 @@ class _ClockColumn extends StatelessWidget {
               tooltip: 'Guida (G)',
               onTap: () => onAction(BannerAction.guide),
             ),
+            if (context.select<TunerController, bool>(
+              (t) => t.canTogglePlusOne,
+            )) ...[
+              const SizedBox(width: 8),
+              _RoundAction(
+                label:
+                    context.select<TunerController, bool>(
+                      (t) => t.timeshift || t.current?.baseChannelId != null,
+                    )
+                    ? 'LIVE'
+                    : '+1',
+                tooltip: 'Versione +1 (+)',
+                onTap: () => onAction(BannerAction.plusOne),
+              ),
+            ],
             if ((context.select<TunerController, int>(
-                  (t) => t.current?.sources.length ?? 0,
+                  (t) => t.activeSources.length,
                 )) >
                 1) ...[
               const SizedBox(width: 8),
@@ -513,11 +544,13 @@ class _ClockColumn extends StatelessWidget {
 /// Azioni rapide per mouse e tocco (con telecomando si usano i tasti).
 class _RoundAction extends StatefulWidget {
   const _RoundAction({
-    required this.icon,
+    this.icon,
+    this.label,
     required this.tooltip,
     required this.onTap,
   });
-  final IconData icon;
+  final IconData? icon;
+  final String? label;
   final String tooltip;
   final VoidCallback onTap;
 
@@ -548,7 +581,17 @@ class _RoundActionState extends State<_RoundAction> {
               color: Colors.white.withValues(alpha: _hover ? 0.18 : 0.08),
               border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
             ),
-            child: Icon(widget.icon, size: 18, color: Palette.textPrimary),
+            alignment: Alignment.center,
+            child: widget.icon != null
+                ? Icon(widget.icon, size: 18, color: Palette.textPrimary)
+                : Text(
+                    widget.label ?? '',
+                    style: AppText.overline.copyWith(
+                      fontSize: (widget.label ?? '').length > 2 ? 9 : 12,
+                      letterSpacing: 0.2,
+                      color: Palette.textPrimary,
+                    ),
+                  ),
           ),
         ),
       ),

@@ -41,6 +41,9 @@ class Channel {
     this.epgIds = const [],
     this.nameKeys = const [],
     this.mapped = true,
+    this.plusOne = const [],
+    this.plusOneChannelId,
+    this.baseChannelId,
   });
 
   /// Identificativo stabile: `m<numero>` per i mappati, `s<streamId>` per gli altri.
@@ -60,6 +63,37 @@ class Channel {
   final List<ChannelSource> sources;
 
   final bool mapped;
+
+  /// Stream della versione "+1" (un'ora dopo) presenti nella lista del
+  /// provider ma non nell'elenco canali: si guardano con il tasto +1.
+  final List<ChannelSource> plusOne;
+
+  /// Se la versione +1 è un canale dell'elenco, il suo id.
+  final String? plusOneChannelId;
+
+  /// Sul canale +1 dell'elenco: id del canale originale.
+  final String? baseChannelId;
+
+  bool get hasPlusOne => plusOne.isNotEmpty || plusOneChannelId != null;
+
+  Channel copyWith({
+    List<ChannelSource>? plusOne,
+    String? plusOneChannelId,
+    String? baseChannelId,
+  }) => Channel(
+    id: id,
+    number: number,
+    name: name,
+    group: group,
+    sources: sources,
+    logoUrl: logoUrl,
+    epgIds: epgIds,
+    nameKeys: nameKeys,
+    mapped: mapped,
+    plusOne: plusOne ?? this.plusOne,
+    plusOneChannelId: plusOneChannelId ?? this.plusOneChannelId,
+    baseChannelId: baseChannelId ?? this.baseChannelId,
+  );
 
   bool get playable => sources.isNotEmpty;
 

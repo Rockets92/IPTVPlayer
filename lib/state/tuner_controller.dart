@@ -52,30 +52,70 @@ class TunerController extends ChangeNotifier {
 
   int get currentIndex => _current;
 
+  /// Versione +1 del canale in visione (stream della lista non in elenco).
+  bool timeshift = false;
+
+  List<ChannelSource> _src(Channel c) =>
+      timeshift && c.plusOne.isNotEmpty ? c.plusOne : c.sources;
+
+  String _choiceKey(Channel c) => timeshift ? '${c.id}+1' : c.id;
+
+  /// Fonti del canale in visione (quelle del +1 se attivo).
+  List<ChannelSource> get activeSources {
+    final c = current;
+    return c == null ? const [] : _src(c);
+  }
+
+  /// Il canale in visione ha una versione +1 (o è il +1 di un altro).
+  bool get canTogglePlusOne {
+    final c = current;
+    return c != null && (c.hasPlusOne || c.baseChannelId != null);
+  }
+
+  /// Tasto +1: passa alla versione di un'ora dopo e ritorno.
+  void togglePlusOne() {
+    final c = current;
+    if (c == null) return;
+    // +1 presente nell'elenco: si va su quel canale (e viceversa).
+    final target = c.plusOneChannelId ?? c.baseChannelId;
+    if (target != null && !timeshift) {
+      final idx = channels.indexWhere((x) => x.id == target);
+      if (idx >= 0) _tune(idx, showBanner: true);
+      return;
+    }
+    if (c.plusOne.isEmpty) return;
+    timeshift = !timeshift;
+    _resetSources(c);
+    _retries = 0;
+    signalMessage = null;
+    _showBanner();
+    _play();
+  }
+
   /// Indice della fonte in uso nel canale corrente.
   int get sourceIndex {
     final c = current;
-    if (c == null || c.sources.isEmpty || _order.isEmpty) return 0;
+    if (c == null || _src(c).isEmpty || _order.isEmpty) return 0;
     return _order[_try.clamp(0, _order.length - 1)].clamp(
       0,
-      c.sources.length - 1,
+      _src(c).length - 1,
     );
   }
 
   ChannelSource? get currentSource {
     final c = current;
-    return c == null || c.sources.isEmpty ? null : c.sources[sourceIndex];
+    return c == null || _src(c).isEmpty ? null : _src(c)[sourceIndex];
   }
 
   /// Passa a un'altra fonte del canale in visione e la ricorda per la volta
   /// successiva (anche dopo il riavvio).
   void selectSource(int index) {
     final c = current;
-    if (c == null || index < 0 || index >= c.sources.length) return;
+    if (c == null || index < 0 || index >= _src(c).length) return;
     unawaited(
       app.settings.setSourceChoice(
-        c.id,
-        index == 0 ? null : c.sources[index].label,
+        _choiceKey(c),
+        index == 0 ? null : _src(c)[index].label,
       ),
     );
     if (index == sourceIndex &&
@@ -89,9 +129,9 @@ class TunerController extends ChangeNotifier {
   }
 
   int _preferredSource(Channel c) {
-    final label = app.settings.sourceChoice(c.id);
+    final label = app.settings.sourceChoice(_choiceKey(c));
     if (label == null) return 0;
-    final i = c.sources.indexWhere((s) => s.label == label);
+    final i = _src(c).indexWhere((s) => s.label == label);
     return i < 0 ? 0 : i;
   }
 
@@ -99,7 +139,7 @@ class TunerController extends ChangeNotifier {
     final first = start ?? _preferredSource(c);
     _order = [
       first,
-      for (var i = 0; i < c.sources.length; i++)
+      for (var i = 0; i < _src(c).length; i++)
         if (i != first) i,
     ];
     _try = 0;
@@ -337,6 +377,7 @@ class TunerController extends ChangeNotifier {
     _current = idx;
     final c = channels[idx];
     _currentId = c.id;
+    timeshift = false;
     _resetSources(c);
     _retries = 0;
     unawaited(app.settings.setLastChannelId(c.id));
@@ -348,16 +389,16 @@ class TunerController extends ChangeNotifier {
   void _play() {
     final c = current;
     _retryTimer?.cancel();
-    if (c == null || c.sources.isEmpty) {
+    if (c == null || _src(c).isEmpty) {
       signalMessage = 'Canale non disponibile';
       _notify();
       return;
     }
     // La lista può essere stata ricaricata con fonti diverse.
-    if (_order.length != c.sources.length) _resetSources(c);
+    if (_order.length != _src(c).length) _resetSources(c);
     if (_retries == 0 && _try == 0) signalMessage = null;
     _attempt++;
-    final src = c.sources[sourceIndex];
+    final src = _src(c)[sourceIndex];
     _stall?.cancel();
     _stall = null;
     _watchdog?.cancel();

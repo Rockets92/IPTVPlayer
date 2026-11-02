@@ -306,6 +306,37 @@ void main() {
     expect(list[2].sources.length, 3);
   });
 
+  test('versioni +1 fuori elenco collegate al canale originale', () {
+    final mapping = ChannelMapping.fromJson({
+      'dynamicGroups': [],
+      'channels': [
+        {'number': 105, 'name': 'Canale 5', 'group': 'A'},
+        {'number': 108, 'name': 'Sky Uno', 'group': 'A'},
+        {'number': 109, 'name': 'Sky Uno +1', 'group': 'A'},
+        {'number': 301, 'name': 'Sky Cinema Uno', 'group': 'B'},
+      ],
+    });
+    final list = const ChannelMatcher().build(
+      mapping: mapping,
+      showUnmapped: true,
+      streams: const [
+        XtreamLiveStream(streamId: 1, name: 'Canale 5 FHD ( sat-stella )'),
+        XtreamLiveStream(streamId: 2, name: 'Canale 5 +1 FHD ( sat-stella )'),
+        XtreamLiveStream(streamId: 3, name: 'Canale 5 +1 HD ( hermes )'),
+        XtreamLiveStream(streamId: 4, name: 'Sky Uno FHD'),
+        XtreamLiveStream(streamId: 5, name: 'Sky Uno +1 FHD'),
+        XtreamLiveStream(streamId: 6, name: 'Sky Cinema Uno FHD'),
+      ],
+    );
+    expect(list.map((c) => c.number), [105, 108, 109, 301]);
+    final c5 = list[0];
+    expect(c5.sources.single.streamId, 1);
+    expect(c5.plusOne.map((s) => s.streamId), [3, 2]);
+    expect(list[1].plusOneChannelId, 'm109');
+    expect(list[2].baseChannelId, 'm108');
+    expect(list[3].hasPlusOne, isFalse);
+  });
+
   group('Fonti multiple', () {
     final mapping = ChannelMapping.fromJson({
       'dynamicGroups': [],
