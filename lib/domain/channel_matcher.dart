@@ -303,11 +303,14 @@ class ChannelMatcher {
 
     final buckets = <String, List<XtreamLiveStream>>{};
     for (final kw in g.keywords) {
+      // La parola chiave deve iniziare una parola: "event" prende "Eventi"
+      // ed "Events" ma non "Benevento".
+      final re = RegExp('(?<![a-z0-9])${RegExp.escape(kw)}');
       final matches =
           [
             for (final s in streams)
               if (!skip(s.streamId) &&
-                  NameNormalizer.fold(s.name).toLowerCase().contains(kw))
+                  re.hasMatch(NameNormalizer.fold(s.name).toLowerCase()))
                 s,
           ]..sort(
             (a, b) =>

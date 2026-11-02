@@ -208,16 +208,21 @@ void main() {
         XtreamLiveStream(streamId: 6, name: 'DAZN 2 FHD'),
         XtreamLiveStream(streamId: 7, name: 'Eventi 1 ( hermes )'),
         XtreamLiveStream(streamId: 8, name: 'Canale Locale'),
+        XtreamLiveStream(streamId: 9, name: 'Benevento TV ( hermes )'),
+        XtreamLiveStream(streamId: 10, name: 'Sport Events 3'),
       ],
     );
     final ev = list.where((c) => c.group == 'Eventi').toList();
-    expect(ev.map((c) => c.number), [800, 801, 802, 803]);
+    expect(ev.map((c) => c.number), [800, 801, 802, 803, 804]);
     expect(ev.map((c) => c.name), [
       'DAZN 2',
       'DAZN 10',
       'Eventi 1',
       'EVENTI 2',
+      'Sport Events 3',
     ]);
+    // "event" dentro una parola (Benevento) non conta.
+    expect(ev.any((c) => c.name.contains('Benevento')), isFalse);
     expect(ev.first.sources.map((s) => s.streamId), [5, 6]);
     // Zona DAZN resta al suo numero, non finisce negli eventi.
     expect(list.firstWhere((c) => c.number == 214).sources.single.streamId, 2);
