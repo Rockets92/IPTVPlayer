@@ -440,4 +440,69 @@ void main() {
       expect(c.password, 'segreta');
     });
   });
+
+  group('canali per adulti', () {
+    final mapping = ChannelMapping.fromJson({
+      'channels': [
+        {'number': 101, 'name': 'Rai 1', 'group': 'A'},
+      ],
+    });
+    const streams = [
+      XtreamLiveStream(streamId: 1, name: 'Rai 1 FHD', categoryId: '1'),
+      XtreamLiveStream(streamId: 2, name: 'Hot Club HD', categoryId: '9'),
+      XtreamLiveStream(
+        streamId: 3,
+        name: 'Hot Club FHD ( hermes )',
+        categoryId: '9',
+      ),
+      XtreamLiveStream(streamId: 4, name: 'Eventi XXX 1', categoryId: '9'),
+      XtreamLiveStream(streamId: 5, name: 'Eventi 1', categoryId: '1'),
+    ];
+    const cats = {'1': 'TV SAT FHD', '9': '★ XXX | ADULTI'};
+
+    test('nascosti per impostazione predefinita', () {
+      final list = const ChannelMatcher().build(
+        mapping: mapping,
+        streams: streams,
+        categoryNames: cats,
+        showUnmapped: true,
+      );
+      expect(list.any((c) => c.adult), isFalse);
+      expect(
+        list.expand((c) => c.sources).map((s) => s.streamId),
+        isNot(anyOf(contains(2), contains(3), contains(4))),
+      );
+    });
+
+    test('attivi: categoria XXX dal 900, una volta per canale', () {
+      final list = const ChannelMatcher().build(
+        mapping: mapping,
+        streams: streams,
+        categoryNames: cats,
+        includeAdult: true,
+      );
+      final xxx = list.where((c) => c.group == 'XXX').toList();
+      expect(xxx.every((c) => c.adult), isTrue);
+      expect(xxx.first.number, 900);
+      expect(xxx.map((c) => c.name), containsAll(['Hot Club', 'Eventi XXX 1']));
+      expect(
+        xxx
+            .firstWhere((c) => c.name == 'Hot Club')
+            .sources
+            .map((s) => s.streamId),
+        [3, 2],
+      );
+      // Gli stream XXX non finiscono negli Eventi.
+      final ev = list.where((c) => c.group == 'Eventi');
+      expect(ev.map((c) => c.name), ['Eventi 1']);
+    });
+
+    test('riconosce i nomi di categoria', () {
+      expect(ChannelMatcher.isAdultCategory('XXX'), isTrue);
+      expect(ChannelMatcher.isAdultCategory('IT | Adulti'), isTrue);
+      expect(ChannelMatcher.isAdultCategory('Adult 18+'), isTrue);
+      expect(ChannelMatcher.isAdultCategory('Sport'), isFalse);
+      expect(ChannelMatcher.isAdultCategory(null), isFalse);
+    });
+  });
 }

@@ -13,6 +13,9 @@ extension StreamFormatX on StreamFormat {
   String get label => this == StreamFormat.ts ? 'MPEG-TS' : 'HLS';
 }
 
+/// Canali per adulti (categoria "XXX" del provider).
+enum AdultMode { off, on, pin }
+
 /// Preferenze persistenti.
 class SettingsStore {
   SettingsStore(this._prefs);
@@ -35,6 +38,8 @@ class SettingsStore {
   static const _kPerf = 'ui.performanceMode';
   static const _kFormat = 'stream.format';
   static const _kSources = 'tuner.sourceChoices';
+  static const _kAdult = 'channels.adultMode';
+  static const _kAdultPin = 'channels.adultPin';
 
   XtreamCredentials? get credentials {
     final raw = _prefs.getString(_kCreds);
@@ -130,6 +135,26 @@ class SettingsStore {
     }
     return _prefs.setString(_kSources, jsonEncode(m));
   }
+
+  /// Predefinito: canali per adulti nascosti.
+  AdultMode get adultMode => AdultMode.values.firstWhere(
+    (m) => m.name == _prefs.getString(_kAdult),
+    orElse: () => AdultMode.off,
+  );
+
+  /// PIN del parental control (solo in modalità [AdultMode.pin]).
+  String? get adultPin => _prefs.getString(_kAdultPin);
+
+  Future<void> setAdultMode(AdultMode m, {String? pin}) async {
+    await _prefs.setString(_kAdult, m.name);
+    if (m == AdultMode.pin && pin != null) {
+      await _prefs.setString(_kAdultPin, pin);
+    } else if (m != AdultMode.pin) {
+      await _prefs.remove(_kAdultPin);
+    }
+  }
+
+  bool checkAdultPin(String pin) => pin.isNotEmpty && pin == adultPin;
 
   Future<void> clearAccount() async {
     await _prefs.remove(_kCreds);

@@ -44,6 +44,7 @@ class Channel {
     this.plusOne = const [],
     this.plusOneChannelId,
     this.baseChannelId,
+    this.adult = false,
   });
 
   /// Identificativo stabile: `m<numero>` per i mappati, `s<streamId>` per gli altri.
@@ -74,12 +75,16 @@ class Channel {
   /// Sul canale +1 dell'elenco: id del canale originale.
   final String? baseChannelId;
 
+  /// Canale della categoria per adulti ("XXX") del provider.
+  final bool adult;
+
   bool get hasPlusOne => plusOne.isNotEmpty || plusOneChannelId != null;
 
   Channel copyWith({
     List<ChannelSource>? plusOne,
     String? plusOneChannelId,
     String? baseChannelId,
+    bool? adult,
   }) => Channel(
     id: id,
     number: number,
@@ -93,6 +98,7 @@ class Channel {
     plusOne: plusOne ?? this.plusOne,
     plusOneChannelId: plusOneChannelId ?? this.plusOneChannelId,
     baseChannelId: baseChannelId ?? this.baseChannelId,
+    adult: adult ?? this.adult,
   );
 
   bool get playable => sources.isNotEmpty;

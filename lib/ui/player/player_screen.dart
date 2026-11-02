@@ -19,6 +19,7 @@ import '../keys.dart';
 import '../settings/settings_panel.dart';
 import '../widgets/focus_tile.dart';
 import '../widgets/glass.dart';
+import '../widgets/pin_dialog.dart';
 import 'channel_list_overlay.dart';
 import 'guide_overlay.dart';
 import 'number_entry.dart';
@@ -66,6 +67,30 @@ class _PlayerScreenState extends State<PlayerScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _tuner.start());
     context.read<AppController>().addListener(_onApp);
     _reminders.addListener(_onReminder);
+    _tuner.addListener(_onTuner);
+  }
+
+  int _pinSeen = 0;
+  bool _pinOpen = false;
+
+  /// Canale per adulti protetto: si chiede il PIN.
+  Future<void> _onTuner() async {
+    if (_tuner.pinRequest == _pinSeen || !_tuner.locked || _pinOpen) return;
+    _pinSeen = _tuner.pinRequest;
+    final c = _tuner.current;
+    if (c == null || !mounted) return;
+    _pinOpen = true;
+    if (_panel != _Panel.none) setState(() => _panel = _Panel.none);
+    final pin = await showPinDialog(
+      context,
+      title: 'Canale protetto',
+      subtitle: '${c.number}  ${c.name}\nInserisci il PIN per guardarlo',
+      validate: _tuner.unlock,
+    );
+    _pinOpen = false;
+    if (!mounted) return;
+    _rootFocus.requestFocus();
+    if (pin == null) _tuner.cancelUnlock();
   }
 
   late final ReminderController _reminders = context.read<ReminderController>();
@@ -107,6 +132,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
   void dispose() {
     context.read<AppController>().removeListener(_onApp);
     _reminders.removeListener(_onReminder);
+    _tuner.removeListener(_onTuner);
     WakelockPlus.disable().catchError((_) {});
     if (_isMobile) {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);

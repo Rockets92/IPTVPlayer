@@ -7,10 +7,12 @@ import '../../core/performance.dart';
 import '../../core/theme.dart';
 import '../../data/settings_store.dart';
 import '../../state/app_controller.dart';
+import '../../state/tuner_controller.dart';
 import '../format.dart';
 import '../widgets/focus_tile.dart';
 import '../widgets/glass.dart';
 import '../widgets/glass_field.dart';
+import '../widgets/pin_dialog.dart';
 
 /// Impostazioni (tasto M): pannello laterale navigabile con il telecomando.
 class SettingsPanel extends StatefulWidget {
@@ -115,6 +117,79 @@ class _SettingsPanelState extends State<SettingsPanel> {
     if (mounted) setState(() {});
   }
 
+  Future<String?> _pin(
+    String title, {
+    String? subtitle,
+    bool Function(String)? validate,
+  }) async {
+    _dialogOpen = true;
+    final v = await showPinDialog(
+      context,
+      title: title,
+      subtitle: subtitle,
+      validate: validate,
+    );
+    _dialogOpen = false;
+    return v;
+  }
+
+  /// Nuovo PIN, chiesto due volte.
+  Future<String?> _newPin() async {
+    final a = await _pin(
+      'Scegli un PIN',
+      subtitle: '4 cifre per sbloccare i canali per adulti',
+    );
+    if (a == null || !mounted) return null;
+    final b = await _pin('Conferma il PIN', subtitle: 'Ripeti le 4 cifre');
+    if (b == null) return null;
+    if (a != b) {
+      widget.onToast('I due PIN non coincidono, nessuna modifica');
+      return null;
+    }
+    return a;
+  }
+
+  Future<bool> _askCurrentPin() async =>
+      await _pin(
+        'PIN attuale',
+        subtitle: 'Serve per cambiare il parental control',
+        validate: _s.checkAdultPin,
+      ) !=
+      null;
+
+  Future<void> _setAdult(AdultMode v) async {
+    final was = _s.adultMode;
+    if (v == was) return;
+    // Il parental control si toglie solo con il PIN.
+    if (was == AdultMode.pin && !await _askCurrentPin()) return;
+    String? pin;
+    if (v == AdultMode.pin) {
+      pin = await _newPin();
+      if (pin == null) return;
+    }
+    await _s.setAdultMode(v, pin: pin);
+    if (!mounted) return;
+    final tuner = context.read<TunerController>();
+    await _app.applyMapping();
+    tuner.relockAdult();
+    widget.onToast(switch (v) {
+      AdultMode.off => 'Canali per adulti nascosti',
+      AdultMode.on => 'Canali per adulti attivi, categoria XXX',
+      AdultMode.pin => 'Canali per adulti protetti da PIN',
+    });
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _changePin() async {
+    if (!await _askCurrentPin()) return;
+    final pin = await _newPin();
+    if (pin == null) return;
+    await _s.setAdultMode(AdultMode.pin, pin: pin);
+    if (!mounted) return;
+    context.read<TunerController>().relockAdult();
+    widget.onToast('PIN aggiornato');
+  }
+
   KeyEventResult _onKey(FocusNode node, KeyEvent e) {
     if (_dialogOpen || e is! KeyDownEvent) return KeyEventResult.ignored;
     final k = e.logicalKey;
@@ -188,6 +263,23 @@ class _SettingsPanelState extends State<SettingsPanel> {
                         if (mounted) setState(() {});
                       },
                     ),
+                    _ChoiceRow<AdultMode>(
+                      title: 'Abilita canali per adulti',
+                      value: s.adultMode,
+                      options: const {
+                        AdultMode.off: 'No',
+                        AdultMode.on: 'Sì',
+                        AdultMode.pin: 'Sì con PIN',
+                      },
+                      onChanged: _setAdult,
+                    ),
+                    if (s.adultMode == AdultMode.pin)
+                      _ActionRow(
+                        icon: Icons.lock_reset_rounded,
+                        title: 'Cambia PIN',
+                        subtitle: 'Canali della categoria XXX dal 900',
+                        onSelect: _changePin,
+                      ),
                     _ActionRow(
                       icon: Icons.refresh_rounded,
                       title: 'Aggiorna canali dal provider',

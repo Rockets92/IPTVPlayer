@@ -183,6 +183,7 @@ class AppController extends ChangeNotifier {
           streams: streams,
           categoryNames: cats,
           showUnmapped: settings.showUnmapped,
+          includeAdult: settings.adultMode != AdultMode.off,
         );
   }
 

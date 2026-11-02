@@ -19,12 +19,36 @@ class ChannelMatcher {
   /// accompagna almeno questo numero di canali diversi della lista.
   static const minTagChannels = 3;
 
+  static const adultGroup = 'XXX';
+  static const adultStartNumber = 900;
+
+  /// Categoria del provider per adulti: "XXX", "XXX | Italia", "Adult"...
+  static bool isAdultCategory(String? name) {
+    if (name == null) return false;
+    final n = NameNormalizer.fold(name).toLowerCase();
+    return RegExp(r'(?<![a-z0-9])(xxx|adult[a-z]*|18\+)').hasMatch(n);
+  }
+
   List<Channel> build({
     required ChannelMapping mapping,
     required List<XtreamLiveStream> streams,
     Map<String, String> categoryNames = const {},
     bool? showUnmapped,
+    bool includeAdult = false,
   }) {
+    // Canali per adulti: fuori da tutto il resto; se attivi formano una
+    // categoria a parte dal 900.
+    final adultStreams = [
+      for (final s in streams)
+        if (isAdultCategory(categoryNames[s.categoryId])) s,
+    ];
+    if (adultStreams.isNotEmpty) {
+      final ids = {for (final s in adultStreams) s.streamId};
+      streams = [
+        for (final s in streams)
+          if (!ids.contains(s.streamId)) s,
+      ];
+    }
     final visible = mapping.channels.where((m) => !m.hidden).toList();
     final byId = <int, XtreamLiveStream>{
       for (final s in streams) s.streamId: s,
@@ -236,6 +260,26 @@ class ChannelMatcher {
       );
     }
 
+    if (includeAdult && adultStreams.isNotEmpty) {
+      channels.addAll(
+        _dynamicGroup(
+          const DynamicGroup(
+            name: adultGroup,
+            startNumber: adultStartNumber,
+            keywords: [],
+          ),
+          adultStreams,
+          passes: [(_) => true],
+          idPrefix: 'x',
+          adult: true,
+          skip: (_) => false,
+          used: <int>{},
+          taken: channels.map((c) => c.number).toSet(),
+          preferredTags: preferredTags,
+        ),
+      );
+    }
+
     if (showUnmapped ?? mapping.showUnmapped) {
       final rest = streams.where(
         (s) =>
@@ -274,6 +318,9 @@ class ChannelMatcher {
   List<Channel> _dynamicGroup(
     DynamicGroup g,
     List<XtreamLiveStream> streams, {
+    List<bool Function(XtreamLiveStream)>? passes,
+    String idPrefix = 'e',
+    bool adult = false,
     required bool Function(int streamId) skip,
     required Set<int> used,
     required Set<int> taken,
@@ -302,16 +349,21 @@ class ChannelMatcher {
     }
 
     final buckets = <String, List<XtreamLiveStream>>{};
-    for (final kw in g.keywords) {
-      // La parola chiave deve iniziare una parola: "event" prende "Eventi"
-      // ed "Events" ma non "Benevento".
-      final re = RegExp('(?<![a-z0-9])${RegExp.escape(kw)}');
+    final filters =
+        passes ??
+        [
+          for (final kw in g.keywords)
+            // La parola chiave deve iniziare una parola: "event" prende
+            // "Eventi" ed "Events" ma non "Benevento".
+            (XtreamLiveStream s) =>
+                RegExp('(?<![a-z0-9])${RegExp.escape(kw)}')
+                    .hasMatch(NameNormalizer.fold(s.name).toLowerCase()),
+        ];
+    for (final pass in filters) {
       final matches =
           [
             for (final s in streams)
-              if (!skip(s.streamId) &&
-                  re.hasMatch(NameNormalizer.fold(s.name).toLowerCase()))
-                s,
+              if (!skip(s.streamId) && pass(s)) s,
           ]..sort(
             (a, b) =>
                 _naturalCompare(_displayName(a.name), _displayName(b.name)),
@@ -338,7 +390,7 @@ class ChannelMatcher {
       final first = list.first;
       out.add(
         Channel(
-          id: 'e:$k',
+          id: '$idPrefix:$k',
           number: n++,
           name: _displayName(first.name),
           group: g.name,
@@ -358,6 +410,7 @@ class ChannelMatcher {
                 preferred: _preferredRank(s.name, preferredTags) >= 0,
               ),
           ],
+          adult: adult,
         ),
       );
     }

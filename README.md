@@ -22,6 +22,13 @@ proiettori e box Android da 1 GB di RAM.
   numerazione Sky Italia per i test, leggibile in futuro da un server.
 - **Guida TV** da fonti XMLTV esterne (anche `.gz`), con riempimento dalla
   guida del provider. Parsing in streaming in un isolate, cache su disco.
+- **Promemoria**: OK su un programma futuro (banner info o Guida TV) lo
+  prenota; 5 minuti prima compare l'avviso per andare al canale.
+- **Canali per adulti**: in Impostazioni → "Abilita canali per adulti"
+  (No / Sì / Sì con PIN). Le categorie del provider con "XXX" o "Adulti" nel
+  nome diventano la categoria XXX dal 900; con il PIN ogni canale chiede il
+  codice (resta sbloccato finché non si torna su un canale normale). Per
+  togliere il PIN o cambiarlo serve quello attuale.
 - **Affidabilità**: più stream per canale con failover automatico, nuovi
   tentativi con attesa crescente, rilevamento di segnale bloccato, avvio
   istantaneo dalla lista in cache con aggiornamento in background.

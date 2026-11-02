@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../data/epg/epg_models.dart';
+import '../data/settings_store.dart';
 import '../domain/channel.dart';
 import '../player/playback_engine.dart';
 import 'app_controller.dart';
@@ -159,6 +160,51 @@ class TunerController extends ChangeNotifier {
   int epgOffset = 0;
   String digits = '';
   bool muted = false;
+
+  /// Canale per adulti protetto da PIN in attesa di sblocco.
+  bool locked = false;
+
+  /// Cresce ogni volta che serve chiedere il PIN (lo schermo apre il dialogo).
+  int pinRequest = 0;
+  bool _adultUnlocked = false;
+
+  bool _needsPin(Channel c) =>
+      c.adult && app.settings.adultMode == AdultMode.pin && !_adultUnlocked;
+
+  /// PIN giusto: il canale parte e i canali per adulti restano sbloccati
+  /// finché non si torna su un canale normale.
+  bool unlock(String pin) {
+    if (!app.settings.checkAdultPin(pin)) return false;
+    _adultUnlocked = true;
+    locked = false;
+    signalMessage = null;
+    _retries = 0;
+    _try = 0;
+    _play();
+    return true;
+  }
+
+  /// PIN annullato: si torna al canale di prima (o al primo non protetto).
+  void cancelUnlock() {
+    if (!locked) return;
+    final p = _previous;
+    if (p != null && p < channels.length && !_needsPin(channels[p])) {
+      _tune(p, showBanner: true);
+      return;
+    }
+    final i = channels.indexWhere((c) => !_needsPin(c));
+    if (i >= 0) _tune(i, showBanner: true);
+  }
+
+  /// Da chiamare quando cambia l'impostazione dei canali per adulti.
+  void relockAdult() {
+    _adultUnlocked = false;
+    final c = current;
+    if (c != null && _needsPin(c) && !locked) {
+      _current = -1;
+      _tune(channels.indexOf(c), showBanner: true);
+    }
+  }
 
   /// Messaggio di stato per l'utente (nessun segnale, tentativo...).
   String? signalMessage;
@@ -363,6 +409,11 @@ class TunerController extends ChangeNotifier {
   }
 
   void retry() {
+    if (locked) {
+      pinRequest++;
+      _notify();
+      return;
+    }
     _retries = 0;
     _try = 0;
     _play();
@@ -383,6 +434,11 @@ class TunerController extends ChangeNotifier {
     _browse = null;
     infoMode = false;
     epgOffset = 0;
+    if (idx == _current && locked) {
+      pinRequest++;
+      _showBanner();
+      return;
+    }
     if (idx == _current && engine.state.value.status != PlaybackStatus.failed) {
       if (showBanner) _showBanner();
       return;
@@ -396,11 +452,25 @@ class TunerController extends ChangeNotifier {
     _retries = 0;
     unawaited(app.settings.setLastChannelId(c.id));
     unawaited(app.ensureEpg(c));
+    if (!c.adult) _adultUnlocked = false;
+    locked = _needsPin(c);
+    if (locked) {
+      // Canale protetto: niente video finché non si inserisce il PIN.
+      _retryTimer?.cancel();
+      _watchdog?.cancel();
+      _stall?.cancel();
+      unawaited(engine.stop());
+      signalMessage = 'Canale protetto · inserisci il PIN';
+      pinRequest++;
+      _showBanner();
+      return;
+    }
     if (showBanner) _showBanner();
     _play();
   }
 
   void _play() {
+    if (locked) return;
     final c = current;
     _retryTimer?.cancel();
     if (c == null || _src(c).isEmpty) {
@@ -455,7 +525,7 @@ class TunerController extends ChangeNotifier {
 
   void _fail() {
     // Errore e "fine stream" possono arrivare insieme: un solo failover per tentativo.
-    if (_failedAttempt == _attempt) return;
+    if (_failedAttempt == _attempt || locked) return;
     _failedAttempt = _attempt;
     _watchdog?.cancel();
     _watchdog = null;
