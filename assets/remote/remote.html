@@ -165,9 +165,37 @@ button{font:inherit;color:inherit;border:0;background:none;padding:0;cursor:poin
 .install b{color:var(--t1)}
 .install button{position:absolute;right:10px;top:8px;font-size:20px;color:var(--t3);padding:4px 8px}
 .offline{padding:12px 16px;font-size:13.5px;color:#ffb3b3;border-color:rgba(255,90,95,.35)}
+
+/* Schermata del telecomando: tutto nello schermo, niente scorrimento verticale */
+body.fit{height:100dvh;overflow:hidden}
+body.fit .app{height:100dvh;min-height:0}
+#p-remote{flex:1;min-height:0;gap:8px}
+.pager{flex:1;min-height:0;display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;
+  scrollbar-width:none;margin:0 -16px;overscroll-behavior-x:contain}
+.pager::-webkit-scrollbar{display:none}
+.sheet{flex:0 0 100%;min-width:0;scroll-snap-align:start;scroll-snap-stop:always;display:flex;flex-direction:column;
+  gap:12px;padding:2px 16px 4px;min-height:0}
+.sheet .key{width:100%}
+.top .key{min-height:46px}
+.padbox{flex:1;min-height:0;container-type:size;display:grid;place-items:center}
+.pad{width:min(100cqw,100cqh,330px);height:auto;margin:0}
+.rock{flex:none}
+.rocker button{min-height:58px}
+.center .key small{margin-top:3px}
+.center .key svg{width:20px;height:20px}
+.nums{flex:1;min-height:0;display:grid;grid-template-columns:repeat(3,1fr);grid-auto-rows:1fr;gap:10px}
+.nums .key{min-height:0;height:100%}
+.nums .key svg{width:20px;height:20px}
+.colors .key{min-height:44px}
+.colors .key i{width:34px;height:8px;border-radius:4px}
+.extra .key{min-height:48px}
+.dots{flex:none;display:flex;align-items:center;justify-content:center;gap:10px;padding:2px 0 0}
+.dots button{font-size:12px;font-weight:600;color:var(--t3);padding:6px 10px;border-radius:999px;transition:background .2s,color .2s}
+.dots button.on{color:var(--t1);background:rgba(255,255,255,.12)}
+.dots i{width:4px;height:4px;border-radius:50%;background:var(--t3)}
 </style>
 </head>
-<body>
+<body class="fit">
 <div class="app">
   <div class="glass now" id="now">
     <div class="num" id="num">–</div>
@@ -187,60 +215,71 @@ button{font:inherit;color:inherit;border:0;background:none;padding:0;cursor:poin
     <span id="installText"></span>
   </div>
 
-  <!-- Telecomando -->
+  <!-- Telecomando: due schermate affiancate, si passa dall'una all'altra con uno swipe -->
   <section class="page on" id="p-remote">
-    <div class="row r4">
-      <div><button class="key" data-k="info" style="width:100%"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.01"/></svg></button><div class="lbl">Info</div></div>
-      <div><button class="key" data-k="guide" style="width:100%"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 9h18M8 4v16"/></svg></button><div class="lbl">Guida</div></div>
-      <div><button class="key" data-k="list" style="width:100%"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg></button><div class="lbl">Elenco</div></div>
-      <div><button class="key" data-k="menu" style="width:100%"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></button><div class="lbl">Menu</div></div>
-    </div>
+    <div class="pager" id="pager">
+      <div class="sheet" id="sheet1">
+        <div class="row r4 top">
+          <div><button class="key" data-k="info"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.01"/></svg></button><div class="lbl">Info</div></div>
+          <div><button class="key" data-k="guide"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 9h18M8 4v16"/></svg></button><div class="lbl">Guida</div></div>
+          <div><button class="key" data-k="list"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg></button><div class="lbl">Elenco</div></div>
+          <div><button class="key" data-k="menu"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></button><div class="lbl">Menu</div></div>
+        </div>
 
-    <div class="pad">
-      <button class="u" data-k="up" data-rep aria-label="Su"><svg viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg></button>
-      <button class="l" data-k="left" data-rep aria-label="Sinistra"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
-      <button class="ok" data-k="ok">OK</button>
-      <button class="r" data-k="right" data-rep aria-label="Destra"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
-      <button class="d" data-k="down" data-rep aria-label="Giù"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
-    </div>
+        <div class="padbox">
+          <div class="pad">
+            <button class="u" data-k="up" data-rep aria-label="Su"><svg viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg></button>
+            <button class="l" data-k="left" data-rep aria-label="Sinistra"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
+            <button class="ok" data-k="ok">OK</button>
+            <button class="r" data-k="right" data-rep aria-label="Destra"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+            <button class="d" data-k="down" data-rep aria-label="Giù"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
+          </div>
+        </div>
 
-    <div class="row r3" style="margin-top:2px">
-      <div><button class="key" data-k="back" style="width:100%"><svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 010 12h-3"/></svg></button><div class="lbl">Indietro</div></div>
-      <div><button class="key" data-k="prev" style="width:100%"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 109-9 9.7 9.7 0 00-6.7 2.8L3 8"/><path d="M3 3v5h5"/></svg></button><div class="lbl">Canale prec.</div></div>
-      <div><button class="key" data-k="mute" style="width:100%" id="muteKey"><svg viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4z"/><path d="M22 9l-6 6M16 9l6 6"/></svg></button><div class="lbl">Muto</div></div>
-    </div>
-
-    <div class="rock">
-      <div class="glass rocker">
-        <button data-k="volup" data-rep aria-label="Volume su">+</button>
-        <div class="mid">VOL</div>
-        <button data-k="voldown" data-rep aria-label="Volume giù">−</button>
+        <div class="rock">
+          <div class="glass rocker">
+            <button data-k="volup" data-rep aria-label="Volume su">+</button>
+            <div class="mid">VOL</div>
+            <button data-k="voldown" data-rep aria-label="Volume giù">−</button>
+          </div>
+          <div class="center">
+            <button class="key" data-k="back"><svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 010 12h-3"/></svg><small>Indietro</small></button>
+            <button class="key" data-k="mute" id="muteKey"><svg viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4z"/><path d="M22 9l-6 6M16 9l6 6"/></svg><small>Muto</small></button>
+          </div>
+          <div class="glass rocker">
+            <button data-k="chup" data-rep aria-label="Canale su">+</button>
+            <div class="mid">CH</div>
+            <button data-k="chdown" data-rep aria-label="Canale giù">−</button>
+          </div>
+        </div>
       </div>
-      <div class="center">
-        <button class="key" data-k="source">Fonte<small>tasto verde</small></button>
-        <button class="key" data-k="red">+1<small>un'ora dopo</small></button>
-      </div>
-      <div class="glass rocker">
-        <button data-k="chup" data-rep aria-label="Canale su">+</button>
-        <div class="mid">CH</div>
-        <button data-k="chdown" data-rep aria-label="Canale giù">−</button>
+
+      <div class="sheet" id="sheet2">
+        <div class="row r4 colors">
+          <div><button class="key" data-k="red" aria-label="Rosso"><i style="background:var(--red)"></i></button><div class="lbl">+1</div></div>
+          <div><button class="key" data-k="green" aria-label="Verde"><i style="background:var(--green)"></i></button><div class="lbl">Fonte</div></div>
+          <div><button class="key" data-k="yellow" aria-label="Giallo"><i style="background:var(--yellow)"></i></button><div class="lbl">&nbsp;</div></div>
+          <div><button class="key" data-k="blue" aria-label="Blu"><i style="background:var(--blue)"></i></button><div class="lbl">&nbsp;</div></div>
+        </div>
+        <div class="nums">
+          <button class="key" data-k="1">1</button><button class="key" data-k="2">2</button><button class="key" data-k="3">3</button>
+          <button class="key" data-k="4">4</button><button class="key" data-k="5">5</button><button class="key" data-k="6">6</button>
+          <button class="key" data-k="7">7</button><button class="key" data-k="8">8</button><button class="key" data-k="9">9</button>
+          <button class="key" data-k="prev"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 109-9 9.7 9.7 0 00-6.7 2.8L3 8"/><path d="M3 3v5h5"/></svg><small>Prec.</small></button>
+          <button class="key" data-k="0">0</button>
+          <button class="key" data-k="ok">OK</button>
+        </div>
+        <div class="row r3 extra">
+          <button class="key" data-k="source">Fonte</button>
+          <button class="key" data-k="red">+1</button>
+          <button class="key" data-k="fullscreen"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+        </div>
       </div>
     </div>
-
-    <div class="row r4 colors">
-      <button class="key" data-k="red" aria-label="Rosso"><i style="background:var(--red)"></i></button>
-      <button class="key" data-k="green" aria-label="Verde"><i style="background:var(--green)"></i></button>
-      <button class="key" data-k="yellow" aria-label="Giallo"><i style="background:var(--yellow)"></i></button>
-      <button class="key" data-k="blue" aria-label="Blu"><i style="background:var(--blue)"></i></button>
-    </div>
-
-    <div class="row r3 nums">
-      <button class="key" data-k="1">1</button><button class="key" data-k="2">2</button><button class="key" data-k="3">3</button>
-      <button class="key" data-k="4">4</button><button class="key" data-k="5">5</button><button class="key" data-k="6">6</button>
-      <button class="key" data-k="7">7</button><button class="key" data-k="8">8</button><button class="key" data-k="9">9</button>
-      <button class="key" data-k="fullscreen"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
-      <button class="key" data-k="0">0</button>
-      <button class="key" data-k="ok">OK</button>
+    <div class="dots" id="dots">
+      <button class="on" data-sheet="0">Comandi</button>
+      <i></i>
+      <button data-sheet="1">Numeri e colori</button>
     </div>
   </section>
 
@@ -344,24 +383,48 @@ const send = async (k) => {
   try { render(await api('/api/key', {key: k})); setOnline(true); } catch (_) { setOnline(false); }
 };
 
+// Il tasto parte al rilascio (così uno swipe che inizia su un tasto non lo
+// preme); tenendo premuti frecce, CH e VOL il comando si ripete.
 document.querySelectorAll('[data-k]').forEach((b) => {
   const k = b.dataset.k;
   const repeat = b.hasAttribute('data-rep');
-  let hold, rep;
-  const stop = () => { clearTimeout(hold); clearInterval(rep); b.classList.remove('down'); };
+  let hold, rep, active = false, repeated = false, x0 = 0, y0 = 0;
+  const stop = () => { clearTimeout(hold); clearInterval(rep); b.classList.remove('down'); active = false; };
   b.addEventListener('pointerdown', (e) => {
-    e.preventDefault();
+    active = true; repeated = false; x0 = e.clientX; y0 = e.clientY;
     b.classList.add('down');
-    send(k);
-    if (repeat) hold = setTimeout(() => { rep = setInterval(() => send(k), 170); }, 420);
+    if (repeat) hold = setTimeout(() => {
+      if (!active) return;
+      repeated = true; send(k);
+      rep = setInterval(() => send(k), 170);
+    }, 380);
   });
-  ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => b.addEventListener(ev, stop));
+  b.addEventListener('pointermove', (e) => {
+    if (active && Math.hypot(e.clientX - x0, e.clientY - y0) > 14) stop();
+  });
+  b.addEventListener('pointerup', () => {
+    const fire = active && !repeated;
+    stop();
+    if (fire) send(k);
+  });
+  ['pointerleave', 'pointercancel'].forEach((ev) => b.addEventListener(ev, stop));
   b.addEventListener('contextmenu', (e) => e.preventDefault());
 });
+
+// --- Due schermate del telecomando --------------------------------------------
+const pager = $('pager');
+const sheetDots = document.querySelectorAll('[data-sheet]');
+pager.addEventListener('scroll', () => {
+  const i = Math.round(pager.scrollLeft / pager.clientWidth);
+  sheetDots.forEach((d) => d.classList.toggle('on', Number(d.dataset.sheet) === i));
+}, {passive: true});
+sheetDots.forEach((d) => d.addEventListener('click', () =>
+  pager.scrollTo({left: Number(d.dataset.sheet) * pager.clientWidth, behavior: 'smooth'})));
 
 // --- Schede -------------------------------------------------------------------
 const show = (name) => {
   tab = name;
+  document.body.classList.toggle('fit', name === 'remote');
   document.querySelectorAll('.page').forEach((p) => p.classList.toggle('on', p.id === 'p-' + name));
   document.querySelectorAll('[data-tab]').forEach((b) => b.classList.toggle('on', b.dataset.tab === name));
   window.scrollTo({top: 0});
