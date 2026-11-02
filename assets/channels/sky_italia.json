@@ -14,7 +14,7 @@
   ],
   "preferredSources": ["hermes +", "hermes"],
   "dynamicGroups": [
-    { "name": "Eventi", "startNumber": 800, "keywords": ["dazn", "eventi"] }
+    { "name": "Eventi", "startNumber": 800, "keywords": ["dazn", "eventi", "event"] }
   ],
   "unmappedChannels": {
     "show": false,

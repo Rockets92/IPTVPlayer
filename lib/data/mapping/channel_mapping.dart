@@ -147,7 +147,7 @@ class ChannelMapping {
     DynamicGroup(
       name: 'Eventi',
       startNumber: 800,
-      keywords: ['dazn', 'eventi'],
+      keywords: ['dazn', 'eventi', 'event'],
     ),
   ];
 
