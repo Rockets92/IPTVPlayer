@@ -513,18 +513,10 @@ class _ProgrammeTile extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: perf.fast,
-        margin: const EdgeInsets.symmetric(vertical: 3),
-        padding: const EdgeInsets.fromLTRB(14, 14, 18, 14),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          color: focused
-              ? Colors.white.withValues(alpha: 0.14)
-              : live
-              ? Colors.white.withValues(alpha: 0.05)
-              : Colors.transparent,
-        ),
+      // Il bordo di focus va disegnato attorno al riquadro intero, non
+      // attorno al contenuto (altrimenti compare un secondo contorno spostato).
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 3),
         child: CustomPaint(
           foregroundPainter: focused
               ? GlassEdgePainter(
@@ -532,110 +524,124 @@ class _ProgrammeTile extends StatelessWidget {
                   accent: Palette.accent.withValues(alpha: 0.75),
                 )
               : null,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(
-                width: 74,
-                child: Text(
-                  hm(p.startTime),
-                  style: AppText.mono.copyWith(
-                    fontSize: 15,
-                    color: live ? Palette.accent : Palette.textSecondary,
+          child: AnimatedContainer(
+            duration: perf.fast,
+            padding: const EdgeInsets.fromLTRB(14, 14, 18, 14),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              color: focused
+                  ? Colors.white.withValues(alpha: 0.14)
+                  : live
+                  ? Colors.white.withValues(alpha: 0.05)
+                  : Colors.transparent,
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: 74,
+                  child: Text(
+                    hm(p.startTime),
+                    style: AppText.mono.copyWith(
+                      fontSize: 15,
+                      color: live ? Palette.accent : Palette.textSecondary,
+                    ),
                   ),
                 ),
-              ),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            p.title,
-                            maxLines: expanded ? 2 : 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppText.headline.copyWith(fontSize: 16.5),
-                          ),
-                        ),
-                        if (reminded) ...[
-                          const SizedBox(width: 10),
-                          const Icon(
-                            Icons.notifications_active_rounded,
-                            size: 16,
-                            color: Palette.warm,
-                          ),
-                        ],
-                        const SizedBox(width: 12),
-                        Text(
-                          durationLabel(p.duration),
-                          style: AppText.mono.copyWith(
-                            color: Palette.textTertiary,
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (live) ...[
-                      const SizedBox(height: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Row(
                         children: [
-                          Text(
-                            'IN ONDA',
-                            style: AppText.overline.copyWith(
-                              color: Palette.accent,
+                          Expanded(
+                            child: Text(
+                              p.title,
+                              maxLines: expanded ? 2 : 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppText.headline.copyWith(fontSize: 16.5),
                             ),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: EpgProgress(value: p.progressAt(now)),
-                          ),
+                          if (reminded) ...[
+                            const SizedBox(width: 10),
+                            const Icon(
+                              Icons.notifications_active_rounded,
+                              size: 16,
+                              color: Palette.warm,
+                            ),
+                          ],
                           const SizedBox(width: 12),
                           Text(
-                            remaining(p.remainingAt(now)),
+                            durationLabel(p.duration),
                             style: AppText.mono.copyWith(
                               color: Palette.textTertiary,
                             ),
                           ),
                         ],
                       ),
-                    ],
-                    AnimatedSize(
-                      duration: perf.fast,
-                      curve: Curves.easeOutCubic,
-                      alignment: Alignment.topCenter,
-                      child:
-                          expanded &&
-                              (p.description != null || p.category != null)
-                          ? Padding(
-                              padding: const EdgeInsets.only(top: 10),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (p.category != null)
-                                    Padding(
-                                      padding: const EdgeInsets.only(bottom: 6),
-                                      child: Text(
-                                        p.category!.toUpperCase(),
-                                        style: AppText.overline,
-                                      ),
-                                    ),
-                                  if (p.description != null)
-                                    Text(
-                                      p.description!,
-                                      maxLines: 4,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: AppText.body,
-                                    ),
-                                ],
+                      if (live) ...[
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            Text(
+                              'IN ONDA',
+                              style: AppText.overline.copyWith(
+                                color: Palette.accent,
                               ),
-                            )
-                          : const SizedBox(width: double.infinity),
-                    ),
-                  ],
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: EpgProgress(value: p.progressAt(now)),
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              remaining(p.remainingAt(now)),
+                              style: AppText.mono.copyWith(
+                                color: Palette.textTertiary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                      AnimatedSize(
+                        duration: perf.fast,
+                        curve: Curves.easeOutCubic,
+                        alignment: Alignment.topCenter,
+                        child:
+                            expanded &&
+                                (p.description != null || p.category != null)
+                            ? Padding(
+                                padding: const EdgeInsets.only(top: 10),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (p.category != null)
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                          bottom: 6,
+                                        ),
+                                        child: Text(
+                                          p.category!.toUpperCase(),
+                                          style: AppText.overline,
+                                        ),
+                                      ),
+                                    if (p.description != null)
+                                      Text(
+                                        p.description!,
+                                        maxLines: 4,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: AppText.body,
+                                      ),
+                                  ],
+                                ),
+                              )
+                            : const SizedBox(width: double.infinity),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
