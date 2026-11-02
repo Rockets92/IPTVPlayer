@@ -183,10 +183,12 @@ abstract final class NameNormalizer {
     return t.join();
   }
 
-  /// Punteggio per scegliere lo stream migliore tra più varianti.
+  /// Punteggio per ordinare le varianti di un canale (dopo le fonti
+  /// preferite come "hermes"): FHD, poi HD, poi senza indicazione, poi SD.
+  /// Il 4K va in cima, tranne sui dispositivi leggeri ([preferLighter]) dove
+  /// finisce in fondo perché non riescono a decodificarlo.
   static int qualityScore(String raw, {bool preferLighter = false}) {
     final s = fold(raw).toLowerCase();
-    var score = 0;
     final has4k = s.contains('4k') || s.contains('uhd') || s.contains('2160');
     final hasFhd = s.contains('fhd') || s.contains('1080');
     final hasHd =
@@ -194,20 +196,19 @@ abstract final class NameNormalizer {
         s.contains('720') ||
         s.contains('ᴴᴰ');
     final hasSd = RegExp(r'(^|[^a-z])sd([^a-z]|$)').hasMatch(s);
-    if (has4k) {
-      score += preferLighter ? -20 : 15;
-    } else if (hasFhd) {
-      score += preferLighter ? 22 : 30;
-    } else if (hasHd) {
-      score += preferLighter ? 30 : 24;
-    } else if (hasSd) {
-      score += preferLighter ? 18 : 8;
-    } else {
-      score += 16;
-    }
-    if (s.contains('backup') || RegExp(r'\bbk\b').hasMatch(s)) score -= 6;
+    var score = has4k
+        ? (preferLighter ? 0 : 50)
+        : hasFhd
+        ? 40
+        : hasHd
+        ? 30
+        : hasSd
+        ? 10
+        : 20;
+    // Piccole correzioni che non scavalcano mai il livello di qualità.
+    if (s.contains('backup') || RegExp(r'\bbk\b').hasMatch(s)) score -= 3;
     if (s.contains('hevc') || s.contains('h265')) {
-      score += preferLighter ? -8 : 2;
+      score += preferLighter ? -2 : 1;
     }
     return score;
   }

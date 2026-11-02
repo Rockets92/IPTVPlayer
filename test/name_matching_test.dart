@@ -39,20 +39,22 @@ void main() {
     });
   });
 
-  test('qualityScore preferisce FHD, nel profilo light preferisce HD', () {
-    final fhd = NameNormalizer.qualityScore('Rai 1 FHD');
-    final hd = NameNormalizer.qualityScore('Rai 1 HD');
-    final uhd = NameNormalizer.qualityScore('Rai 1 4K');
-    expect(fhd, greaterThan(hd));
+  test('qualityScore: FHD, poi HD, poi senza indicazione, poi SD', () {
+    for (final light in [false, true]) {
+      int q(String n) => NameNormalizer.qualityScore(n, preferLighter: light);
+      expect(q('Rai 1 FHD'), greaterThan(q('Rai 1 HD')));
+      expect(q('Rai 1 HEVC FHD'), greaterThan(q('Rai 1 HD')));
+      expect(q('Rai 1 HD'), greaterThan(q('Rai 1')));
+      expect(q('Rai 1'), greaterThan(q('Rai 1 SD')));
+    }
+    // Il 4K va in cima, ma non sui dispositivi leggeri.
     expect(
-      NameNormalizer.qualityScore('Rai 1 HD', preferLighter: true),
-      greaterThan(
-        NameNormalizer.qualityScore('Rai 1 FHD', preferLighter: true),
-      ),
+      NameNormalizer.qualityScore('Rai 1 4K'),
+      greaterThan(NameNormalizer.qualityScore('Rai 1 FHD')),
     );
     expect(
       NameNormalizer.qualityScore('Rai 1 4K', preferLighter: true),
-      lessThan(uhd),
+      lessThan(NameNormalizer.qualityScore('Rai 1 SD', preferLighter: true)),
     );
   });
 
@@ -387,6 +389,28 @@ void main() {
       // "+1" è un altro canale, non una fonte di Sky Uno.
       expect(list[3].sources.single.streamId, 7);
       expect(list[4].sources.first.streamId, 9);
+    });
+
+    test('fonti: prima hermes, poi FHD, HD e SD', () {
+      for (final light in [false, true]) {
+        final list = ChannelMatcher(preferLighterStreams: light).build(
+          mapping: mapping,
+          streams: const [
+            XtreamLiveStream(streamId: 1, name: 'Rai 1 SD ( sat-stella )'),
+            XtreamLiveStream(streamId: 2, name: 'Rai 1 HD ( stellina )'),
+            XtreamLiveStream(streamId: 3, name: 'Rai 1 SD ( hermes )'),
+            XtreamLiveStream(streamId: 4, name: 'Rai 1 FHD ( garantito )'),
+            XtreamLiveStream(streamId: 5, name: 'Rai 1 FHD ( hermes )'),
+            XtreamLiveStream(streamId: 6, name: 'Rai 1 HEVC FHD ( fls )'),
+          ],
+        );
+        final rai1 = list.firstWhere((c) => c.number == 101);
+        // Tra due FHD l'HEVC passa avanti solo sui dispositivi potenti.
+        expect(
+          rai1.sources.map((s) => s.streamId),
+          light ? [5, 3, 4, 6, 2, 1] : [5, 3, 6, 4, 2, 1],
+        );
+      }
     });
 
     test('lista rigida: niente canali fuori lista per impostazione', () {
