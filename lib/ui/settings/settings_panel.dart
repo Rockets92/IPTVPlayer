@@ -670,43 +670,166 @@ class _ChoiceRow<T> extends StatelessWidget {
 class _Shortcuts extends StatelessWidget {
   const _Shortcuts();
 
-  static const _items = [
-    ('↑ ↓', 'Canale successivo / precedente'),
-    ('0–9', 'Vai al numero'),
-    ('OK', 'Info canale · di nuovo OK: elenco canali'),
-    ('← →', 'Sfoglia gli altri canali (OK per guardare)'),
-    ('← →', 'Con le info aperte: programmi prima e dopo'),
-    ('L', 'Elenco canali'),
-    ('G', 'Guida TV'),
-    ('S', 'Fonte del canale'),
-    ('+', 'Versione +1 del canale (tasto rosso)'),
-    ('⌫', 'Canale precedente'),
-    ('M', 'Impostazioni'),
-    ('F', 'Schermo intero'),
+  /// (tasti, descrizione, nota tra parentesi).
+  static const _groups = [
+    (
+      'Visione',
+      [
+        (['↑', '↓'], 'Canale successivo / precedente', null),
+        (['0–9'], 'Vai al numero', null),
+        (['⌫'], 'Canale precedente', null),
+        (['+'], 'Versione +1 del canale', 'tasto rosso'),
+        (['S'], 'Fonte del canale', 'tasto verde'),
+      ],
+    ),
+    (
+      'Info e guida',
+      [
+        (['OK'], 'Info canale', 'di nuovo OK: elenco'),
+        (['←', '→'], 'Sfoglia gli altri canali', 'OK per guardare'),
+        (['←', '→'], 'Con le info aperte: programmi prima e dopo', null),
+        (['OK'], 'Su un programma futuro: promemoria', null),
+      ],
+    ),
+    (
+      'Pannelli',
+      [
+        (['L'], 'Elenco canali', null),
+        (['G'], 'Guida TV', null),
+        (['M'], 'Impostazioni', null),
+        (['F'], 'Schermo intero', null),
+      ],
+    ),
   ];
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 16),
+    padding: const EdgeInsets.symmetric(horizontal: 4),
     child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        for (final (k, t) in _items)
+        for (final (title, items) in _groups) ...[
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 5),
-            child: Row(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+            child: Text(
+              title,
+              style: AppText.label.copyWith(
+                color: Palette.textTertiary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              color: Colors.white.withValues(alpha: 0.05),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            ),
+            child: Column(
               children: [
-                SizedBox(
-                  width: 64,
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: KeyCap(k),
+                for (var i = 0; i < items.length; i++) ...[
+                  if (i > 0)
+                    Divider(
+                      height: 1,
+                      thickness: 1,
+                      indent: 16,
+                      endIndent: 16,
+                      color: Colors.white.withValues(alpha: 0.06),
+                    ),
+                  _ShortcutRow(
+                    keys: items[i].$1,
+                    text: items[i].$2,
+                    note: items[i].$3,
                   ),
-                ),
-                Expanded(child: Text(t, style: AppText.label)),
+                ],
               ],
             ),
           ),
+        ],
       ],
+    ),
+  );
+}
+
+class _ShortcutRow extends StatelessWidget {
+  const _ShortcutRow({required this.keys, required this.text, this.note});
+
+  final List<String> keys;
+  final String text;
+  final String? note;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+    child: Row(
+      children: [
+        SizedBox(
+          width: 76,
+          child: Wrap(spacing: 4, children: [for (final k in keys) _Cap(k)]),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(text: text),
+                if (note != null)
+                  TextSpan(
+                    text: '  ·  $note',
+                    style: AppText.label.copyWith(color: Palette.textTertiary),
+                  ),
+              ],
+            ),
+            style: AppText.label.copyWith(
+              color: Palette.textPrimary,
+              fontSize: 14,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+/// Tasto in rilievo, largo quanto il suo testo.
+class _Cap extends StatelessWidget {
+  const _Cap(this.label);
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    constraints: const BoxConstraints(minWidth: 28),
+    height: 28,
+    padding: const EdgeInsets.symmetric(horizontal: 8),
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(8),
+      gradient: LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          Colors.white.withValues(alpha: 0.18),
+          Colors.white.withValues(alpha: 0.08),
+        ],
+      ),
+      border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.25),
+          offset: const Offset(0, 1.5),
+        ),
+      ],
+    ),
+    child: Center(
+      widthFactor: 1,
+      child: Text(
+        label,
+        style: AppText.label.copyWith(
+          color: Palette.textPrimary,
+          fontWeight: FontWeight.w600,
+          fontSize: 12.5,
+        ),
+      ),
     ),
   );
 }
