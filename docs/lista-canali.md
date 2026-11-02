@@ -24,7 +24,8 @@ In build si può impostare un URL predefinito con
   ],
   "preferredSources": ["hermes +", "hermes"],
   "dynamicGroups": [
-    { "name": "Eventi", "startNumber": 800, "keywords": ["dazn", "eventi", "event"] }
+    { "name": "Eventi", "startNumber": 800, "keywords": ["dazn", "eventi", "event"] },
+    { "name": "Vetrina", "startNumber": 870, "keywords": ["vetrina"] }
   ],
   "unmappedChannels": { "show": false, "startNumber": 1000 },
   "channels": [
@@ -54,7 +55,7 @@ In build si può impostare un URL predefinito con
 | `hidden` | Nasconde il canale senza toglierlo dal file. |
 | `epgSources` | Guide XMLTV esterne (anche `.gz`), lette in ordine. |
 | `preferredSources` | Etichette di fonte da usare come principali, in ordine (predefinito `["hermes +", "hermes"]`). |
-| `dynamicGroups` | Categorie automatiche per i canali che cambiano spesso: tutti gli stream del provider (non già in lista) con una parola che inizia con una delle `keywords` ("event" prende "Eventi" ma non "Benevento"), numerati da `startNumber`. Prima tutti quelli della prima parola chiave, poi della seconda; le copie dello stesso evento diventano fonti. Predefinito: "Eventi" dall'800 con `dazn`, poi `eventi` e `event`. |
+| `dynamicGroups` | Categorie automatiche per i canali che cambiano spesso: tutti gli stream del provider (non già in lista) con una parola che inizia con una delle `keywords` ("event" prende "Eventi" ma non "Benevento"), numerati da `startNumber`. Prima tutti quelli della prima parola chiave, poi della seconda; le copie dello stesso evento diventano fonti. Predefinito: "Eventi" dall'800 con `dazn`, poi `eventi` e `event`; "Vetrina" dall'870 con `vetrina`. Se un gruppo arriva al numero di partenza del successivo, quest'ultimo prosegue dal primo numero libero. |
 | `unmappedChannels` | Con `show: true` mostra anche gli altri canali del provider (senza doppioni) a partire da `startNumber`. Predefinito: spento, si vede solo la lista. |
 
 ## Come avviene l'abbinamento

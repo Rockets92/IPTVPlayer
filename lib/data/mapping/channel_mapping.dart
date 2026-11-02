@@ -149,6 +149,7 @@ class ChannelMapping {
       startNumber: 800,
       keywords: ['dazn', 'eventi', 'event'],
     ),
+    DynamicGroup(name: 'Vetrina', startNumber: 870, keywords: ['vetrina']),
   ];
 
   final String id;

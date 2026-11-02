@@ -210,8 +210,16 @@ void main() {
         XtreamLiveStream(streamId: 8, name: 'Canale Locale'),
         XtreamLiveStream(streamId: 9, name: 'Benevento TV ( hermes )'),
         XtreamLiveStream(streamId: 10, name: 'Sport Events 3'),
+        XtreamLiveStream(streamId: 11, name: 'Vetrina 2 HD'),
+        XtreamLiveStream(streamId: 12, name: 'VETRINA 1 ( hermes )'),
       ],
     );
+    final vt = list.where((c) => c.group == 'Vetrina').toList();
+    expect(vt.map((c) => c.number), [870, 871]);
+    expect(vt.map((c) => c.name), ['VETRINA 1', 'Vetrina 2']);
+    // Vetrina viene subito dopo Eventi.
+    final groups = list.map((c) => c.group).toSet().toList();
+    expect(groups.indexOf('Vetrina'), groups.indexOf('Eventi') + 1);
     final ev = list.where((c) => c.group == 'Eventi').toList();
     expect(ev.map((c) => c.number), [800, 801, 802, 803, 804]);
     expect(ev.map((c) => c.name), [
