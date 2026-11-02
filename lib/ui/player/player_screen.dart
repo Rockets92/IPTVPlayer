@@ -303,6 +303,15 @@ class _PlayerScreenState extends State<PlayerScreen> {
       return KeyEventResult.handled;
     }
 
+    // Anteprima dei canali (←→): ↑↓ sfogliano i programmi del canale
+    // mostrato, senza sintonizzarlo.
+    if (_tuner.browsing &&
+        _tuner.bannerVisible &&
+        (k == LogicalKeyboardKey.arrowUp ||
+            k == LogicalKeyboardKey.arrowDown)) {
+      _tuner.stepEpg(k == LogicalKeyboardKey.arrowDown ? 1 : -1);
+      return KeyEventResult.handled;
+    }
     if (k == LogicalKeyboardKey.arrowUp ||
         k == LogicalKeyboardKey.channelUp ||
         k == LogicalKeyboardKey.pageUp) {

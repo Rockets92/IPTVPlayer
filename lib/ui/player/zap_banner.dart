@@ -51,7 +51,7 @@ class ZapBanner extends StatelessWidget {
         var next = later(app.epg.nextOn(channel.id, at));
         // Info aperte con ←→: programma precedente o successivo.
         var shift = 0;
-        if (tuner.infoMode && tuner.epgOffset != 0) {
+        if ((tuner.infoMode || tuner.browsing) && tuner.epgOffset != 0) {
           final list = app.epg.forChannel(channel.id);
           final base = app.epg.indexNear(channel.id, at);
           final i = base + tuner.epgOffset;
@@ -297,29 +297,61 @@ class _Programmes extends StatelessWidget {
             ],
             const SizedBox(width: 14),
             if (isLive) const _SignalBadges(),
-            if (tuner.browsing) const _Badge('ANTEPRIMA', accent: true),
-            const Spacer(),
-            if (tuner.browsing)
-              const KeyHint('OK', 'Guarda')
-            else if (tuner.infoProgramme case final p?) ...[
-              if (context.watch<ReminderController>().isSet(channel.id, p)) ...[
-                const _Badge(
-                  'PRENOTATO',
-                  icon: Icons.notifications_active_rounded,
-                  accent: true,
+            if (tuner.browsingOther) const _Badge('ANTEPRIMA', accent: true),
+            const SizedBox(width: 12),
+            // I suggerimenti si rimpiccioliscono se lo spazio è poco: il nome
+            // del canale resta sempre leggibile.
+            Expanded(
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (tuner.browsing)
+                        const SizedBox.shrink()
+                      else if (tuner.infoProgramme case final p?) ...[
+                        if (context.watch<ReminderController>().isSet(
+                          channel.id,
+                          p,
+                        )) ...[
+                          const _Badge(
+                            'PRENOTATO',
+                            icon: Icons.notifications_active_rounded,
+                            accent: true,
+                          ),
+                          const SizedBox(width: 12),
+                          const KeyHint('OK', 'Annulla promemoria'),
+                        ] else
+                          const KeyHint('OK', 'Promemoria'),
+                      ] else if (tuner.infoMode)
+                        const KeyHint('← →', 'Programmi'),
+                      if (tuner.infoMode && !tuner.browsing) ...[
+                        const SizedBox(width: 12),
+                        const KeyHint('↓', 'Menu'),
+                      ],
+                    ],
+                  ),
                 ),
-                const SizedBox(width: 12),
-                const KeyHint('OK', 'Annulla promemoria'),
-              ] else
-                const KeyHint('OK', 'Promemoria'),
-            ] else if (tuner.infoMode)
-              const KeyHint('← →', 'Programmi'),
-            if (tuner.infoMode && !tuner.browsing) ...[
-              const SizedBox(width: 12),
-              const KeyHint('↓', 'Menu'),
-            ],
+              ),
+            ),
           ],
         ),
+        // Anteprima dei canali: i tasti utili su una riga a parte, ben leggibili.
+        if (tuner.browsing) ...[
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 16,
+            runSpacing: 6,
+            children: [
+              const KeyHint('← →', 'Canali'),
+              const KeyHint('↑ ↓', 'Programmi'),
+              if (tuner.browsingOther) const KeyHint('OK', 'Guarda'),
+            ],
+          ),
+        ],
         const SizedBox(height: 16),
         _NowNext(now: now, current: current, next: next, shift: shift),
       ],

@@ -153,6 +153,9 @@ class TunerController extends ChangeNotifier {
   int? _browse;
   bool get browsing => _browse != null;
 
+  /// Si sta guardando l'anteprima di un canale diverso da quello in visione.
+  bool get browsingOther => _browse != null && _browse != _current;
+
   /// Banner aperto con OK sul canale corrente: ←→ sfogliano la sua guida.
   bool infoMode = false;
 
@@ -325,11 +328,15 @@ class TunerController extends ChangeNotifier {
   }
 
   /// Anteprima di un altro canale senza cambiare il video (←→).
+  /// La prima pressione mostra il canale in visione, le successive scorrono.
   void browse(int delta) {
     if (channels.isEmpty) return;
-    final base = _browse ?? (_current < 0 ? 0 : _current);
     final n = channels.length;
-    _browse = ((base + delta) % n + n) % n;
+    if (_browse == null || !bannerVisible) {
+      _browse = _current < 0 ? 0 : _current;
+    } else {
+      _browse = ((_browse! + delta) % n + n) % n;
+    }
     infoMode = false;
     epgOffset = 0;
     unawaited(app.ensureEpg(channels[_browse!]));
@@ -341,6 +348,11 @@ class TunerController extends ChangeNotifier {
     final b = _browse;
     if (b == null) return;
     _browse = null;
+    if (b == _current) {
+      // Era il canale in visione: si chiude l'anteprima e basta.
+      hideBanner();
+      return;
+    }
     _tune(b, showBanner: true);
   }
 
@@ -366,9 +378,10 @@ class TunerController extends ChangeNotifier {
     return p.startTime.isAfter(DateTime.now()) ? p : null;
   }
 
-  /// ←→ con le informazioni aperte: programma precedente o successivo.
+  /// ←→ con le informazioni aperte, ↑↓ durante l'anteprima dei canali:
+  /// programma precedente o successivo del canale mostrato nel banner.
   void stepEpg(int delta) {
-    final c = current;
+    final c = displayed;
     if (c == null) return;
     final now = DateTime.now();
     final list = app.epg.forChannel(c.id);
