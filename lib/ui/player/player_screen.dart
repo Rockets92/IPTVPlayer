@@ -12,6 +12,7 @@ import '../../core/performance.dart';
 import '../../core/theme.dart';
 import '../../data/epg/epg_models.dart';
 import '../../player/playback_engine.dart';
+import '../../player/system_volume.dart';
 import '../../state/app_controller.dart';
 import '../../state/reminder_controller.dart';
 import '../../state/tuner_controller.dart';
@@ -379,6 +380,12 @@ class _PlayerScreenState extends State<PlayerScreen> {
       _tuner.previousChannel();
     } else if (k == LogicalKeyboardKey.keyF || k == LogicalKeyboardKey.f11) {
       _toggleFullscreen();
+    } else if (SystemVolume.supported &&
+        (k == LogicalKeyboardKey.audioVolumeUp ||
+            k == LogicalKeyboardKey.audioVolumeDown ||
+            k == LogicalKeyboardKey.audioVolumeMute)) {
+      // Tasti del volume fisici: li gestisce il sistema (TV, PC…).
+      return KeyEventResult.ignored;
     } else if (k == LogicalKeyboardKey.audioVolumeMute ||
         k == LogicalKeyboardKey.keyK) {
       _tuner.toggleMute();

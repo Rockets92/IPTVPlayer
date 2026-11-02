@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../data/epg/epg_models.dart';
 import '../data/settings_store.dart';
 import '../domain/channel.dart';
+import '../player/system_volume.dart';
 import '../player/playback_engine.dart';
 import 'app_controller.dart';
 
@@ -421,7 +422,24 @@ class TunerController extends ChangeNotifier {
   /// Ultima variazione di volume o muto: l'indicatore resta visibile poco.
   DateTime? volumeChangedAt;
 
-  void changeVolume(int delta) {
+  /// Volume: si regola quello del dispositivo (TV, PC…); solo dove non è
+  /// possibile (iOS, web) si usa il volume interno dell'app.
+  void changeVolume(int delta) =>
+      unawaited(_systemVolume(delta > 0 ? 1 : -1, () => _appVolume(delta)));
+
+  void toggleMute() => unawaited(_systemVolume(0, _appMute));
+
+  Future<void> _systemVolume(int direction, void Function() fallback) async {
+    final st = await SystemVolume.adjust(direction);
+    if (st == null) return fallback();
+    if (st.level != null) volume = st.level!.clamp(0, 100);
+    if (st.muted != null) muted = st.muted!;
+    // Se il sistema mostra già il suo indicatore non se ne aggiunge un altro.
+    if (!st.systemOsd && st.level != null) volumeChangedAt = DateTime.now();
+    _notify();
+  }
+
+  void _appVolume(int delta) {
     volume = (volume + delta).clamp(0, 100);
     if (muted && delta > 0) {
       muted = false;
@@ -432,7 +450,7 @@ class TunerController extends ChangeNotifier {
     _notify();
   }
 
-  void toggleMute() {
+  void _appMute() {
     volumeChangedAt = DateTime.now();
     muted = !muted;
     unawaited(engine.setMuted(muted));
