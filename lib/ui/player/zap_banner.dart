@@ -276,6 +276,10 @@ class _Programmes extends StatelessWidget {
   Widget build(BuildContext context) {
     final tuner = context.watch<TunerController>();
     final isLive = tuner.current?.id == channel.id;
+    final programme = tuner.infoProgramme;
+    final reminded =
+        programme != null &&
+        context.watch<ReminderController>().isSet(channel.id, programme);
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -298,65 +302,33 @@ class _Programmes extends StatelessWidget {
             const SizedBox(width: 14),
             if (isLive) const _SignalBadges(),
             if (tuner.browsingOther) const _Badge('ANTEPRIMA', accent: true),
-            const SizedBox(width: 12),
-            // I suggerimenti si rimpiccioliscono se lo spazio è poco: il nome
-            // del canale resta sempre leggibile.
-            Expanded(
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerRight,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (tuner.infoProgramme case final p?) ...[
-                        if (context.watch<ReminderController>().isSet(
-                          channel.id,
-                          p,
-                        )) ...[
-                          const _Badge(
-                            'PRENOTATO',
-                            icon: Icons.notifications_active_rounded,
-                            accent: true,
-                          ),
-                          if (!tuner.browsing) ...[
-                            const SizedBox(width: 12),
-                            const KeyHint('OK', 'Annulla promemoria'),
-                          ],
-                        ] else if (!tuner.browsing)
-                          const KeyHint('OK', 'Promemoria'),
-                      ] else if (tuner.infoMode)
-                        const KeyHint('← →', 'Programmi'),
-                      if (tuner.infoMode && !tuner.browsing) ...[
-                        const SizedBox(width: 12),
-                        const KeyHint('↓', 'Menu'),
-                      ],
-                    ],
-                  ),
-                ),
+            if (reminded) ...[
+              const SizedBox(width: 10),
+              const _Badge(
+                'PRENOTATO',
+                icon: Icons.notifications_active_rounded,
+                accent: true,
               ),
-            ),
+            ],
           ],
         ),
-        // Anteprima dei canali: i tasti utili su una riga a parte, ben leggibili.
-        if (tuner.browsing) ...[
+        // I tasti utili su una riga a parte, sempre della stessa grandezza.
+        if (tuner.browsing || tuner.infoMode) ...[
           const SizedBox(height: 10),
           Wrap(
             spacing: 16,
             runSpacing: 6,
             children: [
-              const KeyHint('← →', 'Canali'),
-              const KeyHint('↑ ↓', 'Programmi'),
-              if (tuner.infoProgramme case final p?)
-                KeyHint(
-                  'OK',
-                  context.watch<ReminderController>().isSet(channel.id, p)
-                      ? 'Annulla promemoria'
-                      : 'Promemoria',
-                )
+              if (tuner.browsing) ...[
+                const KeyHint('← →', 'Canali'),
+                const KeyHint('↑ ↓', 'Programmi'),
+              ] else
+                const KeyHint('← →', 'Programmi'),
+              if (programme != null)
+                KeyHint('OK', reminded ? 'Annulla' : 'Promemoria')
               else if (tuner.browsingOther)
                 const KeyHint('OK', 'Guarda'),
+              if (tuner.infoMode && !tuner.browsing) const KeyHint('↓', 'Menu'),
             ],
           ),
         ],
