@@ -273,11 +273,16 @@ class GroupStrip extends StatefulWidget {
     required this.groups,
     required this.selected,
     required this.onSelect,
+    this.focused,
   });
 
   final List<String> groups;
   final int selected;
   final ValueChanged<int> onSelect;
+
+  /// Categoria evidenziata dal telecomando (anello di focus), se si stanno
+  /// scorrendo le categorie.
+  final int? focused;
 
   @override
   State<GroupStrip> createState() => _GroupStripState();
@@ -289,9 +294,10 @@ class _GroupStripState extends State<GroupStrip> {
   @override
   void didUpdateWidget(GroupStrip old) {
     super.didUpdateWidget(old);
-    if (old.selected != widget.selected) {
+    final target = widget.focused ?? widget.selected;
+    if (old.selected != widget.selected || old.focused != widget.focused) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        final ctx = _keys[widget.selected]?.currentContext;
+        final ctx = _keys[target]?.currentContext;
         if (ctx != null) {
           Scrollable.ensureVisible(
             ctx,
@@ -314,6 +320,7 @@ class _GroupStripState extends State<GroupStrip> {
         separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (context, i) {
           final sel = i == widget.selected;
+          final ring = i == widget.focused;
           return GestureDetector(
             key: _keys.putIfAbsent(i, GlobalKey.new),
             onTap: () => widget.onSelect(i),
@@ -329,7 +336,10 @@ class _GroupStripState extends State<GroupStrip> {
                       ? Colors.white.withValues(alpha: 0.92)
                       : Colors.white.withValues(alpha: 0.07),
                   border: Border.all(
-                    color: Colors.white.withValues(alpha: sel ? 0 : 0.12),
+                    width: ring ? 2 : 1,
+                    color: ring
+                        ? Palette.accent
+                        : Colors.white.withValues(alpha: sel ? 0 : 0.12),
                   ),
                 ),
                 child: Text(

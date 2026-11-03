@@ -37,6 +37,10 @@ class _GuideOverlayState extends State<GuideOverlay> {
   bool _inProgrammes = false;
   int _group = 0;
 
+  /// Categoria evidenziata mentre si scorrono le categorie con ←→
+  /// (null: si è nell'elenco dei canali).
+  int? _groupCursor;
+
   static const _rowExtent = ChannelRow.extent + 6;
 
   List<String> get _groups => context.read<AppController>().groups;
@@ -184,6 +188,26 @@ class _GuideOverlayState extends State<GuideOverlay> {
       return KeyEventResult.ignored;
     }
     final k = e.logicalKey;
+    // Categorie: ←→ scorrono e applicano, OK/↓/Indietro tornano ai canali.
+    if (_groupCursor != null) {
+      final count = _groups.length + 1;
+      if (k == LogicalKeyboardKey.arrowLeft ||
+          k == LogicalKeyboardKey.arrowRight) {
+        final next =
+            (_groupCursor! + (k == LogicalKeyboardKey.arrowRight ? 1 : -1))
+                .clamp(0, count - 1);
+        _setGroup(next);
+        setState(() => _groupCursor = next);
+        return KeyEventResult.handled;
+      }
+      if (isSelectKey(k) || k == LogicalKeyboardKey.arrowDown || isBackKey(k)) {
+        if (isSelectKey(k) && _groupCursor != _group) _setGroup(_groupCursor!);
+        setState(() => _groupCursor = null);
+        return KeyEventResult.handled;
+      }
+      if (k == LogicalKeyboardKey.arrowUp) return KeyEventResult.handled;
+      setState(() => _groupCursor = null);
+    }
     if (k == LogicalKeyboardKey.arrowUp) {
       _inProgrammes ? _moveProgramme(-1) : _moveChannel(-1);
     } else if (k == LogicalKeyboardKey.arrowDown) {
@@ -200,7 +224,8 @@ class _GuideOverlayState extends State<GuideOverlay> {
       if (_inProgrammes) {
         setState(() => _inProgrammes = false);
       } else {
-        _setGroup(_group - 1);
+        // Dall'elenco dei canali si sale sulle categorie, partendo dalla prima.
+        setState(() => _groupCursor = 0);
       }
     } else if (k == LogicalKeyboardKey.keyC ||
         k == LogicalKeyboardKey.colorF2Yellow) {
@@ -282,7 +307,11 @@ class _GuideOverlayState extends State<GuideOverlay> {
                   child: GroupStrip(
                     groups: ['Tutti', ...groups],
                     selected: _group,
-                    onSelect: _setGroup,
+                    focused: _groupCursor,
+                    onSelect: (g) {
+                      setState(() => _groupCursor = null);
+                      _setGroup(g);
+                    },
                   ),
                 ),
                 Container(
