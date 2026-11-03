@@ -155,6 +155,46 @@ button{font:inherit;color:inherit;border:0;background:none;padding:0;cursor:poin
 .prog .bell svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .tag{font-size:10px;font-weight:700;letter-spacing:.6px;color:var(--accent);margin-left:6px}
 
+/* Guida: palinsesto / promemoria */
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:16px}
+.seg button{padding:9px 0;border-radius:12px;font-size:14px;font-weight:600;color:var(--t3)}
+.seg button.on{background:rgba(255,255,255,.14);color:var(--t1)}
+.seg .cnt{display:inline-block;min-width:18px;padding:0 5px;margin-left:4px;border-radius:9px;font-size:11px;line-height:18px;
+  background:var(--warm);color:var(--ink)}
+.gview{display:flex;flex-direction:column;gap:12px}
+.gview[hidden]{display:none}
+.gbar{display:flex;align-items:center;gap:8px;padding:8px}
+.gbar .nav{flex:none;width:44px;height:52px;border-radius:14px;display:grid;place-items:center;color:var(--t1);
+  background:rgba(255,255,255,.07);border:1px solid var(--stroke)}
+.gbar .nav:active{background:rgba(255,255,255,.16)}
+.gbar .nav svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.gpick{position:relative;flex:1;min-width:0;display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:14px}
+.gpick:active{background:rgba(255,255,255,.06)}
+.gpick .gn{flex:none;min-width:42px;height:42px;padding:0 6px;border-radius:12px;display:grid;place-items:center;font-weight:700;font-size:16px;
+  font-variant-numeric:tabular-nums;background:rgba(255,255,255,.1)}
+.gpick .gt{flex:1;min-width:0}
+.gpick .gt b{display:block;font-size:16px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gpick .gt span{display:block;font-size:11.5px;color:var(--t3);margin-top:2px}
+.gpick .gt span.live{color:var(--accent)}
+.gpick select{position:absolute;inset:0;opacity:0;width:100%;height:100%;font-size:16px}
+.gacts{display:flex;gap:8px}
+.gacts button{flex:1;padding:10px 0;border-radius:14px;font-size:13.5px;font-weight:600;color:var(--t2);
+  background:var(--glass);border:1px solid var(--stroke)}
+.gacts button.pri{color:var(--ink);background:rgba(255,255,255,.9);border-color:transparent}
+.rem{padding:14px;border-top:1px solid rgba(255,255,255,.06)}
+.rem:first-child{border-top:0}
+.rem .rtop{display:flex;align-items:center;gap:8px}
+.rem .when{flex:1;font-size:12.5px;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums}
+.rem .del{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;color:#ff9a9a;background:var(--glass)}
+.rem .del svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.rem b{display:block;font-size:15.5px;font-weight:600;margin-top:2px}
+.rem .sub{display:block;font-size:12.5px;color:var(--t3);margin-top:2px}
+.opts{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.opts button{padding:7px 11px;border-radius:999px;font-size:12.5px;font-weight:600;color:var(--t2);background:var(--glass);border:1px solid var(--stroke)}
+.opts button.on{background:rgba(255,255,255,.9);color:var(--ink);border-color:transparent}
+.opts.days button{min-width:40px;padding:6px 0}
+.opts.days button.on{background:var(--warm)}
+
 /* Barra in basso */
 .tabs{position:fixed;left:0;right:0;bottom:0;padding:18px 16px calc(var(--safe-b) + 8px);z-index:5;
   display:flex;justify-content:center;pointer-events:none;
@@ -303,12 +343,29 @@ body.fit .app{height:100dvh;min-height:0}
 
   <!-- Guida -->
   <section class="page" id="p-guide">
-    <div class="glass ghead">
-      <div class="num" id="gnum" style="min-width:46px;height:46px;font-size:18px;border-radius:14px">–</div>
-      <div class="name" id="gname">Guida TV</div>
-      <button onclick="guideFor(null)">In visione</button>
+    <div class="glass seg" id="gseg">
+      <button class="on" data-gv="epg">Palinsesto</button>
+      <button data-gv="rem">I tuoi promemoria<span class="cnt" id="remCnt" hidden></span></button>
     </div>
-    <div class="glass list" id="glist"><div class="empty">Caricamento…</div></div>
+    <div class="gview" id="g-epg">
+      <div class="glass gbar">
+        <button class="nav" id="gprev" aria-label="Canale precedente"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <label class="gpick">
+          <div class="gn" id="gnum">–</div>
+          <div class="gt"><b id="gname">Guida TV</b><span id="gsub">Tocca per cambiare canale ▾</span></div>
+          <select id="gsel" aria-label="Scegli il canale"></select>
+        </label>
+        <button class="nav" id="gnext" aria-label="Canale successivo"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+      </div>
+      <div class="gacts" id="gacts" hidden>
+        <button id="gback">↩ Canale in visione</button>
+        <button class="pri" id="gwatch">Guarda questo canale</button>
+      </div>
+      <div class="glass list" id="glist"><div class="empty">Caricamento…</div></div>
+    </div>
+    <div class="gview" id="g-rem" hidden>
+      <div class="glass list" id="rlist"><div class="empty">Caricamento…</div></div>
+    </div>
   </section>
 </div>
 
@@ -324,6 +381,7 @@ body.fit .app{height:100dvh;min-height:0}
 <script>
 const T = '{{TOKEN}}';
 const $ = (id) => document.getElementById(id);
+let views = {};
 let state = null, channels = [], groups = [], group = null, guideId = null, tab = 'remote';
 let online = null, failures = 0;
 
@@ -437,7 +495,7 @@ const show = (name) => {
   document.querySelectorAll('[data-tab]').forEach((b) => b.classList.toggle('on', b.dataset.tab === name));
   window.scrollTo({top: 0});
   if (name === 'channels') loadChannels();
-  if (name === 'guide') loadGuide();
+  if (name === 'guide') loadGuidePage();
 };
 document.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => show(b.dataset.tab)));
 
@@ -445,7 +503,7 @@ document.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click
 const loadChannels = async () => {
   try {
     const r = await api('/api/channels');
-    channels = r.channels; groups = r.groups;
+    channels = r.channels; groups = r.groups; views = r.views || {};
     renderChips(); renderChannels();
   } catch (_) { setOnline(false); }
 };
@@ -460,8 +518,12 @@ const renderChips = () => {
 
 const renderChannels = () => {
   const q = $('q').value.trim().toLowerCase();
-  const list = channels.filter((c) => (!group || c.g === group) &&
-    (!q || c.name.toLowerCase().includes(q) || String(c.n).startsWith(q)));
+  // Categorie "vista" (Vetrina): l'elenco arriva già ordinato dal player.
+  const base = group && views[group]
+    ? views[group].map((id) => channels.find((c) => c.id === id)).filter(Boolean)
+    : channels.filter((c) => !group || c.g === group);
+  const list = base.filter((c) =>
+    !q || c.name.toLowerCase().includes(q) || String(c.n).startsWith(q));
   const cur = state && state.current;
   $('chlist').innerHTML = list.length ? list.map((c) => `
     <div class="ch ${c.id === cur ? 'on' : ''}" data-id="${esc(c.id)}">
@@ -491,13 +553,76 @@ $('chlist').addEventListener('click', async (e) => {
 });
 
 // --- Guida ----------------------------------------------------------------------
-const guideFor = (id) => { guideId = id; show('guide'); };
+let gview = 'epg', guideShown = null;
+const guideFor = (id) => { guideId = id; gview = 'epg'; show('guide'); };
+
+const setGview = (v) => {
+  gview = v;
+  document.querySelectorAll('[data-gv]').forEach((b) => b.classList.toggle('on', b.dataset.gv === v));
+  $('g-epg').hidden = v !== 'epg';
+  $('g-rem').hidden = v !== 'rem';
+  window.scrollTo({top: 0});
+  if (v === 'rem') loadReminders(); else loadGuide();
+};
+document.querySelectorAll('[data-gv]').forEach((b) => b.addEventListener('click', () => setGview(b.dataset.gv)));
+
+const loadGuidePage = () => { setGview(gview); loadReminders(true); };
+
+// Canale precedente / successivo nella guida, senza cambiare canale in TV.
+const stepGuide = async (d) => {
+  if (!channels.length) await loadChannels();
+  if (!channels.length) return;
+  let i = channels.findIndex((c) => c.id === guideShown);
+  i = i < 0 ? 0 : (i + d + channels.length) % channels.length;
+  guideId = channels[i].id;
+  if (navigator.vibrate) navigator.vibrate(8);
+  loadGuide();
+};
+$('gprev').addEventListener('click', () => stepGuide(-1));
+$('gnext').addEventListener('click', () => stepGuide(1));
+$('gsel').addEventListener('change', (e) => { guideId = e.target.value; loadGuide(); });
+$('gback').addEventListener('click', () => { guideId = null; loadGuide(); });
+$('gwatch').addEventListener('click', async () => {
+  try {
+    render(await api('/api/tune', {id: guideShown}));
+    toast('Sintonizzato');
+    guideId = null; loadGuide();
+  } catch (_) { setOnline(false); }
+});
+
+// Swipe orizzontale sull'elenco: canale precedente / successivo.
+{
+  let x0 = null, y0 = 0;
+  const gl = $('glist');
+  gl.addEventListener('touchstart', (e) => { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, {passive: true});
+  gl.addEventListener('touchend', (e) => {
+    if (x0 === null) return;
+    const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0;
+    x0 = null;
+    if (Math.abs(dx) > 70 && Math.abs(dx) > 2 * Math.abs(dy)) stepGuide(dx < 0 ? 1 : -1);
+  }, {passive: true});
+}
+
+const fillPicker = async (cur) => {
+  if (!channels.length) await loadChannels();
+  const sel = $('gsel');
+  if (sel.options.length !== channels.length) {
+    sel.innerHTML = channels.map((c) => `<option value="${esc(c.id)}">${c.n}  ${esc(c.name)}</option>`).join('');
+  }
+  sel.value = cur || '';
+};
 
 const loadGuide = async () => {
   try {
     const r = await api('/api/epg' + (guideId ? '?id=' + encodeURIComponent(guideId) : ''));
+    guideShown = r.id || null;
     $('gnum').textContent = r.n ?? '–';
     $('gname').textContent = r.name || 'Guida TV';
+    const watching = state && r.id === state.current;
+    $('gsub').textContent = watching ? 'In visione · tocca per cambiare ▾' : 'Tocca per cambiare canale ▾';
+    $('gsub').classList.toggle('live', !!watching);
+    $('gacts').hidden = !!watching || !r.id;
+    fillPicker(r.id);
     const now = Date.now() / 1000;
     const ps = r.programmes || [];
     $('glist').innerHTML = ps.length ? ps.map((p) => {
@@ -523,10 +648,79 @@ $('glist').addEventListener('click', async (e) => {
       if (r.error) { toast(r.error); return; }
       e.target.closest('[data-bell]').classList.toggle('on', r.reminded);
       toast(r.reminded ? 'Promemoria: ti avviso 5 minuti prima' : 'Promemoria annullato');
+      loadReminders(true);
     } catch (_) { setOnline(false); }
     return;
   }
   row.classList.toggle('open');
+});
+
+// --- Promemoria -------------------------------------------------------------------
+const REPEATS = [['once', 'Una volta'], ['daily', 'Ogni giorno'], ['weekly', 'Ogni settimana'], ['monthly', 'Ogni mese']];
+const DAYS = ['lun', 'mar', 'mer', 'gio', 'ven', 'sab', 'dom'];
+let rems = [];
+
+const dayLabel = (s) => {
+  const d = new Date(s * 1000), t = new Date();
+  const a = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const b = new Date(t.getFullYear(), t.getMonth(), t.getDate());
+  const diff = Math.round((a - b) / 86400000);
+  const day = diff === 0 ? 'Oggi' : diff === 1 ? 'Domani'
+    : d.toLocaleDateString('it-IT', {weekday: 'short', day: 'numeric', month: 'short'});
+  return day + ' · ' + hm(s);
+};
+
+const renderReminders = () => {
+  const cnt = $('remCnt');
+  cnt.hidden = !rems.length;
+  cnt.textContent = rems.length;
+  $('rlist').innerHTML = rems.length ? rems.map((r) => `
+    <div class="rem" data-key="${esc(r.key)}">
+      <div class="rtop">
+        <span class="when">${dayLabel(r.s)}</span>
+        <button class="del" data-del aria-label="Elimina"><svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></button>
+      </div>
+      <b>${esc(r.t)}</b>
+      <span class="sub">${r.n} · ${esc(r.name)}</span>
+      <div class="opts">${REPEATS.map(([k, l]) => `<button class="${r.repeat === k ? 'on' : ''}" data-rep="${k}">${l}</button>`).join('')}</div>
+      ${r.repeat === 'weekly' ? `<div class="opts days">${DAYS.map((l, i) => `<button class="${r.days.includes(i + 1) ? 'on' : ''}" data-day="${i + 1}">${l}</button>`).join('')}</div>` : ''}
+    </div>`).join('')
+    : '<div class="empty">Nessun promemoria.<br>Nel Palinsesto tocca la campanella di un programma futuro: ti avviso 5 minuti prima.</div>';
+};
+
+const loadReminders = async (quiet) => {
+  try {
+    rems = (await api('/api/reminders')).reminders || [];
+    if (quiet && gview !== 'rem') { const c = $('remCnt'); c.hidden = !rems.length; c.textContent = rems.length; return; }
+    renderReminders();
+  } catch (_) { if (!quiet) setOnline(false); }
+};
+
+$('rlist').addEventListener('click', async (e) => {
+  const row = e.target.closest('.rem');
+  if (!row) return;
+  const r = rems.find((x) => x.key === row.dataset.key);
+  if (!r) return;
+  let body = null;
+  if (e.target.closest('[data-del]')) body = {key: r.key, delete: true};
+  const rep = e.target.closest('[data-rep]');
+  if (rep) body = {key: r.key, repeat: rep.dataset.rep};
+  const day = e.target.closest('[data-day]');
+  if (day) {
+    const d = Number(day.dataset.day);
+    let days = r.days.includes(d) ? r.days.filter((x) => x !== d) : [...r.days, d];
+    if (!days.length) { toast('Scegli almeno un giorno'); return; }
+    body = {key: r.key, repeat: 'weekly', days: days.sort()};
+  }
+  if (!body) return;
+  if (navigator.vibrate) navigator.vibrate(8);
+  try {
+    const res = await api('/api/reminders', body);
+    if (res.error) toast(res.error);
+    else if (body.delete) toast('Promemoria eliminato');
+    rems = res.reminders || [];
+    renderReminders();
+  } catch (_) { setOnline(false); }
 });
 
 // --- Installazione -------------------------------------------------------------

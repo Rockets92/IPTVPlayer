@@ -232,6 +232,30 @@ class RemoteServer extends ChangeNotifier {
         }
         final on = reminders.toggle(c, p);
         return _json(res, {'reminded': on});
+      case ('GET', '/api/reminders'):
+        return _json(res, _reminders());
+      case ('POST', '/api/reminders'):
+        final body = await _body(r);
+        final rem = reminders.byKey('${body['key']}');
+        if (rem == null) {
+          return _json(res, {
+            ..._reminders(),
+            'error': 'Promemoria non trovato',
+          });
+        }
+        if (body['delete'] == true) {
+          reminders.remove(rem);
+        } else {
+          final days = body['days'];
+          reminders.setRepeat(
+            rem,
+            ReminderRepeat.parse(body['repeat']),
+            days is List
+                ? days.whereType<num>().map((e) => e.toInt()).toList()
+                : null,
+          );
+        }
+        return _json(res, _reminders());
       case ('POST', '/api/setup'):
         return _json(res, await _setup(await _body(r)));
       case ('GET', '/api/info'):
@@ -277,10 +301,34 @@ class RemoteServer extends ChangeNotifier {
     };
   }
 
+  Map<String, Object?> _reminders() => {
+    'reminders': [
+      for (final r in reminders.items)
+        {
+          'key': r.key,
+          'id': r.channelId,
+          'n': r.channelNumber,
+          'name': r.channelName,
+          't': r.title,
+          's': r.start,
+          'repeat': r.repeat.name,
+          'days': r.weekDays,
+          'label': r.repeatLabel,
+        },
+    ],
+  };
+
   Map<String, Object?> _channels() {
     final now = DateTime.now();
+    final direct = {for (final c in app.channels) c.group};
     return {
       'groups': app.groups,
+      // Categorie "vista" (Vetrina): canali nell'ordine in cui compaiono,
+      // ogni vetrina seguita dai suoi canali collegati.
+      'views': {
+        for (final g in app.groups)
+          if (!direct.contains(g)) g: [for (final c in app.channelsIn(g)) c.id],
+      },
       'current': tuner.current?.id,
       'channels': [
         for (final c in app.channels)
@@ -300,6 +348,7 @@ class RemoteServer extends ChangeNotifier {
   Map<String, Object?> _epg(String? id) {
     final c = id == null ? tuner.current : _byId(id);
     if (c == null) return {'programmes': const []};
+    unawaited(app.ensureEpg(c));
     final from = DateTime.now().millisecondsSinceEpoch ~/ 1000 - 3 * 3600;
     final to = from + 30 * 3600;
     return {
