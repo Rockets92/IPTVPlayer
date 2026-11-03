@@ -48,12 +48,18 @@ class RemoteServer extends ChangeNotifier {
   /// Registrato dalla schermata di primo avvio: riceve i dati inviati dal
   /// telefono e restituisce null se la connessione riesce, o il messaggio
   /// d'errore da mostrare sul telefono.
-  Future<String?> Function(XtreamCredentials)? setupHandler;
+  /// Primo avvio: dati della lista dal telefono, più una fonte EPG
+  /// aggiuntiva facoltativa.
+  Future<String?> Function(XtreamCredentials c, String? extraEpg)? setupHandler;
 
   bool get running => _server != null && host != null;
   String? get baseUrl => running ? 'http://$host:$port' : null;
   String? get remoteUrl => running ? '$baseUrl/remote?t=$token' : null;
   String? get setupUrl => running ? '$baseUrl/setup?t=$token' : null;
+  String? get epgUrl => running ? '$baseUrl/epg?t=$token' : null;
+
+  /// Fonti EPG aggiuntive (dalle impostazioni), cambiate dal telefono.
+  List<String> get extraEpgSources => app.settings.extraEpgSources;
 
   Future<void> start() async {
     if (kIsWeb || _server != null) return;
@@ -188,6 +194,12 @@ class RemoteServer extends ChangeNotifier {
     switch ((r.method, path)) {
       case ('GET', '/' || '/remote'):
         return _html(res, 'assets/remote/remote.html');
+      case ('GET', '/epg'):
+        return _html(res, 'assets/remote/epg.html');
+      case ('GET', '/api/epg-sources'):
+        return _json(res, {'sources': app.settings.extraEpgSources});
+      case ('POST', '/api/epg-sources'):
+        return _json(res, await _editEpgSources(await _body(r)));
       case ('GET', '/setup'):
         return _html(res, 'assets/remote/setup.html');
       case ('GET', '/manifest.webmanifest'):
@@ -363,6 +375,30 @@ class RemoteServer extends ChangeNotifier {
     };
   }
 
+  Future<Map<String, Object?>> _editEpgSources(Map<String, Object?> b) async {
+    final list = [...app.settings.extraEpgSources];
+    final add = '${b['add'] ?? ''}'.trim();
+    final remove = '${b['remove'] ?? ''}'.trim();
+    if (add.isNotEmpty) {
+      final uri = Uri.tryParse(add);
+      if (uri == null || !uri.hasScheme || !uri.scheme.startsWith('http')) {
+        return {
+          'sources': list,
+          'error': 'Indirizzo non valido: deve iniziare con http:// o https://',
+        };
+      }
+      if (list.contains(add)) {
+        return {'sources': list, 'error': 'Questa fonte c\'è già.'};
+      }
+      list.add(add);
+    }
+    if (remove.isNotEmpty) list.remove(remove);
+    await app.settings.setExtraEpgSources(list);
+    notifyListeners();
+    unawaited(app.refreshEpg());
+    return {'sources': app.settings.extraEpgSources};
+  }
+
   Future<Map<String, Object?>> _setup(Map<String, Object?> b) async {
     final handler = setupHandler;
     if (handler == null) {
@@ -393,7 +429,8 @@ class RemoteServer extends ChangeNotifier {
       }
       c = XtreamCredentials(serverUrl: server, username: user, password: pass);
     }
-    final err = await handler(c);
+    final extra = '${b['extraEpg'] ?? ''}'.trim();
+    final err = await handler(c, extra.isEmpty ? null : extra);
     return err == null ? {'ok': true} : {'error': err};
   }
 

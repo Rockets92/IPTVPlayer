@@ -36,6 +36,10 @@ class _SetupScreenState extends State<SetupScreen> {
   final _pass = TextEditingController();
   final _playlist = TextEditingController();
   final _epg = TextEditingController();
+
+  /// Fonte EPG aggiuntiva facoltativa (per le liste Xtream).
+  final _extraEpg = TextEditingController();
+  final _extraEpgNode = FocusNode();
   ListKind _kind = ListKind.xtream;
   late final RemoteServer _remote = context.read<RemoteServer>();
   final _userNode = FocusNode();
@@ -61,10 +65,11 @@ class _SetupScreenState extends State<SetupScreen> {
   }
 
   /// Dati inviati dallo smartphone: si compilano i campi e si connette.
-  Future<String?> _fromPhone(XtreamCredentials c) async {
+  Future<String?> _fromPhone(XtreamCredentials c, String? extraEpg) async {
     if (!mounted) return 'Il player non è pronto.';
     setState(() {
       _kind = c.kind;
+      if (extraEpg != null) _extraEpg.text = extraEpg;
       if (c.isM3u) {
         _playlist.text = c.serverUrl;
         _epg.text = c.epgUrl ?? '';
@@ -80,9 +85,10 @@ class _SetupScreenState extends State<SetupScreen> {
   @override
   void dispose() {
     if (_remote.setupHandler == _fromPhone) _remote.setupHandler = null;
-    for (final c in [_server, _user, _pass, _playlist, _epg]) {
+    for (final c in [_server, _user, _pass, _playlist, _epg, _extraEpg]) {
       c.dispose();
     }
+    _extraEpgNode.dispose();
     _userNode.dispose();
     _passNode.dispose();
     super.dispose();
@@ -135,6 +141,14 @@ class _SetupScreenState extends State<SetupScreen> {
       _error = null;
     });
     final app = context.read<AppController>();
+    // Fonte EPG aggiuntiva: si salva prima, così la guida la legge subito.
+    final extra = _extraEpg.text.trim();
+    if (!c.isM3u && extra.isNotEmpty) {
+      final list = app.settings.extraEpgSources;
+      if (!list.contains(extra)) {
+        await app.settings.setExtraEpgSources([...list, extra]);
+      }
+    }
     try {
       final info = await app.connect(c);
       if (!mounted) return null;
@@ -337,8 +351,17 @@ class _SetupScreenState extends State<SetupScreen> {
               controller: _pass,
               focusNode: _passNode,
               obscure: true,
-              textInputAction: TextInputAction.done,
               autofillHints: const [AutofillHints.password],
+              onSubmitted: (_) => _extraEpgNode.requestFocus(),
+            ),
+            const SizedBox(height: 18),
+            GlassField(
+              label: 'Fonte EPG aggiuntiva (facoltativa)',
+              hint: 'https://…/guida.xml.gz',
+              controller: _extraEpg,
+              focusNode: _extraEpgNode,
+              keyboardType: TextInputType.url,
+              textInputAction: TextInputAction.done,
               onSubmitted: (_) => _connect(),
             ),
           ] else ...[

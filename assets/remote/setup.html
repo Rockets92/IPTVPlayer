@@ -60,6 +60,9 @@ input::placeholder{color:var(--t3)}
       <label for="pass">Password</label>
       <input id="pass" type="password" autocomplete="current-password">
       <div class="hint">Puoi incollare nel campo Server anche il link completo con utente e password: gli altri campi si compilano da soli.</div>
+      <label for="xepg">Fonte EPG aggiuntiva (facoltativa)</label>
+      <input id="xepg" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="https://…/guida.xml.gz">
+      <div class="hint">Una guida XMLTV in più, per i canali che quella del provider non copre. Potrai aggiungerne altre dalle impostazioni.</div>
     </div>
 
     <div id="f-m3u" hidden>
@@ -107,7 +110,7 @@ $('server').addEventListener('input', () => {
 $('go').addEventListener('click', async () => {
   const body = kind === 'm3u'
     ? {kind, playlist: $('playlist').value.trim(), epg: $('epg').value.trim()}
-    : {kind, server: $('server').value.trim(), user: $('user').value.trim(), pass: $('pass').value};
+    : {kind, server: $('server').value.trim(), user: $('user').value.trim(), pass: $('pass').value, extraEpg: $('xepg').value.trim()};
   $('go').disabled = true;
   $('go').textContent = 'Connessione in corso…';
   $('msg').className = 'msg';

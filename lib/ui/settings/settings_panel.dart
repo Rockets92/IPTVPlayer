@@ -13,6 +13,7 @@ import '../widgets/focus_tile.dart';
 import '../widgets/glass.dart';
 import '../widgets/glass_field.dart';
 import '../widgets/pin_dialog.dart';
+import 'epg_phone_dialog.dart';
 import 'remote_setup_dialog.dart';
 
 /// Impostazioni (tasto M): pannello laterale navigabile con il telecomando.
@@ -317,6 +318,15 @@ class _SettingsPanelState extends State<SettingsPanel> {
                           ? 'Nessuna'
                           : '${s.extraEpgSources.length} configurate',
                       onSelect: _editEpg,
+                    ),
+                    _ActionRow(
+                      icon: Icons.qr_code_2_rounded,
+                      title: 'Aggiungi fonti EPG dal telefono',
+                      subtitle: 'Inquadra il codice e incolla i link',
+                      onSelect: () async {
+                        await showEpgFromPhone(context);
+                        if (mounted) setState(() {});
+                      },
                     ),
                     _ToggleRow(
                       title: 'Usa la guida del provider',
