@@ -282,9 +282,13 @@ class GroupStrip extends StatefulWidget {
     required this.selected,
     required this.onSelect,
     this.focused,
+    this.icons = const {},
   });
 
   final List<String> groups;
+
+  /// Icona davanti a una voce (es. la campanella dei promemoria).
+  final Map<int, IconData> icons;
   final int selected;
   final ValueChanged<int> onSelect;
 
@@ -350,12 +354,25 @@ class _GroupStripState extends State<GroupStrip> {
                         : Colors.white.withValues(alpha: sel ? 0 : 0.12),
                   ),
                 ),
-                child: Text(
-                  widget.groups[i],
-                  style: AppText.label.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: sel ? Palette.ink : Palette.textSecondary,
-                  ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (widget.icons[i] case final icon?) ...[
+                      Icon(
+                        icon,
+                        size: 15,
+                        color: sel ? Palette.ink : Palette.warm,
+                      ),
+                      const SizedBox(width: 6),
+                    ],
+                    Text(
+                      widget.groups[i],
+                      style: AppText.label.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: sel ? Palette.ink : Palette.textSecondary,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),

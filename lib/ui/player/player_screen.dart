@@ -125,7 +125,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     _tuner.hideBanner();
     final me = ModalRoute.of(context);
     if (me != null) Navigator.of(context).popUntil((route) => route == me);
-    final go = await showReminderDialog(context, r);
+    final answer = await showReminderDialog(context, r);
     _reminderShown = null;
     if (!mounted) return;
     _rootFocus.requestFocus();
@@ -134,10 +134,14 @@ class _PlayerScreenState extends State<PlayerScreen> {
       if (_reminders.due != null) _onReminder();
       return;
     }
-    if (go) {
-      _acceptReminder();
-    } else {
-      _reminders.resolve();
+    switch (answer) {
+      case ReminderAnswer.go:
+        _acceptReminder();
+      case ReminderAnswer.snooze:
+        _reminders.snooze();
+        _showToast('Te lo ricordo tra 1 minuto');
+      case ReminderAnswer.dismiss:
+        _reminders.resolve();
     }
   }
 
@@ -383,7 +387,15 @@ class _PlayerScreenState extends State<PlayerScreen> {
     } else if (k == LogicalKeyboardKey.backspace ||
         k == LogicalKeyboardKey.keyP ||
         k == LogicalKeyboardKey.mediaLast) {
-      _tuner.previousChannel();
+      // Con il banner aperto (o un numero in digitazione) prima si chiude
+      // quello; il canale precedente solo a schermo libero.
+      if (_tuner.digits.isNotEmpty) {
+        _tuner.clearDigits();
+      } else if (_tuner.bannerVisible) {
+        _tuner.hideBanner();
+      } else {
+        _tuner.previousChannel();
+      }
     } else if (k == LogicalKeyboardKey.keyF || k == LogicalKeyboardKey.f11) {
       _toggleFullscreen();
     } else if (SystemVolume.supported &&

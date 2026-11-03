@@ -8,10 +8,16 @@ import '../widgets/focus_tile.dart';
 import '../widgets/glass.dart';
 import '../widgets/glass_field.dart';
 
+/// Risposta all'avviso di un promemoria.
+enum ReminderAnswer { go, snooze, dismiss }
+
 /// Mostra l'avviso sopra a tutto, con il focus su "Vai al canale": col
-/// telecomando basta OK. Restituisce true se si va al canale.
-Future<bool> showReminderDialog(BuildContext context, Reminder reminder) async {
-  final go = await showGeneralDialog<bool>(
+/// telecomando basta OK.
+Future<ReminderAnswer> showReminderDialog(
+  BuildContext context,
+  Reminder reminder,
+) async {
+  final go = await showGeneralDialog<ReminderAnswer>(
     context: context,
     barrierDismissible: true,
     barrierLabel: 'Promemoria',
@@ -29,7 +35,7 @@ Future<bool> showReminderDialog(BuildContext context, Reminder reminder) async {
       ),
     ),
   );
-  return go ?? false;
+  return go ?? ReminderAnswer.dismiss;
 }
 
 class _ReminderDialog extends StatefulWidget {
@@ -43,7 +49,7 @@ class _ReminderDialog extends StatefulWidget {
 class _ReminderDialogState extends State<_ReminderDialog> {
   bool _closed = false;
 
-  void _close(bool go) {
+  void _close(ReminderAnswer go) {
     if (_closed) return;
     _closed = true;
     Navigator.of(context).pop(go);
@@ -55,7 +61,7 @@ class _ReminderDialogState extends State<_ReminderDialog> {
     final due = context.select<ReminderController, Reminder?>((r) => r.due);
     if (!identical(due, widget.reminder) && !_closed) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _close(false);
+        if (mounted) _close(ReminderAnswer.dismiss);
       });
     }
     return Center(
@@ -64,8 +70,9 @@ class _ReminderDialogState extends State<_ReminderDialog> {
         child: ReminderPopup(
           reminder: widget.reminder,
           autofocus: true,
-          onGo: () => _close(true),
-          onDismiss: () => _close(false),
+          onGo: () => _close(ReminderAnswer.go),
+          onSnooze: () => _close(ReminderAnswer.snooze),
+          onDismiss: () => _close(ReminderAnswer.dismiss),
         ),
       ),
     );
@@ -79,6 +86,7 @@ class ReminderPopup extends StatelessWidget {
     required this.reminder,
     required this.onGo,
     required this.onDismiss,
+    this.onSnooze,
     this.autofocus = false,
   });
 
@@ -86,6 +94,9 @@ class ReminderPopup extends StatelessWidget {
   final Reminder reminder;
   final VoidCallback onGo;
   final VoidCallback onDismiss;
+
+  /// "Ricordamelo tra 1 min".
+  final VoidCallback? onSnooze;
 
   @override
   Widget build(BuildContext context) {
@@ -135,7 +146,8 @@ class ReminderPopup extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               'Hai prenotato questo programma su ${r.channelName}, '
-              'canale ${r.channelNumber}.',
+              'canale ${r.channelNumber}.'
+              '${r.recurring ? ' ${r.repeatLabel}.' : ''}',
               style: AppText.body.copyWith(color: Palette.textSecondary),
             ),
             const SizedBox(height: 16),
@@ -158,11 +170,20 @@ class ReminderPopup extends StatelessWidget {
                 ),
               ],
             ),
+            if (onSnooze != null) ...[
+              const SizedBox(height: 10),
+              GlassButton(
+                label: 'Ricordamelo tra 1 min',
+                icon: Icons.snooze_rounded,
+                primary: false,
+                onPressed: onSnooze,
+              ),
+            ],
             const SizedBox(height: 12),
             const Wrap(
               spacing: 16,
               children: [
-                KeyHint('← →', 'Scegli'),
+                KeyHint('← → ↓', 'Scegli'),
                 KeyHint('OK', 'Conferma'),
                 KeyHint('Indietro', 'Continua a guardare'),
               ],

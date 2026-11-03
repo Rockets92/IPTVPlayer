@@ -18,6 +18,7 @@ import '../widgets/glass.dart';
 import '../widgets/now.dart';
 import 'channel_list_overlay.dart';
 import 'channel_row.dart';
+import 'guide_reminders.dart';
 
 /// Guida TV a due colonne: canali a sinistra, palinsesto a destra.
 class GuideOverlay extends StatefulWidget {
@@ -37,9 +38,148 @@ class _GuideOverlayState extends State<GuideOverlay> {
   bool _inProgrammes = false;
   int _group = 0;
 
-  /// Categoria evidenziata mentre si scorrono le categorie con ←→
-  /// (null: si è nell'elenco dei canali).
+  /// Voce evidenziata mentre si scorrono le categorie con ←→ (indice nella
+  /// striscia: 0 = "I tuoi promemoria", 1 = "Tutti", poi le categorie;
+  /// null: si è nell'elenco).
   int? _groupCursor;
+
+  /// Sezione "I tuoi promemoria" al posto dei canali.
+  bool _remView = false;
+  int _rem = 0;
+
+  /// Riga evidenziata nel pannello di modifica del promemoria (null: si è
+  /// nell'elenco dei promemoria).
+  int? _editRow;
+  int _dayCursor = 0;
+
+  /// Voce della striscia corrispondente alla vista attuale.
+  int get _stripIndex => _remView ? 0 : _group + 1;
+
+  void _setStrip(int i) {
+    if (i == 0) {
+      setState(() {
+        _remView = true;
+        _rem = 0;
+        _editRow = null;
+      });
+    } else {
+      if (_remView) setState(() => _remView = false);
+      _setGroup(i - 1);
+    }
+  }
+
+  List<Reminder> get _reminders => context.read<ReminderController>().items;
+
+  void _applyEdit() {
+    final items = _reminders;
+    if (items.isEmpty || _editRow == null) return;
+    final r = items[_rem.clamp(0, items.length - 1)];
+    final rows = reminderEditRows(r);
+    final (kind, v) = rows[_editRow!.clamp(0, rows.length - 1)];
+    final ctl = context.read<ReminderController>();
+    switch (kind) {
+      case ReminderEditRow.repeat:
+        _keep(ctl.setRepeat(r, ReminderRepeat.values[v]));
+      case ReminderEditRow.days:
+        _toggleDay(r, _dayCursor + 1);
+      case ReminderEditRow.delete:
+        ctl.remove(r);
+        setState(() {
+          _editRow = null;
+          _rem = _rem.clamp(0, (_reminders.length - 1).clamp(0, 1 << 20));
+        });
+    }
+  }
+
+  void _toggleDay(Reminder r, int day) {
+    final days = [...r.weekDays];
+    if (days.contains(day)) {
+      if (days.length == 1) return; // almeno un giorno
+      days.remove(day);
+    } else {
+      days.add(day);
+    }
+    days.sort();
+    _keep(
+      context.read<ReminderController>().setRepeat(
+        r,
+        ReminderRepeat.weekly,
+        days,
+      ),
+    );
+  }
+
+  /// Dopo una modifica il promemoria può cambiare posto nell'elenco.
+  void _keep(Reminder? r) {
+    if (r == null) return;
+    final i = _reminders.indexWhere((x) => x.key == r.key);
+    setState(() {
+      if (i >= 0) _rem = i;
+      final rows = reminderEditRows(r);
+      if (_editRow != null && _editRow! >= rows.length) {
+        _editRow = rows.length - 1;
+      }
+    });
+  }
+
+  KeyEventResult _onRemindersKey(LogicalKeyboardKey k) {
+    final items = _reminders;
+    final n = items.length;
+    if (_editRow == null) {
+      if (k == LogicalKeyboardKey.arrowUp) {
+        if (_rem == 0 || n == 0) {
+          setState(() => _groupCursor = 0);
+        } else {
+          setState(() => _rem--);
+        }
+      } else if (k == LogicalKeyboardKey.arrowDown) {
+        if (n > 0) setState(() => _rem = (_rem + 1).clamp(0, n - 1));
+      } else if (k == LogicalKeyboardKey.arrowLeft) {
+        setState(() => _groupCursor = 0);
+      } else if (k == LogicalKeyboardKey.arrowRight || isSelectKey(k)) {
+        if (n == 0) return KeyEventResult.handled;
+        final r = items[_rem.clamp(0, n - 1)];
+        setState(() => _editRow = r.repeat.index);
+      } else if (isBackKey(k) ||
+          k == LogicalKeyboardKey.keyG ||
+          k == LogicalKeyboardKey.guide) {
+        widget.onClose();
+      } else {
+        return KeyEventResult.ignored;
+      }
+      return KeyEventResult.handled;
+    }
+    if (n == 0) {
+      setState(() => _editRow = null);
+      return KeyEventResult.handled;
+    }
+    final r = items[_rem.clamp(0, n - 1)];
+    final rows = reminderEditRows(r);
+    final onDays =
+        rows[_editRow!.clamp(0, rows.length - 1)].$1 == ReminderEditRow.days;
+    if (k == LogicalKeyboardKey.arrowUp) {
+      setState(() => _editRow = (_editRow! - 1).clamp(0, rows.length - 1));
+    } else if (k == LogicalKeyboardKey.arrowDown) {
+      setState(() => _editRow = (_editRow! + 1).clamp(0, rows.length - 1));
+    } else if (k == LogicalKeyboardKey.arrowRight) {
+      if (onDays) setState(() => _dayCursor = (_dayCursor + 1).clamp(0, 6));
+    } else if (k == LogicalKeyboardKey.arrowLeft) {
+      if (onDays && _dayCursor > 0) {
+        setState(() => _dayCursor--);
+      } else {
+        setState(() => _editRow = null);
+      }
+    } else if (isSelectKey(k)) {
+      _applyEdit();
+    } else if (isBackKey(k)) {
+      setState(() => _editRow = null);
+    } else if (k == LogicalKeyboardKey.keyG || k == LogicalKeyboardKey.guide) {
+      widget.onClose();
+    } else {
+      return KeyEventResult.ignored;
+    }
+    return KeyEventResult.handled;
+  }
 
   static const _rowExtent = ChannelRow.extent + 6;
 
@@ -197,24 +337,27 @@ class _GuideOverlayState extends State<GuideOverlay> {
     final k = e.logicalKey;
     // Categorie: ←→ scorrono e applicano, OK/↓/Indietro tornano ai canali.
     if (_groupCursor != null) {
-      final count = _groups.length + 1;
+      final count = _groups.length + 2;
       if (k == LogicalKeyboardKey.arrowLeft ||
           k == LogicalKeyboardKey.arrowRight) {
         final next =
             (_groupCursor! + (k == LogicalKeyboardKey.arrowRight ? 1 : -1))
                 .clamp(0, count - 1);
-        _setGroup(next);
+        if (next != _stripIndex) _setStrip(next);
         setState(() => _groupCursor = next);
         return KeyEventResult.handled;
       }
       if (isSelectKey(k) || k == LogicalKeyboardKey.arrowDown || isBackKey(k)) {
-        if (isSelectKey(k) && _groupCursor != _group) _setGroup(_groupCursor!);
+        if (isSelectKey(k) && _groupCursor != _stripIndex) {
+          _setStrip(_groupCursor!);
+        }
         setState(() => _groupCursor = null);
         return KeyEventResult.handled;
       }
       if (k == LogicalKeyboardKey.arrowUp) return KeyEventResult.handled;
       setState(() => _groupCursor = null);
     }
+    if (_remView) return _onRemindersKey(k);
     if (k == LogicalKeyboardKey.arrowUp) {
       _inProgrammes ? _moveProgramme(-1) : _moveChannel(-1);
     } else if (k == LogicalKeyboardKey.arrowDown) {
@@ -231,12 +374,16 @@ class _GuideOverlayState extends State<GuideOverlay> {
       if (_inProgrammes) {
         setState(() => _inProgrammes = false);
       } else {
-        // Dall'elenco dei canali si sale sulle categorie, partendo dalla prima.
-        setState(() => _groupCursor = 0);
+        // Dall'elenco dei canali si sale sulle categorie, partendo da "Tutti"
+        // (a sinistra c'è ancora "I tuoi promemoria").
+        setState(() => _groupCursor = 1);
       }
     } else if (k == LogicalKeyboardKey.keyC ||
         k == LogicalKeyboardKey.colorF2Yellow) {
       _setGroup(_group + 1);
+    } else if (k == LogicalKeyboardKey.keyR ||
+        k == LogicalKeyboardKey.colorF0Red) {
+      _setStrip(0);
     } else if (isSelectKey(k)) {
       _select();
     } else if (isBackKey(k)) {
@@ -312,12 +459,13 @@ class _GuideOverlayState extends State<GuideOverlay> {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(18, 0, 18, 14),
                   child: GroupStrip(
-                    groups: ['Tutti', ...groups],
-                    selected: _group,
+                    groups: ['I tuoi promemoria', 'Tutti', ...groups],
+                    icons: const {0: Icons.notifications_rounded},
+                    selected: _stripIndex,
                     focused: _groupCursor,
                     onSelect: (g) {
                       setState(() => _groupCursor = null);
-                      _setGroup(g);
+                      _setStrip(g);
                     },
                   ),
                 ),
@@ -325,63 +473,107 @@ class _GuideOverlayState extends State<GuideOverlay> {
                   height: 1,
                   color: Colors.white.withValues(alpha: 0.08),
                 ),
-                Expanded(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      SizedBox(
-                        width: narrow ? size.width * 0.42 : 430,
-                        child: ListView.builder(
-                          controller: _chScroll,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          itemExtent: _rowExtent,
-                          itemCount: channels.length,
-                          itemBuilder: (context, i) => Opacity(
-                            opacity: _inProgrammes && i != _ch ? 0.55 : 1,
-                            child: ChannelRow(
-                              channel: channels[i],
-                              linked: _isLinked(channels[i]),
-                              now: now,
-                              focused: i == _ch,
-                              onAir: tuner.current?.id == channels[i].id,
-                              onTap: () {
-                                if (i == _ch) {
-                                  _tuneSelected();
-                                } else {
-                                  _moveChannel(i - _ch);
-                                }
-                              },
+                if (_remView)
+                  Expanded(
+                    child: GuideReminders(
+                      items: context.watch<ReminderController>().items,
+                      selected: _rem,
+                      listFocused: _groupCursor == null && _editRow == null,
+                      editRow: _groupCursor == null ? (_editRow ?? -1) : -1,
+                      dayCursor: _dayCursor,
+                      listWidth: narrow ? size.width * 0.42 : 430,
+                      onTapItem: (i) => setState(() {
+                        _rem = i;
+                        _editRow = null;
+                        _groupCursor = null;
+                      }),
+                      onTapRepeat: (rep) {
+                        final items = _reminders;
+                        if (items.isEmpty) return;
+                        _keep(
+                          context.read<ReminderController>().setRepeat(
+                            items[_rem.clamp(0, items.length - 1)],
+                            rep,
+                          ),
+                        );
+                      },
+                      onTapDay: (d) {
+                        final items = _reminders;
+                        if (items.isEmpty) return;
+                        _toggleDay(items[_rem.clamp(0, items.length - 1)], d);
+                      },
+                      onTapDelete: () {
+                        final items = _reminders;
+                        if (items.isEmpty) return;
+                        context.read<ReminderController>().remove(
+                          items[_rem.clamp(0, items.length - 1)],
+                        );
+                        setState(() {
+                          _editRow = null;
+                          _rem = 0;
+                        });
+                      },
+                    ),
+                  )
+                else
+                  Expanded(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        SizedBox(
+                          width: narrow ? size.width * 0.42 : 430,
+                          child: ListView.builder(
+                            controller: _chScroll,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            itemExtent: _rowExtent,
+                            itemCount: channels.length,
+                            itemBuilder: (context, i) => Opacity(
+                              opacity: _inProgrammes && i != _ch ? 0.55 : 1,
+                              child: ChannelRow(
+                                channel: channels[i],
+                                linked: _isLinked(channels[i]),
+                                now: now,
+                                focused: i == _ch,
+                                onAir: tuner.current?.id == channels[i].id,
+                                onTap: () {
+                                  if (i == _ch) {
+                                    _tuneSelected();
+                                  } else {
+                                    _moveChannel(i - _ch);
+                                  }
+                                },
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      Container(
-                        width: 1,
-                        color: Colors.white.withValues(alpha: 0.08),
-                      ),
-                      Expanded(
-                        child: _Schedule(
-                          channel: selected,
-                          programmes: app.epg
-                              .forChannel(selected.id)
-                              .where(
-                                (p) =>
-                                    p.end > now.millisecondsSinceEpoch ~/ 1000,
-                              )
-                              .toList(),
-                          now: now,
-                          focusedIndex: _inProgrammes ? _prog : -1,
-                          scroll: _progScroll,
-                          keys: _progKeys,
-                          onTapProgramme: (i) => setState(() {
-                            _inProgrammes = true;
-                            _prog = i;
-                          }),
+                        Container(
+                          width: 1,
+                          color: Colors.white.withValues(alpha: 0.08),
                         ),
-                      ),
-                    ],
+                        Expanded(
+                          child: _Schedule(
+                            channel: selected,
+                            programmes: app.epg
+                                .forChannel(selected.id)
+                                .where(
+                                  (p) =>
+                                      p.end >
+                                      now.millisecondsSinceEpoch ~/ 1000,
+                                )
+                                .toList(),
+                            now: now,
+                            focusedIndex: _inProgrammes ? _prog : -1,
+                            scroll: _progScroll,
+                            keys: _progKeys,
+                            onTapProgramme: (i) => setState(() {
+                              _inProgrammes = true;
+                              _prog = i;
+                            }),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
                 Container(
                   height: 1,
                   color: Colors.white.withValues(alpha: 0.08),
@@ -391,16 +583,30 @@ class _GuideOverlayState extends State<GuideOverlay> {
                   child: Wrap(
                     spacing: 22,
                     runSpacing: 8,
-                    children: [
-                      KeyHint('↑↓', 'Canale'),
-                      KeyHint('→', 'Palinsesto'),
-                      KeyHint('←', 'Categoria'),
-                      KeyHint(
-                        'OK',
-                        _inProgrammes && _prog > 0 ? 'Promemoria' : 'Guarda',
-                      ),
-                      KeyHint('G', 'Chiudi'),
-                    ],
+                    children: _remView
+                        ? [
+                            const KeyHint('↑↓', 'Scegli'),
+                            if (_editRow == null) ...[
+                              const KeyHint('→', 'Ripetizione'),
+                              const KeyHint('←', 'Categoria'),
+                            ] else ...[
+                              const KeyHint('OK', 'Applica'),
+                              const KeyHint('←', 'Elenco'),
+                            ],
+                            const KeyHint('G', 'Chiudi'),
+                          ]
+                        : [
+                            KeyHint('↑↓', 'Canale'),
+                            KeyHint('→', 'Palinsesto'),
+                            KeyHint('←', 'Categoria'),
+                            KeyHint(
+                              'OK',
+                              _inProgrammes && _prog > 0
+                                  ? 'Promemoria'
+                                  : 'Guarda',
+                            ),
+                            KeyHint('G', 'Chiudi'),
+                          ],
                   ),
                 ),
               ],

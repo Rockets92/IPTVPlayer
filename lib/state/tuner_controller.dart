@@ -329,14 +329,16 @@ class TunerController extends ChangeNotifier {
   }
 
   /// Anteprima di un altro canale senza cambiare il video (←→).
-  /// La prima pressione mostra il canale in visione, le successive scorrono.
+  /// A schermo libero la prima pressione mostra il canale in visione; con
+  /// il banner già aperto si passa subito al canale vicino.
   void browse(int delta) {
     if (channels.isEmpty) return;
     final n = channels.length;
-    if (_browse == null || !bannerVisible) {
-      _browse = _current < 0 ? 0 : _current;
+    final from = _browse ?? _pending ?? (_current < 0 ? 0 : _current);
+    if (!bannerVisible) {
+      _browse = from;
     } else {
-      _browse = ((_browse! + delta) % n + n) % n;
+      _browse = ((from + delta) % n + n) % n;
     }
     infoMode = false;
     epgOffset = 0;
