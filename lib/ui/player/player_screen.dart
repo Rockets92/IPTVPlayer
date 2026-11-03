@@ -24,6 +24,7 @@ import '../widgets/pin_dialog.dart';
 import 'channel_list_overlay.dart';
 import 'guide_overlay.dart';
 import 'number_entry.dart';
+import '../widgets/confirm_dialog.dart';
 import 'reminder_popup.dart';
 import 'signal_overlay.dart';
 import 'source_picker.dart';
@@ -266,11 +267,32 @@ class _PlayerScreenState extends State<PlayerScreen> {
     final now = DateTime.now();
     if (_backPressedAt != null &&
         now.difference(_backPressedAt!) < const Duration(seconds: 2)) {
-      SystemNavigator.pop();
+      _backPressedAt = null;
+      unawaited(_confirmExit());
       return;
     }
     _backPressedAt = now;
     _showToast('Premi di nuovo Indietro per uscire');
+  }
+
+  bool _exitAsked = false;
+
+  /// Secondo Indietro: si chiede conferma prima di uscire.
+  Future<void> _confirmExit() async {
+    if (_exitAsked) return;
+    _exitAsked = true;
+    final yes = await showConfirmDialog(
+      context,
+      title: 'Vuoi uscire?',
+      message: 'Il player si chiude.',
+      icon: Icons.logout_rounded,
+    );
+    _exitAsked = false;
+    if (yes) {
+      await SystemNavigator.pop();
+    } else if (mounted) {
+      _rootFocus.requestFocus();
+    }
   }
 
   KeyEventResult _onKey(FocusNode node, KeyEvent e) {
