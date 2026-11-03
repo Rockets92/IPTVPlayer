@@ -310,9 +310,7 @@ class _Programmes extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (tuner.browsing)
-                        const SizedBox.shrink()
-                      else if (tuner.infoProgramme case final p?) ...[
+                      if (tuner.infoProgramme case final p?) ...[
                         if (context.watch<ReminderController>().isSet(
                           channel.id,
                           p,
@@ -322,9 +320,11 @@ class _Programmes extends StatelessWidget {
                             icon: Icons.notifications_active_rounded,
                             accent: true,
                           ),
-                          const SizedBox(width: 12),
-                          const KeyHint('OK', 'Annulla promemoria'),
-                        ] else
+                          if (!tuner.browsing) ...[
+                            const SizedBox(width: 12),
+                            const KeyHint('OK', 'Annulla promemoria'),
+                          ],
+                        ] else if (!tuner.browsing)
                           const KeyHint('OK', 'Promemoria'),
                       ] else if (tuner.infoMode)
                         const KeyHint('← →', 'Programmi'),
@@ -348,7 +348,15 @@ class _Programmes extends StatelessWidget {
             children: [
               const KeyHint('← →', 'Canali'),
               const KeyHint('↑ ↓', 'Programmi'),
-              if (tuner.browsingOther) const KeyHint('OK', 'Guarda'),
+              if (tuner.infoProgramme case final p?)
+                KeyHint(
+                  'OK',
+                  context.watch<ReminderController>().isSet(channel.id, p)
+                      ? 'Annulla promemoria'
+                      : 'Promemoria',
+                )
+              else if (tuner.browsingOther)
+                const KeyHint('OK', 'Guarda'),
             ],
           ),
         ],

@@ -155,7 +155,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
   }
 
   void _toggleReminder(EpgProgramme p) {
-    final c = _tuner.current;
+    final c = _tuner.displayed;
     if (c == null) return;
     final on = _reminders.toggle(c, p);
     _tuner.showBanner(duration: TunerController.browseDuration);
@@ -338,6 +338,12 @@ class _PlayerScreenState extends State<PlayerScreen> {
     } else if (isSelectKey(k)) {
       if (_tuner.digits.isNotEmpty) {
         _tuner.commitDigits();
+      } else if (_tuner.browsing &&
+          _tuner.bannerVisible &&
+          _tuner.infoProgramme != null) {
+        // Programma futuro di un canale in anteprima: OK lo prenota
+        // (o annulla) senza cambiare canale.
+        _toggleReminder(_tuner.infoProgramme!);
       } else if (_tuner.browsing && _tuner.bannerVisible) {
         _tuner.confirmBrowse();
       } else if (_tuner.signalMessage == 'Canale non disponibile') {

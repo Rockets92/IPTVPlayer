@@ -367,10 +367,12 @@ class TunerController extends ChangeNotifier {
   }
 
   /// Programma futuro mostrato nel banner mentre si sfoglia la guida del
-  /// canale in diretta (per prenotare un promemoria con OK).
+  /// canale in diretta o di un altro canale in anteprima (per prenotare un
+  /// promemoria con OK).
   EpgProgramme? get infoProgramme {
-    final c = current;
-    if (c == null || !infoMode || epgOffset <= 0 || timeshift) return null;
+    final c = displayed;
+    if (c == null || epgOffset <= 0) return null;
+    if (!browsing && (!infoMode || timeshift)) return null;
     final list = app.epg.forChannel(c.id);
     final base = app.epg.indexNear(c.id, DateTime.now());
     final i = base + epgOffset;
