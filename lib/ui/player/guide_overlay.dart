@@ -50,7 +50,14 @@ class _GuideOverlayState extends State<GuideOverlay> {
     final all = context.read<AppController>().channels;
     if (_group == 0 || _group > _groups.length) return all;
     final g = _groups[_group - 1];
-    return all.where((c) => c.group == g).toList();
+    return context.read<AppController>().channelsIn(g);
+  }
+
+  /// Nelle categorie "vista" (Vetrina) i canali collegati sono rientrati.
+  bool _isLinked(Channel c) {
+    if (_group == 0 || _group > _groups.length) return false;
+    final g = _groups[_group - 1];
+    return c.group != g && !c.extraGroups.contains(g);
   }
 
   void _setGroup(int g) {
@@ -333,6 +340,7 @@ class _GuideOverlayState extends State<GuideOverlay> {
                             opacity: _inProgrammes && i != _ch ? 0.55 : 1,
                             child: ChannelRow(
                               channel: channels[i],
+                              linked: _isLinked(channels[i]),
                               now: now,
                               focused: i == _ch,
                               onAir: tuner.current?.id == channels[i].id,

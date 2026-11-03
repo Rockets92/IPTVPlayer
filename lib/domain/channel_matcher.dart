@@ -245,6 +245,8 @@ class ChannelMatcher {
     // contengono le parole chiave, una volta sola per evento.
     final dynamicUsed = <int>{};
     for (final g in mapping.dynamicGroups) {
+      // Le categorie "vista" (Vetrina) non rinumerano: vedi più sotto.
+      if (g.keepNumbers) continue;
       channels.addAll(
         _dynamicGroup(
           g,
@@ -280,7 +282,62 @@ class ChannelMatcher {
       );
     }
 
-    if (showUnmapped ?? mapping.showUnmapped) {
+    // Categorie "vista" (Vetrina): i canali restano al loro numero e al loro
+    // posto; ogni vetrina porta con sé i canali collegati, cioè quelli che
+    // si chiamano come ciò che segue la parola chiave ("Vetrina Natura
+    // Cinematica" → "Natura Cinematica 1 FHD ( hermes )", "… 2"…).
+    bool free(int id) => !dynamicUsed.contains(id) && !plusOneUsed.contains(id);
+    final viewOf = <int, String>{}; // streamId -> categoria vista
+    final topicOf = <int, String>{}; // streamId vetrina -> argomento
+    for (final g in mapping.dynamicGroups.where((g) => g.keepNumbers)) {
+      final res = [
+        for (final kw in g.keywords)
+          RegExp('(?<![a-z0-9])${RegExp.escape(kw)}'),
+      ];
+      for (final st in streams) {
+        if (!free(st.streamId) || viewOf.containsKey(st.streamId)) continue;
+        final folded = NameNormalizer.fold(st.name).toLowerCase();
+        if (!res.any((re) => re.hasMatch(folded))) continue;
+        viewOf[st.streamId] = g.name;
+        final t = _tagless(st.name, preferredTags)
+          ..removeWhere(g.keywords.contains);
+        if (t.isNotEmpty && !t.every(_isNumber)) {
+          topicOf[st.streamId] = t.join(' ');
+        }
+      }
+    }
+    final topics = {for (final t in topicOf.values.toSet()) t: t.split(' ')};
+    final linkedTopic = <int, String>{}; // streamId collegato -> argomento
+    if (topics.isNotEmpty) {
+      for (final st in streams) {
+        if (!free(st.streamId) || viewOf.containsKey(st.streamId)) continue;
+        final t = _tagless(st.name, preferredTags);
+        for (final MapEntry(key: k, value: topic) in topics.entries) {
+          if (t.length < topic.length) continue;
+          var ok = true;
+          for (var i = 0; i < topic.length && ok; i++) {
+            ok = t[i] == topic[i];
+          }
+          final rest = t.sublist(topic.length);
+          if (ok &&
+              (rest.isEmpty || (rest.length == 1 && _isNumber(rest[0])))) {
+            linkedTopic[st.streamId] = k;
+            break;
+          }
+        }
+      }
+    }
+    // Canali in lista (mappati) che sono vetrine o collegati.
+    final idOfStream = <int, String>{};
+    final mappedIds = {for (final c in channels) c.id};
+    for (final MapEntry(key: id, value: i) in assigned.entries) {
+      final cid = 'm${visible[i].number}';
+      if (mappedIds.contains(cid)) idOfStream[id] = cid;
+    }
+
+    final show = showUnmapped ?? mapping.showUnmapped;
+    final needed = {...viewOf.keys, ...linkedTopic.keys};
+    if (show || needed.isNotEmpty) {
       final rest = streams.where(
         (s) =>
             !assigned.containsKey(s.streamId) &&
@@ -288,27 +345,109 @@ class ChannelMatcher {
             !plusOneUsed.contains(s.streamId),
       );
       final taken = channels.map((c) => c.number).toSet();
-      final seen = <String>{};
-      var n = mapping.unmappedStartNumber;
+      // Raggruppamento per nome: anche fuori lista un canale compare una
+      // volta sola. Vetrine e collegati riuniscono tutte le loro fonti.
+      final byKey = <String, List<XtreamLiveStream>>{};
       for (final s in rest) {
-        final key = NameNormalizer.key(s.name);
-        // Anche fuori lista un canale compare una volta sola.
-        if (key.isNotEmpty && !seen.add(key)) continue;
+        final isNeeded = needed.contains(s.streamId);
+        if (!show && !isNeeded) continue;
+        var key = isNeeded
+            ? 'v:${_tagless(s.name, preferredTags).join(' ')}'
+            : NameNormalizer.key(s.name);
+        if (key.isEmpty || key == 'v:') key = 'u:${s.streamId}';
+        (byKey[key] ??= []).add(s);
+      }
+      var n = mapping.unmappedStartNumber;
+      for (final MapEntry(key: key, value: list) in byKey.entries) {
         while (taken.contains(n)) {
           n++;
         }
+        final s = list.first;
+        final many = key.startsWith('v:');
+        int rank(XtreamLiveStream x) {
+          final p = _preferredRank(x.name, preferredTags);
+          return (p < 0 ? 0 : (preferredTags.length - p) * -100) -
+              _score(x.name);
+        }
+
+        final sources = many
+            ? ([...list]..sort((a, b) => rank(a).compareTo(rank(b))))
+            : [s];
+        final id = 's${s.streamId}';
+        for (final x in list) {
+          idOfStream[x.streamId] = id;
+        }
+        final view = {for (final x in list) ?viewOf[x.streamId]}.toList();
         channels.add(
           Channel(
-            id: 's${s.streamId}',
+            id: id,
             number: n++,
-            name: _clean(s.name),
+            name: _clean(many ? _displayName(sources.first.name) : s.name),
             group: categoryNames[s.categoryId] ?? 'Altri canali',
-            logoUrl: s.icon,
-            epgIds: [?s.epgChannelId],
-            nameKeys: [if (key.isNotEmpty) key],
-            sources: [ChannelSource(streamId: s.streamId, label: s.name)],
+            logoUrl: list
+                .map((x) => x.icon)
+                .firstWhere(
+                  (i) => i != null && i.isNotEmpty,
+                  orElse: () => null,
+                ),
+            epgIds: {
+              for (final x in list)
+                if (x.epgChannelId != null) x.epgChannelId!,
+            }.toList(),
+            nameKeys: [
+              if (NameNormalizer.key(s.name) case final k when k.isNotEmpty) k,
+            ],
+            sources: [
+              for (final x in sources)
+                ChannelSource(
+                  streamId: x.streamId,
+                  label: x.name.trim(),
+                  preferred: _preferredRank(x.name, preferredTags) >= 0,
+                ),
+            ],
             mapped: false,
+            extraGroups: view,
           ),
+        );
+      }
+    }
+
+    // Vetrine in lista (mappate) e collegamenti di ogni vetrina.
+    if (viewOf.isNotEmpty) {
+      final linkedByTopic = <String, List<String>>{};
+      for (final MapEntry(key: id, value: topic) in linkedTopic.entries) {
+        final cid = idOfStream[id];
+        if (cid == null) continue;
+        final l = linkedByTopic[topic] ??= [];
+        if (!l.contains(cid)) l.add(cid);
+      }
+      final byId = {
+        for (var i = 0; i < channels.length; i++) channels[i].id: i,
+      };
+      for (final l in linkedByTopic.values) {
+        l.sort(
+          (a, b) =>
+              _naturalCompare(channels[byId[a]!].name, channels[byId[b]!].name),
+        );
+      }
+      final viewOfChannel = <String, Set<String>>{};
+      final topicOfChannel = <String, String>{};
+      for (final MapEntry(key: id, value: g) in viewOf.entries) {
+        final cid = idOfStream[id];
+        if (cid == null) continue;
+        (viewOfChannel[cid] ??= {}).add(g);
+        if (topicOf[id] case final t?) topicOfChannel[cid] ??= t;
+      }
+      for (final MapEntry(key: cid, value: gs) in viewOfChannel.entries) {
+        final i = byId[cid]!;
+        final c = channels[i];
+        channels[i] = c.copyWith(
+          extraGroups: {...c.extraGroups, ...gs}.toList(),
+          linked: [
+            for (final l
+                in linkedByTopic[topicOfChannel[cid]] ?? const <String>[])
+              if (l != cid) l,
+          ],
         );
       }
     }
@@ -436,6 +575,30 @@ class ChannelMatcher {
   }
 
   /// Ordine "naturale": DAZN 2 prima di DAZN 10.
+  /// Parole del nome senza qualità, etichette tra parentesi finali e fonti
+  /// preferite ("Natura Cinematica 1 FHD ( hermes )" → [natura, cinematica, 1]).
+  static List<String> _tagless(String name, List<List<String>> tags) {
+    final t = NameNormalizer.tokens(NameNormalizer.baseName(name));
+    for (final tag in tags) {
+      for (var i = 0; i + tag.length <= t.length; i++) {
+        var hit = true;
+        for (var j = 0; j < tag.length; j++) {
+          if (t[i + j] != tag[j]) {
+            hit = false;
+            break;
+          }
+        }
+        if (hit) {
+          t.removeRange(i, i + tag.length);
+          break;
+        }
+      }
+    }
+    return t;
+  }
+
+  static bool _isNumber(String s) => int.tryParse(s) != null;
+
   static int _naturalCompare(String a, String b) {
     final re = RegExp(r'(\d+)|(\D+)');
     final x = re.allMatches(a.toLowerCase()).toList();

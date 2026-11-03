@@ -22,6 +22,7 @@ class ChannelRow extends StatefulWidget {
     required this.onAir,
     required this.onTap,
     this.showProgramme = true,
+    this.linked = false,
   });
 
   static const double extent = 78;
@@ -32,6 +33,9 @@ class ChannelRow extends StatefulWidget {
   final bool onAir;
   final VoidCallback onTap;
   final bool showProgramme;
+
+  /// Canale collegato a una vetrina: rientrato sotto di essa.
+  final bool linked;
 
   @override
   State<ChannelRow> createState() => _ChannelRowState();
@@ -48,7 +52,7 @@ class _ChannelRowState extends State<ChannelRow> {
     final prog = widget.showProgramme ? epg.nowOn(c.id, widget.now) : null;
     final f = widget.focused;
 
-    return MouseRegion(
+    final row = MouseRegion(
       cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _hover = true),
       onExit: (_) => setState(() => _hover = false),
@@ -174,6 +178,22 @@ class _ChannelRowState extends State<ChannelRow> {
           ),
         ),
       ),
+    );
+    if (!widget.linked) return row;
+    return Row(
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 18),
+          child: Text(
+            '↳',
+            style: AppText.title.copyWith(
+              fontSize: 22,
+              color: Palette.textTertiary,
+            ),
+          ),
+        ),
+        Expanded(child: row),
+      ],
     );
   }
 }

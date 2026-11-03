@@ -65,10 +65,46 @@ class AppController extends ChangeNotifier {
 
   List<String> get groups {
     final seen = <String>{};
-    return [
+    final out = [
       for (final c in channels)
         if (seen.add(c.group)) c.group,
     ];
+    // Categorie "vista" (Vetrina): dopo la categoria automatica che le
+    // precede nella lista (es. dopo Eventi), altrimenti in fondo.
+    final views = <String>{for (final c in channels) ...c.extraGroups}
+        .where((g) => !seen.contains(g));
+    final dyn = mapping?.dynamicGroups ?? const [];
+    for (final v in views) {
+      final at = dyn.indexWhere((g) => g.name == v);
+      var pos = out.length;
+      for (var i = at - 1; i >= 0; i--) {
+        final p = out.indexOf(dyn[i].name);
+        if (p >= 0) {
+          pos = p + 1;
+          break;
+        }
+      }
+      out.insert(pos, v);
+    }
+    return out;
+  }
+
+  /// Canali di una categoria. Nelle categorie "vista" (Vetrina) ogni canale
+  /// è seguito dai suoi canali collegati, per raggiungerli subito.
+  List<Channel> channelsIn(String group) {
+    final direct = channels.where((c) => c.group == group).toList();
+    if (direct.isNotEmpty) return direct;
+    final byId = {for (final c in channels) c.id: c};
+    final out = <Channel>[];
+    final seen = <String>{};
+    for (final c in channels.where((c) => c.extraGroups.contains(group))) {
+      if (seen.add(c.id)) out.add(c);
+      for (final id in c.linked) {
+        final l = byId[id];
+        if (l != null && seen.add(l.id)) out.add(l);
+      }
+    }
+    return out;
   }
 
   /// Un'impostazione che cambia l'aspetto (es. dimensione interfaccia).

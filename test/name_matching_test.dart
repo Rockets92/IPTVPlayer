@@ -192,6 +192,64 @@ void main() {
     expect(list[1].sources.single.streamId, 4);
   });
 
+  test('vetrina: canali al loro posto, con i canali collegati', () {
+    final mapping = ChannelMapping.fromJson({
+      'channels': [
+        {'number': 101, 'name': 'Rai 1', 'group': 'A'},
+      ],
+      'unmappedChannels': {'show': true},
+      'dynamicGroups': [
+        {
+          'name': 'Eventi',
+          'startNumber': 800,
+          'keywords': ['eventi'],
+        },
+        {
+          'name': 'Vetrina',
+          'startNumber': 870,
+          'keywords': ['vetrina'],
+        },
+      ],
+    });
+    final list = const ChannelMatcher().build(
+      mapping: mapping,
+      streams: const [
+        XtreamLiveStream(streamId: 1, name: 'Rai 1 FHD'),
+        XtreamLiveStream(streamId: 2, name: 'Altro Canale'),
+        XtreamLiveStream(streamId: 3, name: 'Vetrina Natura Cinematica FHD'),
+        XtreamLiveStream(
+          streamId: 4,
+          name: 'Natura Cinematica 2 FHD ( hermes )',
+        ),
+        XtreamLiveStream(
+          streamId: 5,
+          name: 'Natura Cinematica 1 FHD ( hermes )',
+        ),
+        XtreamLiveStream(streamId: 6, name: 'Natura Cinematica 1 HD'),
+        XtreamLiveStream(streamId: 7, name: 'Natura Cinematica Extra Show'),
+        XtreamLiveStream(
+          streamId: 8,
+          name: 'Vetrina Natura Cinematica HD ( hermes )',
+        ),
+      ],
+    );
+    // Numeri nell'ordine della lista del provider, senza salti alla 870.
+    expect(list.map((c) => c.number), [101, 1000, 1001, 1002, 1003, 1004]);
+    final v = list.firstWhere((c) => c.inGroup('Vetrina'));
+    expect(v.number, 1001);
+    expect(v.sources.map((s) => s.streamId), [8, 3]);
+    final linked = [
+      for (final id in v.linked) list.firstWhere((c) => c.id == id),
+    ];
+    expect(linked.map((c) => c.name), [
+      'Natura Cinematica 1',
+      'Natura Cinematica 2',
+    ]);
+    expect(linked.first.sources.map((s) => s.streamId), [5, 6]);
+    // Un nome che continua con altre parole non è collegato.
+    expect(list.any((c) => c.name == 'Natura Cinematica Extra Show'), isTrue);
+  });
+
   test('canali evento dall\'800: prima DAZN, poi "eventi", senza doppioni', () {
     final mapping = ChannelMapping.fromJson({
       'channels': [
@@ -216,12 +274,11 @@ void main() {
         XtreamLiveStream(streamId: 12, name: 'VETRINA 1 ( hermes )'),
       ],
     );
-    final vt = list.where((c) => c.group == 'Vetrina').toList();
-    expect(vt.map((c) => c.number), [870, 871]);
-    expect(vt.map((c) => c.name), ['VETRINA 1', 'Vetrina 2']);
-    // Vetrina viene subito dopo Eventi.
-    final groups = list.map((c) => c.group).toSet().toList();
-    expect(groups.indexOf('Vetrina'), groups.indexOf('Eventi') + 1);
+    // Le vetrine non vengono rinumerate: restano fuori lista (dal 1000)
+    // e compaiono anche nella categoria Vetrina.
+    final vt = list.where((c) => c.inGroup('Vetrina')).toList();
+    expect(vt.every((c) => c.number >= 1000 && c.group != 'Vetrina'), isTrue);
+    expect(vt.length, 2);
     final ev = list.where((c) => c.group == 'Eventi').toList();
     expect(ev.map((c) => c.number), [800, 801, 802, 803, 804]);
     expect(ev.map((c) => c.name), [

@@ -98,10 +98,20 @@ class DynamicGroup {
     required this.name,
     required this.startNumber,
     required this.keywords,
+    this.keepNumbersOverride,
   });
 
   final String name;
   final int startNumber;
+
+  /// Valore esplicito dal JSON (`keepNumbers`), se presente.
+  final bool? keepNumbersOverride;
+
+  /// Categoria "vista": i canali restano al loro numero e al loro posto
+  /// nell'elenco e compaiono anche in questa categoria, ognuno seguito dai
+  /// canali collegati (es. "Vetrina Natura Cinematica" → "Natura Cinematica
+  /// 1", "2"…). Senza indicazione vale per la Vetrina.
+  bool get keepNumbers => keepNumbersOverride ?? keywords.contains('vetrina');
 
   /// Parole chiave in ordine: prima tutti i canali della prima, poi della
   /// seconda, e così via.
@@ -117,7 +127,13 @@ class DynamicGroup {
         .where((e) => e.isNotEmpty)
         .toList();
     if (keywords.isEmpty) return null;
-    return DynamicGroup(name: name, startNumber: start, keywords: keywords);
+    final keep = j['keepNumbers'];
+    return DynamicGroup(
+      name: name,
+      startNumber: start,
+      keywords: keywords,
+      keepNumbersOverride: keep is bool ? keep : null,
+    );
   }
 }
 

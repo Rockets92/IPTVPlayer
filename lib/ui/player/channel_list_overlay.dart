@@ -40,7 +40,14 @@ class _ChannelListOverlayState extends State<ChannelListOverlay> {
     final all = context.read<AppController>().channels;
     if (_group == 0) return all;
     final g = _groups[_group - 1];
-    return all.where((c) => c.group == g).toList();
+    return context.read<AppController>().channelsIn(g);
+  }
+
+  /// Nelle categorie "vista" (Vetrina) i canali collegati sono rientrati.
+  bool _isLinked(Channel c) {
+    if (_group == 0 || _group > _groups.length) return false;
+    final g = _groups[_group - 1];
+    return c.group != g && !c.extraGroups.contains(g);
   }
 
   @override
@@ -228,6 +235,7 @@ class _ChannelListOverlayState extends State<ChannelListOverlay> {
                             final c = items[i];
                             return ChannelRow(
                               channel: c,
+                              linked: _isLinked(c),
                               now: now,
                               focused: i == _sel,
                               onAir: tuner.current?.id == c.id,

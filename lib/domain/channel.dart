@@ -45,6 +45,8 @@ class Channel {
     this.plusOneChannelId,
     this.baseChannelId,
     this.adult = false,
+    this.extraGroups = const [],
+    this.linked = const [],
   });
 
   /// Identificativo stabile: `m<numero>` per i mappati, `s<streamId>` per gli altri.
@@ -78,6 +80,16 @@ class Channel {
   /// Canale della categoria per adulti ("XXX") del provider.
   final bool adult;
 
+  /// Categorie "vista" in cui il canale compare oltre alla sua (es.
+  /// "Vetrina"), senza cambiare numero né posizione nell'elenco.
+  final List<String> extraGroups;
+
+  /// Canali collegati (es. per "Vetrina Natura Cinematica" i canali
+  /// "Natura Cinematica 1", "2"…), per raggiungerli dalla vetrina.
+  final List<String> linked;
+
+  bool inGroup(String g) => group == g || extraGroups.contains(g);
+
   bool get hasPlusOne => plusOne.isNotEmpty || plusOneChannelId != null;
 
   Channel copyWith({
@@ -85,6 +97,8 @@ class Channel {
     String? plusOneChannelId,
     String? baseChannelId,
     bool? adult,
+    List<String>? extraGroups,
+    List<String>? linked,
   }) => Channel(
     id: id,
     number: number,
@@ -99,6 +113,8 @@ class Channel {
     plusOneChannelId: plusOneChannelId ?? this.plusOneChannelId,
     baseChannelId: baseChannelId ?? this.baseChannelId,
     adult: adult ?? this.adult,
+    extraGroups: extraGroups ?? this.extraGroups,
+    linked: linked ?? this.linked,
   );
 
   bool get playable => sources.isNotEmpty;
