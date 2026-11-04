@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import 'retro.dart';
+import 'sfx.dart';
 
 /// SERPENTINA: il serpente cresce mangiando, non deve toccare i bordi né
 /// la propria coda. Ogni 5 frutti compare per poco una stella bonus.
@@ -101,6 +102,7 @@ class SnakeGame extends RetroGame {
     body.insert(0, h);
     if (h == food) {
       score += 10;
+      sound(Sfx.eat);
       _grow += 2;
       _eaten++;
       _flash = 0.15;
@@ -109,9 +111,11 @@ class SnakeGame extends RetroGame {
       if (_eaten % 5 == 0) {
         bonus = _free();
         bonusLeft = 6;
+        sound(Sfx.select);
       }
     } else if (h == bonus) {
       score += 50 + (bonusLeft * 10).round();
+      sound(Sfx.bonus);
       _grow += 3;
       _flash = 0.3;
       bonus = null;

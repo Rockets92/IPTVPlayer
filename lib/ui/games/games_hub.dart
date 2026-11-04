@@ -2,13 +2,17 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../core/performance.dart';
 
 import '../widgets/focus_tile.dart';
 import 'bricks_game.dart';
 import 'memory_game.dart';
 import 'racer_game.dart';
 import 'retro.dart';
+import 'sfx.dart';
 import 'snake_game.dart';
 import 'stars_game.dart';
 
@@ -123,15 +127,27 @@ class _GamesHubState extends State<GamesHub>
   )..repeat();
   int _sel = 0;
   RetroGame? _playing;
+  late final SfxPlayer _sfx = SfxPlayer(
+    light: context.read<PerformanceProfile>().isLight,
+  )..enabled = widget.prefs.getBool(_soundKey) ?? true;
+  static const _soundKey = 'games.sound';
+
+  void _toggleSound() {
+    setState(() => _sfx.enabled = !_sfx.enabled);
+    widget.prefs.setBool(_soundKey, _sfx.enabled);
+    _sfx.play(Sfx.select);
+  }
 
   @override
   void initState() {
     super.initState();
+    _sfx.init();
     WidgetsBinding.instance.addPostFrameCallback((_) => _focus.requestFocus());
   }
 
   @override
   void dispose() {
+    _sfx.dispose();
     _focus.dispose();
     _anim.dispose();
     super.dispose();
@@ -143,6 +159,7 @@ class _GamesHubState extends State<GamesHub>
     }
     final k = e.logicalKey;
     final n = _games.length;
+    final before = _sel;
     if (k == LogicalKeyboardKey.arrowRight) {
       setState(() => _sel = (_sel + 1) % n);
     } else if (k == LogicalKeyboardKey.arrowLeft) {
@@ -151,6 +168,9 @@ class _GamesHubState extends State<GamesHub>
       setState(() => _sel = min(n - 1, _sel + 3));
     } else if (k == LogicalKeyboardKey.arrowUp) {
       setState(() => _sel = max(0, _sel - 3));
+    } else if (k == LogicalKeyboardKey.keyS ||
+        k == LogicalKeyboardKey.colorF2Yellow) {
+      _toggleSound();
     } else if (isSelectKey(k) || k == LogicalKeyboardKey.space) {
       _play(_sel);
     } else if (isBackKey(k)) {
@@ -158,10 +178,12 @@ class _GamesHubState extends State<GamesHub>
     } else {
       return KeyEventResult.ignored;
     }
+    if (_sel != before) _sfx.play(Sfx.move);
     return KeyEventResult.handled;
   }
 
   void _play(int i) => setState(() {
+    _sfx.play(Sfx.select);
     _sel = i;
     _playing = _games[i].make();
   });
@@ -179,6 +201,7 @@ class _GamesHubState extends State<GamesHub>
         key: ValueKey(g),
         game: g,
         prefs: widget.prefs,
+        sfx: _sfx,
         onExit: _back,
       );
     }
@@ -243,7 +266,8 @@ class _GamesHubState extends State<GamesHub>
                   ),
                   Blink(
                     child: Text(
-                      'OK: GIOCA    INDIETRO: TORNA ALLA TV',
+                      'OK: GIOCA    GIALLO/S: SUONI '
+                      '${_sfx.enabled ? 'SÌ' : 'NO'}    INDIETRO: TORNA ALLA TV',
                       style: Retro.text(compact ? 12 : 15, color: Retro.yellow),
                     ),
                   ),

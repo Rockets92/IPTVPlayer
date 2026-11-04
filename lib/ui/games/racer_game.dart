@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import 'retro.dart';
+import 'sfx.dart';
 
 class _Car {
   _Car(this.lane, this.y, this.color, this.speed);
@@ -64,8 +65,10 @@ class RacerGame extends RetroGame {
 
   @override
   void onKey(LogicalKeyboardKey k) {
+    final before = lane;
     if (k == LogicalKeyboardKey.arrowLeft) lane = max(0, lane - 1);
     if (k == LogicalKeyboardKey.arrowRight) lane = min(2, lane + 1);
+    if (lane != before) sound(Sfx.move);
   }
 
   static const _paints = [
@@ -127,6 +130,7 @@ class RacerGame extends RetroGame {
       if (c.y > h + 6) return true;
       if ((laneX(c.lane) - x).abs() < 8 && (c.y - _py).abs() < 9) {
         _bonus += 25;
+        sound(Sfx.coin);
         return true;
       }
       return false;
@@ -134,6 +138,7 @@ class RacerGame extends RetroGame {
     // Scontro.
     for (final c in cars) {
       if ((laneX(c.lane) - x).abs() < 9 && (c.y - _py).abs() < 13) {
+        if (_crash <= 0) sound(Sfx.crash);
         _crash = 0.8;
       }
     }

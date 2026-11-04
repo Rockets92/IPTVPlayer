@@ -6,6 +6,8 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'sfx.dart';
+
 import '../widgets/focus_tile.dart';
 
 /// Colori "anni '90": fosfori di un televisore a tubo catodico.
@@ -112,6 +114,10 @@ abstract class RetroGame {
   final rnd = Random();
   final held = <LogicalKeyboardKey>{};
 
+  /// Effetti sonori (impostati dalla cornice).
+  void Function(Sfx)? onSound;
+  void sound(Sfx s) => onSound?.call(s);
+
   void reset();
   void update(double dt);
   void paint(Canvas canvas);
@@ -133,8 +139,10 @@ class GameShell extends StatefulWidget {
     required this.game,
     required this.prefs,
     required this.onExit,
+    this.sfx,
   });
 
+  final SfxPlayer? sfx;
   final RetroGame game;
   final SharedPreferences prefs;
   final VoidCallback onExit;
@@ -160,6 +168,7 @@ class _GameShellState extends State<GameShell>
   void initState() {
     super.initState();
     _best = widget.prefs.getInt(_bestKey) ?? 0;
+    g.onSound = (s) => widget.sfx?.play(s);
     g.reset();
     _ticker.start();
     WidgetsBinding.instance.addPostFrameCallback((_) => _focus.requestFocus());
@@ -190,6 +199,7 @@ class _GameShellState extends State<GameShell>
       widget.prefs.setInt(_bestKey, _best);
     }
     g.held.clear();
+    widget.sfx?.play(g.won ? Sfx.win : Sfx.over);
     setState(() => _phase = _Phase.over);
   }
 
@@ -199,6 +209,7 @@ class _GameShellState extends State<GameShell>
     g.over = false;
     g.won = false;
     _newBest = false;
+    widget.sfx?.play(Sfx.start);
     setState(() => _phase = _Phase.playing);
   }
 
@@ -224,6 +235,7 @@ class _GameShellState extends State<GameShell>
         if (isSelectKey(k) ||
             k == LogicalKeyboardKey.space ||
             k == LogicalKeyboardKey.keyP) {
+          widget.sfx?.play(Sfx.select);
           setState(() => _phase = _Phase.playing);
         } else if (isBackKey(k)) {
           // Secondo Indietro in pausa: si torna alla sala giochi.
@@ -232,6 +244,7 @@ class _GameShellState extends State<GameShell>
       case _Phase.playing:
         if (back && down) {
           g.held.clear();
+          widget.sfx?.play(Sfx.pause);
           setState(() => _phase = _Phase.paused);
         } else if (down) {
           g.onKey(k);

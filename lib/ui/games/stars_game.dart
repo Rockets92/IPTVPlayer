@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import 'retro.dart';
+import 'sfx.dart';
 
 enum _Kind { star, comet, bomb }
 
@@ -117,15 +118,19 @@ class StarsGame extends RetroGame {
           case _Kind.bomb:
             lives--;
             _hurt = 0.4;
+            sound(Sfx.bomb);
             _streak = 0;
             mult = 1;
             pops.add(_Pop(it.x, it.y - 6, 'BOOM', Retro.red));
             if (lives <= 0) over = true;
           case _Kind.star || _Kind.comet:
             final pts = (it.kind == _Kind.comet ? 50 : 10) * mult;
+            sound(it.kind == _Kind.comet ? Sfx.bonus : Sfx.eat);
             score += pts;
             _streak++;
+            final before = mult;
             mult = min(5, 1 + _streak ~/ 5);
+            if (mult > before) sound(Sfx.level);
             pops.add(
               _Pop(
                 it.x,

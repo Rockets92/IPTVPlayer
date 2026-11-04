@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 
 import '../widgets/focus_tile.dart';
 import 'retro.dart';
+import 'sfx.dart';
 
 class _Card {
   _Card(this.face);
@@ -55,6 +56,7 @@ class MemoryGame extends RetroGame {
   @override
   void onKey(LogicalKeyboardKey k) {
     final c = sel % 4, r = sel ~/ 4;
+    final before = sel;
     switch (k) {
       case LogicalKeyboardKey.arrowLeft:
         sel = r * 4 + (c + 3) % 4;
@@ -67,6 +69,7 @@ class MemoryGame extends RetroGame {
       default:
         if (isSelectKey(k) || k == LogicalKeyboardKey.space) _flip();
     }
+    if (sel != before) sound(Sfx.move);
   }
 
   void _flip() {
@@ -74,6 +77,7 @@ class MemoryGame extends RetroGame {
     final card = cards[sel];
     if (card.up || card.done) return;
     card.up = true;
+    sound(Sfx.flip);
     if (_first == null) {
       _first = sel;
       return;
@@ -84,6 +88,7 @@ class MemoryGame extends RetroGame {
     if (a.face == card.face) {
       a.done = card.done = true;
       _first = _second = null;
+      sound(Sfx.match);
       if (cards.every((c) => c.done)) {
         score = max(100, 2000 - moves * 40 - _time.round() * 6);
         won = true;
@@ -105,6 +110,7 @@ class MemoryGame extends RetroGame {
     if (_wait > 0) {
       _wait -= dt;
       if (_wait <= 0) {
+        sound(Sfx.miss);
         cards[_first!].up = false;
         cards[_second!].up = false;
         _first = _second = null;

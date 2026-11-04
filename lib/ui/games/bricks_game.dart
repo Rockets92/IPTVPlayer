@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 
 import '../widgets/focus_tile.dart';
 import 'retro.dart';
+import 'sfx.dart';
 
 class _Brick {
   _Brick(this.rect, this.color, this.points, this.hits);
@@ -90,6 +91,7 @@ class BricksGame extends RetroGame {
   void _launch() {
     if (!stuck) return;
     stuck = false;
+    sound(Sfx.select);
     final a = -pi / 2 + (rnd.nextDouble() - 0.5) * 0.8;
     vx = cos(a) * speed;
     vy = sin(a) * speed;
@@ -140,13 +142,16 @@ class BricksGame extends RetroGame {
     if (bx < r + 1) {
       bx = r + 1;
       vx = vx.abs();
+      sound(Sfx.wall);
     } else if (bx > w - r - 1) {
       bx = w - r - 1;
       vx = -vx.abs();
+      sound(Sfx.wall);
     }
     if (by < r + 9) {
       by = r + 9;
       vy = vy.abs();
+      sound(Sfx.wall);
     }
     // Racchetta: l'angolo dipende da dove la si colpisce.
     if (vy > 0 &&
@@ -158,6 +163,7 @@ class BricksGame extends RetroGame {
       vx = cos(a) * speed;
       vy = sin(a) * speed;
       by = py - r;
+      sound(Sfx.bounce);
     }
     final ball = Rect.fromCircle(center: Offset(bx, by), radius: r);
     for (final b in bricks) {
@@ -172,12 +178,14 @@ class BricksGame extends RetroGame {
       b.hits--;
       if (b.hits == 0) {
         score += b.points;
+        sound(Sfx.brick);
         _burst(b.rect.center, b.color);
         speed = min(speed + 1.2, 170);
         final s = sqrt(vx * vx + vy * vy);
         vx = vx / s * speed;
         vy = vy / s * speed;
       } else {
+        sound(Sfx.wall);
         _burst(b.rect.center, Retro.white, n: 4);
       }
       break;
@@ -185,6 +193,7 @@ class BricksGame extends RetroGame {
     bricks.removeWhere((b) => b.hits <= 0);
     if (bricks.isEmpty) {
       score += 100 * level;
+      sound(Sfx.level);
       level++;
       _build();
       return;
@@ -192,6 +201,7 @@ class BricksGame extends RetroGame {
     if (by > h + 4) {
       lives--;
       _shake = 0.35;
+      if (lives > 0) sound(Sfx.hurt);
       if (lives <= 0) {
         over = true;
       } else {
