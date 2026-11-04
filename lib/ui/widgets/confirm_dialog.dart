@@ -39,7 +39,7 @@ Future<bool> showConfirmDialog(
   return r ?? false;
 }
 
-class _Confirm extends StatelessWidget {
+class _Confirm extends StatefulWidget {
   const _Confirm({
     required this.title,
     required this.message,
@@ -55,16 +55,59 @@ class _Confirm extends StatelessWidget {
   final IconData? icon;
 
   @override
+  State<_Confirm> createState() => _ConfirmState();
+}
+
+/// I tasti li gestisce il dialogo stesso, senza affidarsi allo spostamento
+/// del focus tra i pulsanti: sulla Chromecast il focus non si vedeva e la
+/// scelta sembrava bloccata.
+class _ConfirmState extends State<_Confirm> {
+  final _focus = FocusNode(debugLabel: 'confirm');
+
+  /// 0 = Sì, 1 = No (si parte da No).
+  int _sel = 1;
+
+  @override
+  void dispose() {
+    _focus.dispose();
+    super.dispose();
+  }
+
+  void _close(bool v) {
+    if (mounted) Navigator.pop(context, v);
+  }
+
+  KeyEventResult _onKey(FocusNode _, KeyEvent e) {
+    if (e is KeyUpEvent) return KeyEventResult.handled;
+    final k = e.logicalKey;
+    if (isBackKey(k)) {
+      if (e is KeyDownEvent) _close(false);
+    } else if (k == LogicalKeyboardKey.arrowLeft ||
+        k == LogicalKeyboardKey.arrowUp) {
+      setState(() => _sel = 0);
+    } else if (k == LogicalKeyboardKey.arrowRight ||
+        k == LogicalKeyboardKey.arrowDown) {
+      setState(() => _sel = 1);
+    } else if (isSelectKey(k)) {
+      if (e is KeyDownEvent) _close(_sel == 0);
+    }
+    // Nessun tasto passa al player sotto il dialogo.
+    return KeyEventResult.handled;
+  }
+
+  String get title => widget.title;
+  String? get message => widget.message;
+  String get yes => widget.yes;
+  String get no => widget.no;
+  IconData? get icon => widget.icon;
+
+  @override
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
     return Focus(
-      onKeyEvent: (_, e) {
-        if (e is KeyDownEvent && isBackKey(e.logicalKey)) {
-          Navigator.pop(context, false);
-          return KeyEventResult.handled;
-        }
-        return KeyEventResult.ignored;
-      },
+      focusNode: _focus,
+      autofocus: true,
+      onKeyEvent: _onKey,
       child: Center(
         child: Material(
           type: MaterialType.transparency,
@@ -102,24 +145,28 @@ class _Confirm extends StatelessWidget {
                     ),
                   ],
                   const SizedBox(height: 20),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: GlassButton(
-                          label: yes,
-                          primary: false,
-                          onPressed: () => Navigator.pop(context, true),
+                  // Il pulsante scelto è quello acceso; i pulsanti non
+                  // prendono il focus, così i tasti arrivano sempre qui.
+                  ExcludeFocus(
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: GlassButton(
+                            label: yes,
+                            primary: _sel == 0,
+                            onPressed: () => _close(true),
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: GlassButton(
-                          label: no,
-                          autofocus: true,
-                          onPressed: () => Navigator.pop(context, false),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: GlassButton(
+                            label: no,
+                            primary: _sel == 1,
+                            onPressed: () => _close(false),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               ),
