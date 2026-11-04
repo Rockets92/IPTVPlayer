@@ -25,6 +25,7 @@ dependencies:
   window_manager: ^0.5.2
   wakelock_plus: ^1.8.2
   qr_flutter: ^4.1.0
+  flutter_soloud: ^5.2.2
 
 dev_dependencies:
   flutter_test:
@@ -59,3 +60,9 @@ flutter:
           weight: 600
         - asset: assets/fonts/InterDisplay-Bold.ttf
           weight: 700
+
+# Suoni dei giochi: solo WAV generati in memoria, niente codec Ogg/Opus/FLAC.
+hooks:
+  user_defines:
+    flutter_soloud:
+      no_xiph_libs: true

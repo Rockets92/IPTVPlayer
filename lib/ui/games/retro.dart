@@ -72,6 +72,19 @@ class Pix {
     rect(x, y, w, h, c);
   }
 
+  /// Scritta centrata in [cx] (coordinate del gioco).
+  void label(String text, double cx, double y, Color c, {double size = 6}) {
+    final tp = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: Retro.text(size, color: c, glow: 0.6),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    tp.paint(canvas, Offset(cx - tp.width / 2, y));
+    tp.dispose();
+  }
+
   /// Sprite da stringhe: ogni carattere diverso da '.' è un pixel del colore
   /// indicato nella mappa.
   void sprite(
@@ -105,7 +118,7 @@ abstract class RetroGame {
   int score = 0;
   bool over = false;
 
-  /// Partita vinta (es. memory completato) invece che persa.
+  /// Partita vinta (es. un gioco completato) invece che persa.
   bool won = false;
 
   /// Righe extra nella barra in alto (vite, livello…).
@@ -117,6 +130,10 @@ abstract class RetroGame {
   /// Effetti sonori (impostati dalla cornice).
   void Function(Sfx)? onSound;
   void sound(Sfx s) => onSound?.call(s);
+
+  /// Rumore di motore in sottofondo, da 0 (minimo) a 1 (al massimo);
+  /// null se il gioco non ne ha.
+  double? get engine => null;
 
   void reset();
   void update(double dt);
@@ -176,6 +193,7 @@ class _GameShellState extends State<GameShell>
 
   @override
   void dispose() {
+    widget.sfx?.engineOff();
     _ticker.dispose();
     _frame.dispose();
     _focus.dispose();
@@ -188,6 +206,12 @@ class _GameShellState extends State<GameShell>
     if (_phase == _Phase.playing) {
       g.update(dt);
       if (g.over) _finish();
+    }
+    final e = _phase == _Phase.playing ? g.engine : null;
+    if (e != null) {
+      widget.sfx?.engine(e);
+    } else {
+      widget.sfx?.engineOff();
     }
     _frame.value++;
   }

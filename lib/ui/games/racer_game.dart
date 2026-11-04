@@ -11,7 +11,7 @@ class _Car {
   final int lane;
   double y;
   final Color color;
-  final double speed; // velocità propria (più lenta della nostra)
+  double speed; // velocità propria (più lenta della nostra)
 }
 
 class _Coin {
@@ -26,6 +26,9 @@ class RacerGame extends RetroGame {
   static const w = 160.0, h = 120.0;
   static const _road = 66.0, _lane = 22.0, _left = (w - _road) / 2;
   static const _py = 96.0;
+
+  /// Distanza minima tra due auto nella stessa corsia (sono alte 14).
+  static const _gap = 17.0;
 
   @override
   String get id => 'racer';
@@ -99,7 +102,7 @@ class RacerGame extends RetroGame {
       // Mai tutte e tre le corsie chiuse alla stessa altezza.
       final busy = {
         for (final c in cars)
-          if (c.y < 14) c.lane,
+          if (c.y < _gap) c.lane,
       };
       final free = [0, 1, 2].where((l) => !busy.contains(l)).toList();
       if (free.length > 1) {
@@ -120,6 +123,21 @@ class RacerGame extends RetroGame {
     }
     for (final c in cars) {
       c.y += (speed - c.speed) * dt;
+    }
+    // Nella stessa corsia un'auto non passa attraverso quella davanti:
+    // la raggiunge, frena e la segue a distanza.
+    cars.sort((a, b) => b.y.compareTo(a.y));
+    for (var i = 0; i < cars.length; i++) {
+      final c = cars[i];
+      for (var j = i - 1; j >= 0; j--) {
+        final ahead = cars[j];
+        if (ahead.lane != c.lane) continue;
+        if (c.y > ahead.y - _gap) {
+          c.y = ahead.y - _gap;
+          c.speed = ahead.speed;
+        }
+        break;
+      }
     }
     for (final c in coins) {
       c.y += speed * dt;
@@ -145,6 +163,9 @@ class RacerGame extends RetroGame {
   }
 
   int _bonus = 0;
+
+  @override
+  double? get engine => _crash > 0 ? null : (speed - 60) / 90;
 
   void _car(Pix p, double cx, double y, Color body, {bool mine = false}) {
     // Auto vista da dietro, 10x14 pixel.

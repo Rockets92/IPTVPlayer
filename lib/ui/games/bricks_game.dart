@@ -12,7 +12,15 @@ class _Brick {
   final Rect rect;
   final Color color;
   final int points;
+
+  /// Colpi che mancano; -1: dorato, indistruttibile.
   int hits;
+  bool get gold => hits < 0;
+}
+
+class _Ball {
+  _Ball(this.x, this.y, this.vx, this.vy);
+  double x, y, vx, vy;
 }
 
 class _Spark {
@@ -21,11 +29,158 @@ class _Spark {
   final Color color;
 }
 
+/// Capsule che cadono dai mattoncini.
+enum _Power {
+  wide('L', Retro.cyan),
+  multi('M', Retro.magenta),
+  slow('S', Retro.green),
+  life('V', Retro.red);
+
+  const _Power(this.letter, this.color);
+  final String letter;
+  final Color color;
+}
+
+class _Capsule {
+  _Capsule(this.x, this.y, this.kind);
+  double x, y;
+  final _Power kind;
+}
+
+/// Un quadro: righe di 10 caratteri. r o y g c b p = colori, s = argentato
+/// (due colpi), X = dorato (indistruttibile), . = vuoto.
+class _Stage {
+  const _Stage(this.name, this.rows);
+  final String name;
+  final List<String> rows;
+}
+
+const _stages = [
+  _Stage('BENVENUTO', [
+    '..........',
+    'rrrrrrrrrr',
+    'oooooooooo',
+    'yyyyyyyyyy',
+    'gggggggggg',
+    'cccccccccc',
+  ]),
+  _Stage('PIRAMIDE', [
+    '....rr....',
+    '...oooo...',
+    '..yyyyyy..',
+    '.gggggggg.',
+    'cccccccccc',
+    'ssssssssss',
+  ]),
+  _Stage('SCACCHIERA', [
+    'r.r.r.r.r.',
+    '.o.o.o.o.o',
+    'y.y.y.y.y.',
+    '.g.g.g.g.g',
+    'c.c.c.c.c.',
+    '.b.b.b.b.b',
+    'p.p.p.p.p.',
+  ]),
+  _Stage('CUORE', [
+    '.rr....rr.',
+    'rrrr..rrrr',
+    'rrrrssrrrr',
+    '.pppppppp.',
+    '..pppppp..',
+    '...pppp...',
+    '....pp....',
+  ]),
+  _Stage('FORTEZZA', [
+    'ssssssssss',
+    's.rrrrrr.s',
+    's.oXXXXo.s',
+    's.yyyyyy.s',
+    's........s',
+    'gggg..gggg',
+  ]),
+  _Stage('DIAMANTE', [
+    '....cc....',
+    '...cbbc...',
+    '..cbppbc..',
+    '.cbpsspbc.',
+    '..cbppbc..',
+    '...cbbc...',
+    '....cc....',
+  ]),
+  _Stage('LE PORTE', [
+    'ssssssssss',
+    'rrrrrrrrrr',
+    'XXX....XXX',
+    'oooooooooo',
+    'yyyyyyyyyy',
+    'XX..XX..XX',
+    'gggggggggg',
+  ]),
+  _Stage('ONDE', [
+    'r...rr...r',
+    '.o.o..o.o.',
+    '..y....y..',
+    'gggggggggg',
+    '.c.c..c.c.',
+    'b...bb...b',
+    'ssssssssss',
+  ]),
+  _Stage('COLONNE', [
+    'r.o.y.g.c.',
+    'r.o.y.g.c.',
+    's.s.s.s.s.',
+    'r.o.y.g.c.',
+    'r.o.y.g.c.',
+    'X..X..X..X',
+  ]),
+  _Stage('LABIRINTO', [
+    'ssssssssss',
+    'X.rrrrrr.X',
+    'X.o.XX.o.X',
+    'X.y....y.X',
+    'X.gggggg.X',
+    'X........X',
+    'cccccccccc',
+  ]),
+  _Stage('ARCOBALENO', [
+    'rrrrrrrrrr',
+    'oooooooooo',
+    'yyyyyyyyyy',
+    'ssssssssss',
+    'gggggggggg',
+    'cccccccccc',
+    'bbbbbbbbbb',
+    'pppppppppp',
+  ]),
+  _Stage('BERSAGLIO', [
+    'ssssssssss',
+    's........s',
+    's.rrrrrr.s',
+    's.r.XX.r.s',
+    's.r.pp.r.s',
+    's.rrrrrr.s',
+    's........s',
+    'ssssssssss',
+  ]),
+];
+
+const _palette = {
+  'r': Retro.red,
+  'o': Retro.orange,
+  'y': Retro.yellow,
+  'g': Retro.green,
+  'c': Retro.cyan,
+  'b': Retro.blue,
+  'p': Retro.purple,
+};
+
 /// MATTONCINI: con la racchetta si rimbalza la pallina e si abbattono i
-/// mattoncini. I mattoncini argentati vanno colpiti due volte.
+/// mattoncini, quadro dopo quadro. Gli argentati vanno colpiti due volte,
+/// i dorati non si rompono. Alcuni mattoncini lasciano cadere una capsula.
 class BricksGame extends RetroGame {
   static const w = 160.0, h = 120.0;
-  static const _cols = 10, _rows = 6;
+  static const _cols = 10;
+  static int get stageCount => _stages.length;
 
   @override
   String get id => 'bricks';
@@ -33,23 +188,32 @@ class BricksGame extends RetroGame {
   String get title => 'MATTONCINI';
   @override
   List<String> get help => [
-    '← →: MUOVI LA RACCHETTA',
-    'OK: LANCIA LA PALLINA',
-    'GLI ARGENTATI VANNO COLPITI DUE VOLTE',
+    '← →: MUOVI LA RACCHETTA   OK: LANCIA',
+    'ARGENTO: DUE COLPI   ORO: INDISTRUTTIBILE',
+    'CAPSULE: L LUNGA  M MULTI  S LENTA  V VITA',
   ];
   @override
   Size get size => const Size(w, h);
   @override
-  String get status => 'LIVELLO $level  VITE ${'♥' * lives}';
+  String get status =>
+      'QUADRO ${(level - 1) % _stages.length + 1}/${_stages.length}  '
+      'VITE ${'♥' * lives}';
 
   double px = w / 2, pw = 28;
   static const py = 110.0, ph = 3.0, r = 1.6;
-  double bx = 0, by = 0, vx = 0, vy = 0, speed = 85;
+  double speed = 85;
   bool stuck = true;
   int lives = 3, level = 1;
   var bricks = <_Brick>[];
+  final balls = <_Ball>[];
   final sparks = <_Spark>[];
-  double _t = 0, _shake = 0;
+  final capsules = <_Capsule>[];
+  double _t = 0, _shake = 0, _wide = 0, _slow = 0, _banner = 0;
+
+  _Stage get _stage => _stages[(level - 1) % _stages.length];
+
+  /// Giro (dopo l'ultimo quadro si ricomincia, più veloci).
+  int get lap => (level - 1) ~/ _stages.length;
 
   @override
   void reset() {
@@ -59,43 +223,63 @@ class BricksGame extends RetroGame {
     _build();
   }
 
+  /// Salta a un quadro (per le prove).
+  void goTo(int n) {
+    level = n;
+    _build();
+  }
+
   void _build() {
     bricks = [];
     const bw = 14.0, bh = 5.0, gap = 1.0;
     const x0 = (w - _cols * (bw + gap) + gap) / 2;
-    for (var j = 0; j < _rows; j++) {
+    final rows = _stage.rows;
+    for (var j = 0; j < rows.length; j++) {
       for (var i = 0; i < _cols; i++) {
-        // Dal secondo livello la fila in alto è argentata (due colpi).
-        final silver = level >= 2 && j == 0;
-        // Disegni diversi a ogni livello.
-        final skip = switch (level % 3) {
-          2 => (i + j).isOdd && j > 1,
-          0 => (i == 4 || i == 5) && j > 0,
-          _ => false,
-        };
-        if (skip) continue;
-        bricks.add(
-          _Brick(
-            Rect.fromLTWH(x0 + i * (bw + gap), 14 + j * (bh + gap), bw, bh),
-            silver ? const Color(0xFFC9CCE8) : Retro.rainbow[j % 7],
-            (_rows - j) * 10,
-            silver ? 2 : 1,
-          ),
+        final ch = rows[j][i];
+        if (ch == '.') continue;
+        final rect = Rect.fromLTWH(
+          x0 + i * (bw + gap),
+          14 + j * (bh + gap),
+          bw,
+          bh,
         );
+        final (color, hits) = switch (ch) {
+          's' => (const Color(0xFFC9CCE8), 2),
+          'X' => (const Color(0xFFE8B84A), -1),
+          _ => (_palette[ch] ?? Retro.white, 1),
+        };
+        bricks.add(_Brick(rect, color, (rows.length - j) * 10, hits));
       }
     }
-    speed = 85 + (level - 1) * 12;
+    speed = 85 + ((level - 1) % _stages.length) * 4 + lap * 20;
+    capsules.clear();
+    _wide = 0;
+    _slow = 0;
+    _banner = 2;
+    _serve();
+  }
+
+  void _serve() {
     stuck = true;
+    balls
+      ..clear()
+      ..add(_Ball(px, py - r - 0.5, 0, 0));
   }
 
   void _launch() {
     if (!stuck) return;
     stuck = false;
+    _banner = 0;
     sound(Sfx.select);
     final a = -pi / 2 + (rnd.nextDouble() - 0.5) * 0.8;
-    vx = cos(a) * speed;
-    vy = sin(a) * speed;
+    final b = balls.first;
+    b
+      ..vx = cos(a) * _ballSpeed
+      ..vy = sin(a) * _ballSpeed;
   }
+
+  double get _ballSpeed => _slow > 0 ? speed * 0.7 : speed;
 
   @override
   void onKey(LogicalKeyboardKey k) {
@@ -114,6 +298,14 @@ class BricksGame extends RetroGame {
   void update(double dt) {
     _t += dt;
     _shake = max(0, _shake - dt);
+    _banner = max(0, _banner - dt);
+    if (_wide > 0) _wide = max(0, _wide - dt);
+    if (_slow > 0) {
+      _slow -= dt;
+      if (_slow <= 0) _setSpeed(speed);
+    }
+    final target = _wide > 0 ? 42.0 : 28.0;
+    pw += (target - pw) * min(1, dt * 10);
     if (left) px -= 150 * dt;
     if (right) px += 150 * dt;
     px = px.clamp(pw / 2 + 1, w - pw / 2 - 1);
@@ -125,88 +317,173 @@ class BricksGame extends RetroGame {
         ..life -= dt;
     }
     sparks.removeWhere((s) => s.life <= 0);
+    _capsules(dt);
     if (stuck) {
-      bx = px;
-      by = py - r - 0.5;
+      balls.first
+        ..x = px
+        ..y = py - r - 0.5;
       return;
     }
-    const steps = 4;
-    for (var i = 0; i < steps && !over; i++) {
+    // Passi piccoli: anche a tutta velocità la pallina non "salta" i
+    // mattoncini e ogni colpo ha il suo suono.
+    final steps = max(4, (_ballSpeed * dt / 1.2).ceil());
+    for (var i = 0; i < steps && !over && !stuck; i++) {
       _move(dt / steps);
     }
   }
 
+  void _capsules(double dt) {
+    capsules.removeWhere((c) {
+      c.y += 32 * dt;
+      if (c.y > h + 4) return true;
+      if (c.y + 2.5 >= py &&
+          c.y - 2.5 <= py + ph &&
+          (c.x - px).abs() <= pw / 2 + 5) {
+        _take(c.kind);
+        return true;
+      }
+      return false;
+    });
+  }
+
+  void _take(_Power p) {
+    sound(Sfx.power);
+    score += 50;
+    switch (p) {
+      case _Power.wide:
+        _wide = 15;
+      case _Power.slow:
+        _slow = 10;
+        _setSpeed(speed * 0.7);
+      case _Power.life:
+        lives = min(5, lives + 1);
+      case _Power.multi:
+        if (stuck) _launch();
+        for (final b in [...balls]) {
+          if (balls.length >= 6) break;
+          final a = atan2(b.vy, b.vx);
+          for (final d in [-0.5, 0.5]) {
+            balls.add(
+              _Ball(b.x, b.y, cos(a + d) * _ballSpeed, sin(a + d) * _ballSpeed),
+            );
+          }
+        }
+    }
+  }
+
+  void _setSpeed(double v) {
+    for (final b in balls) {
+      final s = sqrt(b.vx * b.vx + b.vy * b.vy);
+      if (s == 0) continue;
+      b
+        ..vx = b.vx / s * v
+        ..vy = b.vy / s * v;
+    }
+  }
+
   void _move(double dt) {
-    bx += vx * dt;
-    by += vy * dt;
-    if (bx < r + 1) {
-      bx = r + 1;
-      vx = vx.abs();
-      sound(Sfx.wall);
-    } else if (bx > w - r - 1) {
-      bx = w - r - 1;
-      vx = -vx.abs();
-      sound(Sfx.wall);
+    for (final b in balls) {
+      _moveBall(b, dt);
     }
-    if (by < r + 9) {
-      by = r + 9;
-      vy = vy.abs();
-      sound(Sfx.wall);
-    }
-    // Racchetta: l'angolo dipende da dove la si colpisce.
-    if (vy > 0 &&
-        by + r >= py &&
-        by - r <= py + ph &&
-        (bx - px).abs() <= pw / 2 + r) {
-      final f = ((bx - px) / (pw / 2)).clamp(-1.0, 1.0);
-      final a = -pi / 2 + f * 1.1;
-      vx = cos(a) * speed;
-      vy = sin(a) * speed;
-      by = py - r;
-      sound(Sfx.bounce);
-    }
-    final ball = Rect.fromCircle(center: Offset(bx, by), radius: r);
-    for (final b in bricks) {
-      if (b.hits <= 0 || !b.rect.overlaps(ball)) continue;
-      final ox = min(ball.right - b.rect.left, b.rect.right - ball.left);
-      final oy = min(ball.bottom - b.rect.top, b.rect.bottom - ball.top);
-      if (ox < oy) {
-        vx = -vx;
-      } else {
-        vy = -vy;
-      }
-      b.hits--;
-      if (b.hits == 0) {
-        score += b.points;
-        sound(Sfx.brick);
-        _burst(b.rect.center, b.color);
-        speed = min(speed + 1.2, 170);
-        final s = sqrt(vx * vx + vy * vy);
-        vx = vx / s * speed;
-        vy = vy / s * speed;
-      } else {
-        sound(Sfx.wall);
-        _burst(b.rect.center, Retro.white, n: 4);
-      }
-      break;
-    }
-    bricks.removeWhere((b) => b.hits <= 0);
-    if (bricks.isEmpty) {
+    balls.removeWhere((b) => b.y > h + 4);
+    bricks.removeWhere((b) => b.hits == 0);
+    if (!bricks.any((b) => !b.gold)) {
       score += 100 * level;
       sound(Sfx.level);
       level++;
       _build();
       return;
     }
-    if (by > h + 4) {
+    if (balls.isEmpty) {
       lives--;
       _shake = 0.35;
-      if (lives > 0) sound(Sfx.hurt);
+      _wide = 0;
+      if (_slow > 0) _slow = 0;
+      capsules.clear();
       if (lives <= 0) {
         over = true;
       } else {
-        stuck = true;
+        sound(Sfx.hurt);
+        _serve();
       }
+    }
+  }
+
+  void _moveBall(_Ball b, double dt) {
+    b
+      ..x += b.vx * dt
+      ..y += b.vy * dt;
+    if (b.x < r + 1) {
+      b
+        ..x = r + 1
+        ..vx = b.vx.abs();
+      sound(Sfx.wall);
+    } else if (b.x > w - r - 1) {
+      b
+        ..x = w - r - 1
+        ..vx = -b.vx.abs();
+      sound(Sfx.wall);
+    }
+    if (b.y < r + 9) {
+      b
+        ..y = r + 9
+        ..vy = b.vy.abs();
+      sound(Sfx.wall);
+    }
+    // Racchetta: l'angolo dipende da dove la si colpisce.
+    if (b.vy > 0 &&
+        b.y + r >= py &&
+        b.y - r <= py + ph &&
+        (b.x - px).abs() <= pw / 2 + r) {
+      final f = ((b.x - px) / (pw / 2)).clamp(-1.0, 1.0);
+      final a = -pi / 2 + f * 1.1;
+      b
+        ..vx = cos(a) * _ballSpeed
+        ..vy = sin(a) * _ballSpeed
+        ..y = py - r;
+      sound(Sfx.bounce);
+    }
+    final ball = Rect.fromCircle(center: Offset(b.x, b.y), radius: r);
+    for (final k in bricks) {
+      if (k.hits == 0 || !k.rect.overlaps(ball)) continue;
+      final ox = min(ball.right - k.rect.left, k.rect.right - ball.left);
+      final oy = min(ball.bottom - k.rect.top, k.rect.bottom - ball.top);
+      // Fuori dal mattoncino, così non lo colpisce di nuovo al passo dopo.
+      if (ox < oy) {
+        b.vx = b.x < k.rect.center.dx ? -b.vx.abs() : b.vx.abs();
+        b.x += b.vx > 0 ? ox : -ox;
+      } else {
+        b.vy = b.y < k.rect.center.dy ? -b.vy.abs() : b.vy.abs();
+        b.y += b.vy > 0 ? oy : -oy;
+      }
+      if (k.gold) {
+        sound(Sfx.wall);
+        _burst(k.rect.center, Retro.yellow, n: 3);
+        break;
+      }
+      k.hits--;
+      if (k.hits == 0) {
+        score += k.points;
+        sound(Sfx.brick);
+        _burst(k.rect.center, k.color);
+        if (rnd.nextDouble() < 0.13) {
+          final roll = rnd.nextDouble();
+          final kind = roll < 0.05
+              ? _Power.life
+              : roll < 0.4
+              ? _Power.wide
+              : roll < 0.7
+              ? _Power.multi
+              : _Power.slow;
+          capsules.add(_Capsule(k.rect.center.dx, k.rect.center.dy, kind));
+        }
+        speed = min(speed + 0.8, 175 + lap * 15);
+        if (_slow <= 0) _setSpeed(speed);
+      } else {
+        sound(Sfx.wall);
+        _burst(k.rect.center, Retro.white, n: 4);
+      }
+      break;
     }
   }
 
@@ -239,6 +516,17 @@ class BricksGame extends RetroGame {
       if (b.hits > 1) {
         p.rect(r.left + 2, r.top + 2, 2, 1, Retro.white);
       }
+      if (b.gold) {
+        // Riflesso che scorre sull'oro.
+        final sx = ((_t * 20 + r.left) % 30) - 8;
+        if (sx >= 0 && sx < r.width - 1) {
+          p.rect(r.left + sx, r.top + 1, 1, r.height - 2, Retro.white);
+        }
+      }
+    }
+    for (final c in capsules) {
+      p.glow(c.x - 5, c.y - 2.5, 10, 5, c.kind.color, r: 2);
+      p.label(c.kind.letter, c.x, c.y - 3.4, Retro.bg, size: 5);
     }
     for (final s in sparks) {
       p.rect(
@@ -254,11 +542,34 @@ class BricksGame extends RetroGame {
     p.rect(px - pw / 2, py, 3, ph, Retro.magenta);
     p.rect(px + pw / 2 - 3, py, 3, ph, Retro.magenta);
     p.rect(px - pw / 2 + 3, py, pw - 6, 1, Retro.white);
-    // Pallina.
-    p.glow(bx - r, by - r, r * 2, r * 2, Retro.white, r: 3);
-    if (stuck && (_t * 3).floor().isEven) {
-      p.rect(bx - 0.5, by - 8, 1, 4, Retro.yellow);
-      p.rect(bx - 1.5, by - 7, 3, 1, Retro.yellow);
+    // Palline.
+    for (final b in balls) {
+      p.glow(
+        b.x - r,
+        b.y - r,
+        r * 2,
+        r * 2,
+        _slow > 0 ? Retro.green : Retro.white,
+        r: 3,
+      );
+    }
+    if (stuck) {
+      final b = balls.first;
+      if ((_t * 3).floor().isEven) {
+        p.rect(b.x - 0.5, b.y - 8, 1, 4, Retro.yellow);
+        p.rect(b.x - 1.5, b.y - 7, 3, 1, Retro.yellow);
+      }
+      {
+        p.label(
+          'QUADRO ${(level - 1) % _stages.length + 1}'
+          '${lap > 0 ? '  GIRO ${lap + 1}' : ''}',
+          w / 2,
+          70,
+          Retro.yellow,
+          size: 7,
+        );
+        p.label(_stage.name, w / 2, 80, Retro.cyan, size: 6);
+      }
     }
   }
 }

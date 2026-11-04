@@ -3,7 +3,7 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
-import 'package:media_kit/media_kit.dart';
+import 'package:flutter_soloud/flutter_soloud.dart';
 
 /// Effetti sonori della sala giochi.
 enum Sfx {
@@ -22,26 +22,38 @@ enum Sfx {
   win,
   level,
   crash,
-  flip,
-  match,
-  miss,
   bomb,
+  shoot,
+  boom,
+  power,
+  enemyShot,
 }
 
 /// Suoni a 8 bit come le console dei primi anni '90: onde quadre e rumore,
-/// generati al volo (nessun file da scaricare) e suonati con libmpv.
+/// generati al volo (nessun file da scaricare) e mixati da SoLoud, che li
+/// fa partire nello stesso istante dell'evento anche quando si accavallano.
 class SfxPlayer {
   SfxPlayer({required this.light});
 
-  /// Dispositivi leggeri: un solo canale audio invece di tre.
+  /// Dispositivi leggeri: meno voci contemporanee.
   final bool light;
-  bool enabled = true;
+  bool _enabled = true;
+  bool get enabled => _enabled;
+  set enabled(bool v) {
+    _enabled = v;
+    if (!v) engineOff();
+  }
 
-  final _players = <Player>[];
-  final _media = <Sfx, Media>{};
-  int _next = 0;
+  final _sources = <Sfx, AudioSource>{};
+  AudioSource? _engineSrc;
+  SoundHandle? _engine;
   Future<void>? _ready;
   bool _disposed = false;
+
+  /// Ultima volta che è partito ciascun suono: due colpi identici nello
+  /// stesso fotogramma suonano come uno solo, più forte.
+  final _last = <Sfx, int>{};
+  final _clock = Stopwatch()..start();
 
   Future<void> init() => _ready ??= _init();
 
@@ -49,48 +61,77 @@ class SfxPlayer {
   @visibleForTesting
   static Uint8List render(Sfx s) => _Synth.render(s);
 
+  /// Il rumore del motore, da ripetere in loop (per i test).
+  @visibleForTesting
+  static Uint8List renderEngine() => _Synth.engine();
+
   Future<void> _init() async {
     try {
+      final so = SoLoud.instance;
+      if (!so.isInitialized) {
+        await so.init(bufferSize: light ? 1024 : 512, sampleRate: 22050);
+      }
+      so.setMaxActiveVoiceCount(light ? 12 : 24);
       for (final s in Sfx.values) {
-        _media[s] = await Media.memory(_Synth.render(s));
-      }
-      for (var i = 0; i < (light ? 1 : 3); i++) {
         if (_disposed) return;
-        final p = Player(
-          configuration: const PlayerConfiguration(
-            vo: 'null',
-            libass: false,
-            logLevel: MPVLogLevel.error,
-          ),
-        );
-        final n = p.platform;
-        if (n is NativePlayer) {
-          // Avvio immediato: niente cache, buffer audio corto.
-          await n.setProperty('cache', 'no');
-          await n.setProperty('audio-buffer', '0.03');
-          await n.setProperty('audio-display', 'no');
-        }
-        _players.add(p);
+        _sources[s] = await so.loadMem('sfx_${s.name}.wav', _Synth.render(s));
       }
+      _engineSrc = await so.loadMem('sfx_engine.wav', _Synth.engine());
     } catch (e) {
       debugPrint('Suoni dei giochi non disponibili: $e');
     }
   }
 
   void play(Sfx s) {
-    if (!enabled || _players.isEmpty || _disposed) return;
-    final m = _media[s];
-    if (m == null) return;
-    final p = _players[_next++ % _players.length];
-    unawaited(p.open(m).catchError((_) {}));
+    if (!_enabled || _disposed) return;
+    final src = _sources[s];
+    if (src == null) return;
+    final now = _clock.elapsedMilliseconds;
+    if (now - (_last[s] ?? -1000) < 25) return;
+    _last[s] = now;
+    try {
+      SoLoud.instance.play(src);
+    } catch (_) {}
+  }
+
+  /// Rumore del motore in sottofondo: [speed] da 0 (minimo) a 1 (al massimo).
+  void engine(double speed) {
+    if (!_enabled || _disposed) return;
+    final src = _engineSrc;
+    if (src == null) return;
+    final so = SoLoud.instance;
+    try {
+      var h = _engine;
+      if (h == null || !so.getIsValidVoiceHandle(h)) {
+        h = _engine = so.play(src, looping: true, volume: 0.22);
+        so.setProtectVoice(h, true);
+      }
+      so.setRelativePlaySpeed(h, 0.7 + speed.clamp(0.0, 1.0) * 0.9);
+    } catch (_) {}
+  }
+
+  void engineOff() {
+    final h = _engine;
+    _engine = null;
+    if (h == null) return;
+    try {
+      unawaited(SoLoud.instance.stop(h).catchError((_) {}));
+    } catch (_) {}
   }
 
   Future<void> dispose() async {
     _disposed = true;
-    for (final p in _players) {
-      await p.dispose();
+    engineOff();
+    await _ready;
+    final so = SoLoud.instance;
+    if (!so.isInitialized) return;
+    for (final src in [..._sources.values, ?_engineSrc]) {
+      try {
+        await so.disposeSource(src);
+      } catch (_) {}
     }
-    _players.clear();
+    _sources.clear();
+    so.deinit();
   }
 }
 
@@ -210,17 +251,47 @@ abstract final class _Synth {
       case Sfx.crash:
         noise(420, vol: 0.6, period: 3);
         tone(160, 50, 200, vol: 0.4);
-      case Sfx.flip:
-        noise(30, vol: 0.3);
-      case Sfx.match:
-        notes(['E5', 'A5', 'E6'], 60, duty: 0.25);
-      case Sfx.miss:
-        tone(180, 150, 160, duty: 0.5, vol: 0.35);
+      case Sfx.shoot:
+        tone(1400, 500, 55, duty: 0.125, vol: 0.22);
+      case Sfx.enemyShot:
+        tone(500, 300, 70, duty: 0.25, vol: 0.18);
+      case Sfx.boom:
+        noise(180, vol: 0.45, period: 4);
+      case Sfx.power:
+        tone(400, 1600, 160, duty: 0.25, vol: 0.4, vibrato: true);
+        notes(['C6', 'G6'], 50, duty: 0.125);
       case Sfx.bomb:
         noise(300, vol: 0.6, period: 6);
     }
     rest(60); // piccola coda di silenzio: niente "click" finale
+    return _wav(out);
+  }
 
+  /// Motore a 8 bit: onda quadra bassa con colpi dei pistoni e un filo di
+  /// rumore. Dura un numero intero di cicli, così il loop non scatta.
+  static Uint8List engine() {
+    const period = 315; // 70 Hz
+    const n = period * 14;
+    final out = <double>[];
+    var lfsr = 0x7FFF;
+    var v = 0.0;
+    for (var i = 0; i < n; i++) {
+      final ph = (i % period) / period;
+      final sq = ph < 0.3 ? 1.0 : -1.0;
+      // Due scoppi per ciclo di pistoni (ogni 2 periodi).
+      final beat = ((i % (period * 2)) / (period * 2));
+      final punch = 0.55 + 0.45 * pow(1 - beat, 3).toDouble();
+      if (i % 4 == 0) {
+        final bit = (lfsr ^ (lfsr >> 1)) & 1;
+        lfsr = (lfsr >> 1) | (bit << 14);
+        v = (lfsr & 1) == 1 ? 1.0 : -1.0;
+      }
+      out.add((sq * 0.75 + v * 0.18) * punch * 0.6);
+    }
+    return _wav(out);
+  }
+
+  static Uint8List _wav(List<double> out) {
     // WAV 8 bit mono, come le schede audio dell'epoca.
     final data = Uint8List(out.length);
     for (var i = 0; i < out.length; i++) {

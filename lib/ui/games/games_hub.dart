@@ -9,7 +9,7 @@ import '../../core/performance.dart';
 
 import '../widgets/focus_tile.dart';
 import 'bricks_game.dart';
-import 'memory_game.dart';
+import 'space_game.dart';
 import 'racer_game.dart';
 import 'retro.dart';
 import 'sfx.dart';
@@ -65,17 +65,23 @@ final _games = <_Entry>[
       '..MMMMMM..',
     ],
   ),
-  _Entry(MemoryGame.new, 'MEMORY TV', 'TROVA LE COPPIE', Retro.magenta, const [
-    'PPPP.PPPP.',
-    'PPPP.PRRP.',
-    'PPPP.PRRP.',
-    'PPPP.PPPP.',
-    '..........',
-    'PCCP.PPPP.',
-    'PCCP.PPPP.',
-    'PPPP.PPPP.',
-    '..........',
-  ]),
+  _Entry(
+    SpaceGame.new,
+    'ASTRO PATTUGLIA',
+    'DIFENDI LA GALASSIA',
+    Retro.magenta,
+    const [
+      '.R.....R..',
+      'RRR...RRR.',
+      '.R.....R..',
+      '..........',
+      '....C.....',
+      '....C.....',
+      '....W.....',
+      '...MCM....',
+      '..MMCMM...',
+    ],
+  ),
   _Entry(
     RacerGame.new,
     'CORSA NOTTURNA',
