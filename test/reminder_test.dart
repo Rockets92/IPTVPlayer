@@ -76,11 +76,12 @@ void main() {
       expect(rc.due, isNotNull);
       rc.snooze();
       expect(rc.due, isNull);
-      expect(rc.items.single.snooze, greaterThan(now));
+      // Nuovo avviso 1 minuto prima dell'inizio.
+      expect(rc.items.single.snooze, soon.start - 60);
 
       final r = rc.setRepeat(rc.items.single, ReminderRepeat.daily)!;
       expect(r.repeat, ReminderRepeat.daily);
-      rc.snooze(Duration.zero);
+      rc.snooze();
       // Avviso ricorrente risolto: resta, il giorno dopo alla stessa ora.
       rc.due = rc.items.single;
       rc.resolve();

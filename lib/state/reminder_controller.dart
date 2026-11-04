@@ -41,7 +41,7 @@ class Reminder {
 
   final ReminderRepeat repeat;
 
-  /// "Ricordamelo tra 1 minuto": quando riproporre l'avviso (secondi epoch).
+  /// "Avvisami 1 minuto prima": quando riproporre l'avviso (secondi epoch).
   final int? snooze;
 
   bool get recurring => repeat != ReminderRepeat.once;
@@ -235,12 +235,19 @@ class ReminderController extends ChangeNotifier {
     _check();
   }
 
-  /// "Ricordamelo tra 1 minuto".
-  void snooze([Duration after = const Duration(minutes: 1)]) {
+  /// Si può ancora chiedere un secondo avviso [before] l'inizio.
+  static bool canSnooze(
+    Reminder r, [
+    Duration before = const Duration(minutes: 1),
+  ]) => r.startTime.subtract(before).isAfter(DateTime.now());
+
+  /// "Avvisami 1 minuto prima dell'inizio": l'avviso si ripropone [before]
+  /// l'inizio del programma.
+  void snooze([Duration before = const Duration(minutes: 1)]) {
     final d = due;
-    if (d == null) return;
+    if (d == null || !canSnooze(d, before)) return;
     final i = _items.indexWhere((r) => r.key == d.key);
-    final at = DateTime.now().add(after).millisecondsSinceEpoch ~/ 1000;
+    final at = d.startTime.subtract(before).millisecondsSinceEpoch ~/ 1000;
     if (i >= 0) _items[i] = d.copyWith(snooze: () => at);
     due = null;
     _save();

@@ -141,7 +141,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
         _acceptReminder();
       case ReminderAnswer.snooze:
         _reminders.snooze();
-        _showToast('Te lo ricordo tra 1 minuto');
+        _showToast('Ti avviso 1 minuto prima dell\'inizio');
       case ReminderAnswer.dismiss:
         _reminders.resolve();
     }

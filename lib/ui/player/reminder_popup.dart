@@ -95,24 +95,26 @@ class ReminderPopup extends StatelessWidget {
   final VoidCallback onGo;
   final VoidCallback onDismiss;
 
-  /// "Ricordamelo tra 1 min".
+  /// "Avvisami 1 minuto prima dell'inizio".
   final VoidCallback? onSnooze;
 
   @override
   Widget build(BuildContext context) {
     final r = reminder;
     final now = DateTime.now();
-    final mins = r.startTime.difference(now).inMinutes;
-    final when = mins > 0
-        ? 'tra $mins min · ${hm(r.startTime)}'
+    final secs = r.startTime.difference(now).inSeconds;
+    final when = secs > 0
+        ? 'tra ${(secs / 60).ceil()} min · ${hm(r.startTime)}'
         : 'iniziato alle ${hm(r.startTime)}';
+    final canSnooze = onSnooze != null && ReminderController.canSnooze(r);
     final width = MediaQuery.sizeOf(context).width;
+    final meta = AppText.body.copyWith(color: Palette.textSecondary);
     return SizedBox(
-      width: width < 520 ? width - 24 : 440,
+      width: width < 540 ? width - 24 : 480,
       child: Glass(
         strong: true,
         radius: 26,
-        padding: const EdgeInsets.fromLTRB(24, 20, 24, 18),
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -141,16 +143,49 @@ class ReminderPopup extends StatelessWidget {
               r.title,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: AppText.headline.copyWith(fontSize: 19),
+              style: AppText.headline.copyWith(fontSize: 21),
             ),
-            const SizedBox(height: 6),
-            Text(
-              'Hai prenotato questo programma su ${r.channelName}, '
-              'canale ${r.channelNumber}.'
-              '${r.recurring ? ' ${r.repeatLabel}.' : ''}',
-              style: AppText.body.copyWith(color: Palette.textSecondary),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Icon(
+                  Icons.live_tv_rounded,
+                  size: 16,
+                  color: Palette.textTertiary,
+                ),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    '${r.channelName} · canale ${r.channelNumber}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: meta,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
+            if (r.recurring) ...[
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.repeat_rounded,
+                    size: 16,
+                    color: Palette.textTertiary,
+                  ),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      r.repeatLabel,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: meta,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+            const SizedBox(height: 18),
             Row(
               children: [
                 Expanded(
@@ -170,23 +205,29 @@ class ReminderPopup extends StatelessWidget {
                 ),
               ],
             ),
-            if (onSnooze != null) ...[
+            if (canSnooze) ...[
               const SizedBox(height: 10),
               GlassButton(
-                label: 'Ricordamelo tra 1 min',
-                icon: Icons.snooze_rounded,
+                label: 'Avvisami 1 minuto prima dell\'inizio',
+                icon: Icons.alarm_rounded,
                 primary: false,
                 onPressed: onSnooze,
               ),
             ],
+            const SizedBox(height: 14),
+            Container(height: 1, color: Colors.white.withValues(alpha: 0.08)),
             const SizedBox(height: 12),
-            const Wrap(
-              spacing: 16,
-              children: [
-                KeyHint('← → ↓', 'Scegli'),
-                KeyHint('OK', 'Conferma'),
-                KeyHint('Indietro', 'Continua a guardare'),
-              ],
+            const Center(
+              child: Wrap(
+                spacing: 22,
+                runSpacing: 8,
+                alignment: WrapAlignment.center,
+                children: [
+                  KeyHint('← → ↓', 'Scegli'),
+                  KeyHint('OK', 'Conferma'),
+                  KeyHint('Indietro', 'Chiudi'),
+                ],
+              ),
             ),
           ],
         ),
