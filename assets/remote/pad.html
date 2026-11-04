@@ -13,7 +13,10 @@
     --white: #f4f1ff; --yellow: #ffe14d; --cyan: #3df2ff; --magenta: #ff3dcb;
     --green: #4dff7a; --orange: #ff8a3d; --p: var(--cyan);
   }
-  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; }
+  /* touch-action non si eredita: va su ogni elemento, così il doppio tocco
+     o il pizzico non ingrandiscono mai il controller. */
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: none; }
+  #join, #join * { touch-action: manipulation; }
   html, body { margin: 0; height: 100%; background: var(--bg); color: var(--white); overflow: hidden; touch-action: none; overscroll-behavior: none; }
   body { font-family: ui-monospace, "SF Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace; font-weight: 800; letter-spacing: .08em; }
   .glow { text-shadow: 0 0 8px currentColor; }
@@ -125,6 +128,31 @@ function connect() {
     setTimeout(connect, Math.min(4000, 500 * ++retry));
   };
 }
+
+// Niente zoom: Safari su iPhone ignora user-scalable=no, quindi si
+// bloccano a mano pizzico e doppio tocco.
+for (const ev of ['gesturestart', 'gesturechange', 'gestureend']) {
+  document.addEventListener(ev, (e) => e.preventDefault(), { passive: false });
+}
+document.addEventListener('dblclick', (e) => e.preventDefault(), { passive: false });
+document.addEventListener('touchstart', (e) => {
+  if (e.touches.length > 1 && !e.target.closest('#dpad, #buttons')) e.preventDefault();
+}, { passive: false });
+let lastTouchEnd = 0;
+document.addEventListener('touchend', (e) => {
+  const now = Date.now();
+  if (now - lastTouchEnd < 350 && !e.target.closest('#join input')) e.preventDefault();
+  lastTouchEnd = now;
+}, { passive: false });
+// Se nonostante tutto la pagina risulta ingrandita, la si riporta a 1.
+const vp = document.querySelector('meta[name=viewport]');
+function unzoom() {
+  if (!window.visualViewport || visualViewport.scale <= 1.01) return;
+  vp.setAttribute('content', 'width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover,minimum-scale=1');
+  window.scrollTo(0, 0);
+  setTimeout(() => vp.setAttribute('content', 'width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover'), 300);
+}
+if (window.visualViewport) visualViewport.addEventListener('resize', unzoom);
 
 function buzz(ms) { try { navigator.vibrate && navigator.vibrate(ms); } catch (_) {} }
 

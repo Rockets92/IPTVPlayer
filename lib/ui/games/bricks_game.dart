@@ -474,6 +474,7 @@ class BricksGame extends RetroGame {
         ..y = py - r;
       sound(Sfx.bounce);
     }
+    _keepSteep(b);
     final ball = Rect.fromCircle(center: Offset(b.x, b.y), radius: r);
     for (final k in bricks) {
       if (k.hits == 0 || !k.rect.overlaps(ball)) continue;
@@ -516,6 +517,22 @@ class BricksGame extends RetroGame {
       }
       break;
     }
+  }
+
+  /// Angolo minimo rispetto all'orizzontale: la pallina non deve mai
+  /// rimbalzare quasi in piano tra le pareti scendendo lentissima.
+  static const _minAngle = 0.42; // circa 24 gradi
+
+  void _keepSteep(_Ball b) {
+    final v = sqrt(b.vx * b.vx + b.vy * b.vy);
+    if (v == 0) return;
+    final minVy = v * sin(_minAngle);
+    if (b.vy.abs() >= minVy) return;
+    final sy = b.vy == 0 ? 1.0 : b.vy.sign;
+    final sx = b.vx == 0 ? 1.0 : b.vx.sign;
+    b
+      ..vy = sy * minVy
+      ..vx = sx * v * cos(_minAngle);
   }
 
   void _burst(Offset c, Color color, {int n = 9}) {

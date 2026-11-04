@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/ui/games/bricks_game.dart';
@@ -60,5 +62,21 @@ void main() {
     final w = SfxPlayer.renderEngine();
     expect(String.fromCharCodes(w.sublist(0, 4)), 'RIFF');
     expect(w.length, greaterThan(4000));
+  });
+
+  test('mattoncini: la pallina non va mai quasi in orizzontale', () {
+    final g = BricksGame()..reset();
+    g.onKey(LogicalKeyboardKey.enter);
+    // Pallina lanciata quasi in piano: al passo dopo è di nuovo ripida.
+    g.balls.first
+      ..vx = 100
+      ..vy = -2;
+    for (var i = 0; i < 60 * 30 && !g.over; i++) {
+      g.update(1 / 60);
+      for (final b in g.balls) {
+        final v = sqrt(b.vx * b.vx + b.vy * b.vy);
+        if (v > 0) expect(b.vy.abs() / v, greaterThan(0.39));
+      }
+    }
   });
 }
