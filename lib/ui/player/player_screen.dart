@@ -24,6 +24,7 @@ import '../widgets/pin_dialog.dart';
 import 'channel_list_overlay.dart';
 import 'guide_overlay.dart';
 import 'number_entry.dart';
+import '../games/games_hub.dart';
 import '../widgets/confirm_dialog.dart';
 import 'reminder_popup.dart';
 import 'signal_overlay.dart';
@@ -31,7 +32,7 @@ import 'source_picker.dart';
 import 'volume_indicator.dart';
 import 'zap_banner.dart';
 
-enum _Panel { none, list, guide, settings, sources }
+enum _Panel { none, list, guide, settings, sources, games }
 
 bool get _isDesktop =>
     !kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS);
@@ -210,6 +211,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   void _open(_Panel p) {
     _tuner.hideBanner();
+    // Nella sala giochi il canale resta sotto, ma senza audio.
+    if (p == _Panel.games) {
+      unawaited(context.read<PlaybackEngine>().setMuted(true));
+    }
     setState(() {
       _menu = null;
       _panel = p;
@@ -243,6 +248,13 @@ class _PlayerScreenState extends State<PlayerScreen> {
   }
 
   void _close() {
+    if (_panel == _Panel.games) {
+      unawaited(
+        context.read<PlaybackEngine>().setMuted(
+          !SystemVolume.supported && _tuner.muted,
+        ),
+      );
+    }
     setState(() => _panel = _Panel.none);
     _rootFocus.requestFocus();
   }
@@ -387,6 +399,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
       }
     } else if (k == LogicalKeyboardKey.keyL) {
       _open(_Panel.list);
+    } else if (k == LogicalKeyboardKey.keyJ) {
+      _open(_Panel.games);
     } else if (k == LogicalKeyboardKey.keyG || k == LogicalKeyboardKey.guide) {
       _open(_Panel.guide);
     } else if (k == LogicalKeyboardKey.add ||
@@ -466,6 +480,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     BannerAction.settings => _open(_Panel.settings),
     BannerAction.sources => _open(_Panel.sources),
     BannerAction.plusOne => _plusOne(),
+    BannerAction.games => _open(_Panel.games),
   };
 
   @override
@@ -629,6 +644,11 @@ class _PlayerScreenState extends State<PlayerScreen> {
                       ),
                       _Panel.sources => SourcePicker(
                         key: const ValueKey(_Panel.sources),
+                        onClose: _close,
+                      ),
+                      _Panel.games => GamesHub(
+                        key: const ValueKey(_Panel.games),
+                        prefs: context.read<AppController>().settings.prefs,
                         onClose: _close,
                       ),
                       _Panel.settings => SettingsPanel(

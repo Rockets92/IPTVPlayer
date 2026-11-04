@@ -108,7 +108,7 @@ class ZapBanner extends StatelessWidget {
   }
 }
 
-enum BannerAction { list, guide, settings, sources, plusOne }
+enum BannerAction { list, guide, settings, sources, plusOne, games }
 
 /// Azioni mostrate nel banner, nell'ordine in cui le si percorre con ←→.
 List<BannerAction> bannerActions(TunerController t) => [
@@ -116,6 +116,7 @@ List<BannerAction> bannerActions(TunerController t) => [
   BannerAction.guide,
   if (t.canTogglePlusOne) BannerAction.plusOne,
   if (t.activeSources.length > 1) BannerAction.sources,
+  BannerAction.games,
   BannerAction.settings,
 ];
 
@@ -599,6 +600,12 @@ class _ActionRow extends StatelessWidget {
               tooltip: 'Fonte',
               focused: menuIndex == i,
               onTap: () => onAction(BannerAction.sources),
+            ),
+            BannerAction.games => _RoundAction(
+              icon: Icons.sports_esports_rounded,
+              tooltip: 'Giochi',
+              focused: menuIndex == i,
+              onTap: () => onAction(BannerAction.games),
             ),
             BannerAction.settings => _RoundAction(
               icon: Icons.tune_rounded,
