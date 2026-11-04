@@ -14,6 +14,18 @@ class _Car {
   double speed; // velocità propria (più lenta della nostra)
 }
 
+class _Driver {
+  _Driver(this.player, this.lane, this.x);
+  final int player;
+  int lane;
+  double x;
+  double crash = 0, dist = 0;
+  int bonus = 0;
+  bool out = false;
+  bool get alive => !out && crash <= 0;
+  int get score => (dist / 10).floor() + bonus;
+}
+
 class _Coin {
   _Coin(this.lane, this.y);
   final int lane;
@@ -24,7 +36,12 @@ class _Coin {
 /// le auto e prendere i gettoni. La velocità sale col tempo.
 class RacerGame extends RetroGame {
   static const w = 160.0, h = 120.0;
-  static const _road = 66.0, _lane = 22.0, _left = (w - _road) / 2;
+  static const _lane = 22.0;
+
+  /// Tre corsie, quattro quando si gioca in più di uno.
+  int lanes = 3;
+  double get _road => _lane * lanes;
+  double get _left => (w - _road) / 2;
   static const _py = 96.0;
 
   /// Distanza minima tra due auto nella stessa corsia (sono alte 14).
@@ -35,6 +52,8 @@ class RacerGame extends RetroGame {
   @override
   String get title => 'CORSA NOTTURNA';
   @override
+  int get maxPlayers => 4;
+  @override
   List<String> get help => [
     '← →: CAMBIA CORSIA',
     'EVITA LE AUTO, PRENDI I GETTONI',
@@ -43,36 +62,74 @@ class RacerGame extends RetroGame {
   @override
   Size get size => const Size(w, h);
   @override
-  String get status => '${(speed * 1.6).round()} KM/H';
+  String get status => players == 1
+      ? '${(speed * 1.6).round()} KM/H'
+      : '${(speed * 1.6).round()} KM/H  '
+            '${[for (final d in drivers) 'G${d.player + 1}${d.out ? ' KO' : ''}'].join(' ')}';
 
-  int lane = 1;
-  double x = 0, speed = 60, _dist = 0, _scroll = 0, _spawn = 0, _t = 0;
-  double _crash = 0;
+  final drivers = <_Driver>[];
+  double speed = 60, _scroll = 0, _spawn = 0, _t = 0;
   final cars = <_Car>[];
   final coins = <_Coin>[];
 
-  static double laneX(int l) => _left + _lane * l + _lane / 2;
+  /// Il pilota del telecomando (gioco in singolo e test).
+  int get lane => drivers.first.lane;
+  double get x => drivers.first.x;
+
+  double laneX(int l) => _left + _lane * l + _lane / 2;
 
   @override
   void reset() {
-    lane = 1;
-    x = laneX(1);
+    final n = players.clamp(1, 4);
+    lanes = n > 1 ? 4 : 3;
+    drivers
+      ..clear()
+      ..addAll([
+        for (var i = 0; i < n; i++)
+          _Driver(i, n == 1 ? 1 : i, laneX(n == 1 ? 1 : i)),
+      ]);
     speed = 60;
-    _dist = 0;
     _spawn = 1;
-    _crash = 0;
-    _bonus = 0;
     cars.clear();
     coins.clear();
   }
 
   @override
-  void onKey(LogicalKeyboardKey k) {
-    final before = lane;
-    if (k == LogicalKeyboardKey.arrowLeft) lane = max(0, lane - 1);
-    if (k == LogicalKeyboardKey.arrowRight) lane = min(2, lane + 1);
-    if (lane != before) sound(Sfx.move);
+  void onPlayerKey(int p, LogicalKeyboardKey k) {
+    if (p >= drivers.length) return;
+    final d = drivers[p];
+    if (!d.alive) return;
+    final before = d.lane;
+    if (k == LogicalKeyboardKey.arrowLeft) d.lane = max(0, d.lane - 1);
+    if (k == LogicalKeyboardKey.arrowRight) d.lane = min(lanes - 1, d.lane + 1);
+    if (d.lane != before && (p == 0 || players == 1)) sound(Sfx.move);
   }
+
+  @override
+  void onKey(LogicalKeyboardKey k) => onPlayerKey(0, k);
+
+  @override
+  String? get endTitle {
+    if (players == 1) return null;
+    final best = _ranked.first;
+    return 'VINCE G${best.player + 1}!';
+  }
+
+  List<_Driver> get _ranked =>
+      [...drivers]..sort((a, b) => b.score.compareTo(a.score));
+
+  @override
+  List<String> get results => players == 1
+      ? const []
+      : [
+          for (final (i, d) in _ranked.indexed)
+            '${i + 1}. G${d.player + 1} '
+                '${names.length > d.player ? names[d.player] : ''}  ${d.score} PUNTI',
+        ];
+
+  /// In multigiocatore le auto del traffico non hanno i colori dei
+  /// giocatori.
+  static const _cpuPaints = [Retro.red, Retro.orange, Retro.purple, Retro.blue];
 
   static const _paints = [
     Retro.red,
@@ -85,26 +142,41 @@ class RacerGame extends RetroGame {
   @override
   void update(double dt) {
     _t += dt;
-    if (_crash > 0) {
-      _crash -= dt;
-      if (_crash <= 0) over = true;
+    // Incidente: il pilota resta fermo un attimo, poi è fuori.
+    for (final d in drivers) {
+      if (d.crash > 0) {
+        d.crash -= dt;
+        if (d.crash <= 0) d.out = true;
+      }
+    }
+    if (drivers.every((d) => d.out)) {
+      over = true;
+      score = drivers.fold(0, (a, d) => max(a, d.score));
       return;
     }
+    if (!drivers.any((d) => d.alive)) return;
     speed = min(150, speed + dt * 1.6);
-    _dist += speed * dt;
     _scroll = (_scroll + speed * dt) % 12;
-    score = (_dist / 10).floor() + _bonus;
-    x += (laneX(lane) - x) * min(1, dt * 14);
+    for (final d in drivers) {
+      if (!d.alive) continue;
+      d
+        ..dist += speed * dt
+        ..x += (laneX(d.lane) - d.x) * min(1, dt * 14);
+    }
+    score = drivers.fold(0, (a, d) => max(a, d.score));
 
     _spawn -= dt;
     if (_spawn <= 0) {
       _spawn = max(0.45, 1.3 - speed / 160) * (0.8 + rnd.nextDouble() * 0.5);
-      // Mai tutte e tre le corsie chiuse alla stessa altezza.
+      // Mai tutte le corsie chiuse alla stessa altezza.
       final busy = {
         for (final c in cars)
           if (c.y < _gap) c.lane,
       };
-      final free = [0, 1, 2].where((l) => !busy.contains(l)).toList();
+      final free = [
+        for (var l = 0; l < lanes; l++)
+          if (!busy.contains(l)) l,
+      ];
       if (free.length > 1) {
         final l = free[rnd.nextInt(free.length)];
         if (rnd.nextDouble() < 0.22) {
@@ -114,7 +186,9 @@ class RacerGame extends RetroGame {
             _Car(
               l,
               -14,
-              _paints[rnd.nextInt(_paints.length)],
+              players > 1
+                  ? _cpuPaints[rnd.nextInt(_cpuPaints.length)]
+                  : _paints[rnd.nextInt(_paints.length)],
               speed * (0.25 + rnd.nextDouble() * 0.3),
             ),
           );
@@ -146,26 +220,34 @@ class RacerGame extends RetroGame {
     // Gettoni presi.
     coins.removeWhere((c) {
       if (c.y > h + 6) return true;
-      if ((laneX(c.lane) - x).abs() < 8 && (c.y - _py).abs() < 9) {
-        _bonus += 25;
-        sound(Sfx.coin);
-        return true;
+      for (final d in drivers) {
+        if (d.alive &&
+            (laneX(c.lane) - d.x).abs() < 8 &&
+            (c.y - _py).abs() < 9) {
+          d.bonus += 25;
+          sound(Sfx.coin);
+          buzz(d.player, 40);
+          return true;
+        }
       }
       return false;
     });
     // Scontro.
-    for (final c in cars) {
-      if ((laneX(c.lane) - x).abs() < 9 && (c.y - _py).abs() < 13) {
-        if (_crash <= 0) sound(Sfx.crash);
-        _crash = 0.8;
+    for (final d in drivers) {
+      if (!d.alive) continue;
+      for (final c in cars) {
+        if ((laneX(c.lane) - d.x).abs() < 9 && (c.y - _py).abs() < 13) {
+          sound(Sfx.crash);
+          buzz(d.player, 500);
+          d.crash = 0.8;
+          break;
+        }
       }
     }
   }
 
-  int _bonus = 0;
-
   @override
-  double? get engine => _crash > 0 ? null : (speed - 60) / 90;
+  double? get engine => drivers.any((d) => d.alive) ? (speed - 60) / 90 : null;
 
   void _car(Pix p, double cx, double y, Color body, {bool mine = false}) {
     // Auto vista da dietro, 10x14 pixel.
@@ -206,6 +288,8 @@ class RacerGame extends RetroGame {
     for (var side = 0; side < 2; side++) {
       for (var i = 0; i < 4; i++) {
         final bx = side == 0 ? 2.0 + i * 11 : w - 46 + i * 11;
+        // Con la strada a quattro corsie i palazzi più interni non ci stanno.
+        if (bx + 9 > _left - 3 && bx < _left + _road + 3) continue;
         final bh = 30.0 + ((i * 37 + side * 11) % 50);
         final yy = ((_scroll * 0.4 + i * 40) % (h + 60)) - 60;
         p.rect(bx, yy, 9, bh, const Color(0xFF1A1740));
@@ -237,7 +321,7 @@ class RacerGame extends RetroGame {
       p.rect(_left + _road + 1, y + 6, 2, 6, Retro.white);
     }
     // Linee tratteggiate.
-    for (var l = 1; l < 3; l++) {
+    for (var l = 1; l < lanes; l++) {
       for (var y = -12.0 + _scroll; y < h; y += 12) {
         p.rect(_left + _lane * l - 0.5, y, 1, 6, const Color(0xFFBDB8E8));
       }
@@ -256,26 +340,36 @@ class RacerGame extends RetroGame {
     for (final c in cars) {
       _car(p, laneX(c.lane), c.y, c.color);
     }
-    // Fari della nostra auto sulla strada.
-    // Due coni di luce che si allargano e sfumano.
-    for (var i = 0; i < 20; i++) {
-      final a = 0.16 * (1 - i / 20);
-      final spread = 1 + i * 0.18;
-      for (final side in [-2.5, 2.5]) {
-        p.rect(
-          x + side - spread / 2,
-          _py - 8 - i,
-          spread,
-          1,
-          const Color(0xFFFFF2B0).withValues(alpha: a),
-        );
+    for (final d in drivers) {
+      if (d.out) continue;
+      final x = d.x;
+      if (d.crash <= 0) {
+        // Fari sulla strada: due coni di luce che si allargano e sfumano.
+        for (var i = 0; i < 20; i++) {
+          final a = 0.16 * (1 - i / 20);
+          final spread = 1 + i * 0.18;
+          for (final side in [-2.5, 2.5]) {
+            p.rect(
+              x + side - spread / 2,
+              _py - 8 - i,
+              spread,
+              1,
+              const Color(0xFFFFF2B0).withValues(alpha: a),
+            );
+          }
+        }
+      }
+      if (d.crash <= 0 || (_t * 16).floor().isEven) {
+        final color = players == 1 ? Retro.magenta : Retro.players[d.player];
+        _car(p, x, _py, color, mine: true);
+        if (players > 1) {
+          p.label('${d.player + 1}', x, _py + 7, color, size: 4);
+        }
       }
     }
-    if (_crash <= 0 || (_t * 16).floor().isEven) {
-      _car(p, x, _py, Retro.magenta, mine: true);
-    }
-    if (_crash > 0) {
-      p.rect(0, 0, w, h, Retro.orange.withValues(alpha: _crash * 0.35));
+    final hurt = drivers.fold(0.0, (a, d) => max(a, d.crash));
+    if (hurt > 0 && (players == 1 || drivers.every((d) => !d.alive))) {
+      p.rect(0, 0, w, h, Retro.orange.withValues(alpha: hurt * 0.35));
     }
   }
 }

@@ -13,6 +13,7 @@ import '../domain/channel.dart';
 import '../state/app_controller.dart';
 import '../state/reminder_controller.dart';
 import '../state/tuner_controller.dart';
+import 'game_pads.dart';
 import 'remote_keys.dart';
 
 /// Piccolo server web sulla rete di casa: lo smartphone, inquadrando un QR,
@@ -26,7 +27,11 @@ class RemoteServer extends ChangeNotifier {
     required this.app,
     required this.tuner,
     required this.reminders,
-  });
+    GamePads? pads,
+  }) : pads = pads ?? GamePads();
+
+  /// Telefoni usati come controller nella sala giochi.
+  final GamePads pads;
 
   final SharedPreferences prefs;
   final AppController app;
@@ -35,6 +40,11 @@ class RemoteServer extends ChangeNotifier {
 
   static const firstPort = 8787;
   static const _kToken = 'remote.token';
+  static const _kGamesToken = 'games.token';
+
+  /// Codice dei controller dei giochi: diverso da [token], così chi gioca
+  /// col proprio telefono non può comandare il resto del player.
+  late String gamesToken;
 
   HttpServer? _server;
   String? host;
@@ -57,6 +67,7 @@ class RemoteServer extends ChangeNotifier {
   String? get remoteUrl => running ? '$baseUrl/remote?t=$token' : null;
   String? get setupUrl => running ? '$baseUrl/setup?t=$token' : null;
   String? get epgUrl => running ? '$baseUrl/epg?t=$token' : null;
+  String? get padUrl => running ? '$baseUrl/pad?g=$gamesToken' : null;
 
   /// Fonti EPG aggiuntive (dalle impostazioni), cambiate dal telefono.
   List<String> get extraEpgSources => app.settings.extraEpgSources;
@@ -65,6 +76,8 @@ class RemoteServer extends ChangeNotifier {
     if (kIsWeb || _server != null) return;
     token = prefs.getString(_kToken) ?? _newToken();
     await prefs.setString(_kToken, token);
+    gamesToken = prefs.getString(_kGamesToken) ?? _newToken();
+    await prefs.setString(_kGamesToken, gamesToken);
     for (var p = firstPort; p < firstPort + 10; p++) {
       try {
         _server = await HttpServer.bind(InternetAddress.anyIPv4, p);
@@ -174,6 +187,33 @@ class RemoteServer extends ChangeNotifier {
           await rootBundle.loadString('assets/remote/sw.js'),
           ContentType('application', 'javascript', charset: 'utf-8'),
         );
+    }
+
+    // Controller dei giochi: hanno un codice a parte.
+    if (path == '/pad' || path == '/pad/ws') {
+      if (r.uri.queryParameters['g'] != gamesToken) {
+        res.statusCode = HttpStatus.forbidden;
+        return _text(
+          res,
+          _page(
+            'Codice non valido',
+            'Inquadra di nuovo il QR della sala giochi sulla TV.',
+          ),
+          ContentType.html,
+        );
+      }
+      if (path == '/pad') {
+        final html = (await rootBundle.loadString('assets/remote/pad.html'))
+            .replaceAll('{{GTOKEN}}', gamesToken);
+        return _text(res, html, ContentType.html);
+      }
+      if (!WebSocketTransformer.isUpgradeRequest(r)) {
+        res.statusCode = HttpStatus.badRequest;
+        return res.close();
+      }
+      final ws = await WebSocketTransformer.upgrade(r);
+      ws.pingInterval = const Duration(seconds: 5);
+      return pads.attach(ws);
     }
 
     final t = r.uri.queryParameters['t'] ?? r.headers.value('x-token');

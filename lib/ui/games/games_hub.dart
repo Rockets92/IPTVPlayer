@@ -13,6 +13,9 @@ import 'space_game.dart';
 import 'racer_game.dart';
 import 'retro.dart';
 import 'sfx.dart';
+import '../../remote/game_pads.dart';
+import '../../remote/remote_server.dart';
+import '../widgets/qr_card.dart';
 import 'snake_game.dart';
 import 'stars_game.dart';
 
@@ -133,6 +136,13 @@ class _GamesHubState extends State<GamesHub>
   )..repeat();
   int _sel = 0;
   RetroGame? _playing;
+  bool _qr = false;
+  late final GamePads? _pads = Provider.of<GamePads?>(context, listen: false);
+
+  void _padsChanged() {
+    if (mounted) setState(() {});
+  }
+
   late final SfxPlayer _sfx = SfxPlayer(
     light: context.read<PerformanceProfile>().isLight,
   )..enabled = widget.prefs.getBool(_soundKey) ?? true;
@@ -148,11 +158,13 @@ class _GamesHubState extends State<GamesHub>
   void initState() {
     super.initState();
     _sfx.init();
+    _pads?.addListener(_padsChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) => _focus.requestFocus());
   }
 
   @override
   void dispose() {
+    _pads?.removeListener(_padsChanged);
     _sfx.dispose();
     _focus.dispose();
     _anim.dispose();
@@ -164,6 +176,17 @@ class _GamesHubState extends State<GamesHub>
       return KeyEventResult.ignored;
     }
     final k = e.logicalKey;
+    if (_qr) {
+      // Qualsiasi tasto chiude il pannello del QR.
+      _sfx.play(Sfx.pause);
+      setState(() => _qr = false);
+      return KeyEventResult.handled;
+    }
+    if (k == LogicalKeyboardKey.colorF3Blue || k == LogicalKeyboardKey.keyG) {
+      _sfx.play(Sfx.select);
+      setState(() => _qr = true);
+      return KeyEventResult.handled;
+    }
     final n = _games.length;
     final before = _sel;
     if (k == LogicalKeyboardKey.arrowRight) {
@@ -208,80 +231,167 @@ class _GamesHubState extends State<GamesHub>
         game: g,
         prefs: widget.prefs,
         sfx: _sfx,
+        pads: _pads,
         onExit: _back,
       );
     }
     return Focus(
       focusNode: _focus,
       onKeyEvent: _onKey,
-      child: CrtFrame(
-        child: LayoutBuilder(
-          builder: (context, box) {
-            final compact = box.maxHeight < 560;
-            return Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: compact ? 24 : 48,
-                vertical: compact ? 16 : 32,
-              ),
-              child: Column(
-                children: [
-                  AnimatedBuilder(
-                    animation: _anim,
-                    builder: (context, _) {
-                      final c = Retro.rainbow[(_anim.value * 7).floor() % 7];
-                      return Text(
-                        'SALA GIOCHI',
-                        style: Retro.text(compact ? 34 : 52, color: c),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    '★ CINQUE CLASSICI DA SALOTTO ★ 1  9  9  X ★',
-                    style: Retro.text(
-                      compact ? 11 : 14,
-                      color: Retro.dim,
-                      glow: 0,
-                    ),
-                  ),
-                  SizedBox(height: compact ? 14 : 28),
-                  Expanded(
-                    child: Center(
-                      child: Wrap(
-                        spacing: compact ? 14 : 22,
-                        runSpacing: compact ? 12 : 22,
-                        alignment: WrapAlignment.center,
-                        children: [
-                          for (var i = 0; i < _games.length; i++)
-                            _Cartridge(
-                              entry: _games[i],
-                              best:
-                                  widget.prefs.getInt(
-                                    'games.best.${_games[i].make().id}',
-                                  ) ??
-                                  0,
-                              selected: i == _sel,
-                              compact: compact,
-                              onTap: () => i == _sel
-                                  ? _play(i)
-                                  : setState(() => _sel = i),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  Blink(
-                    child: Text(
-                      'OK: GIOCA    GIALLO/S: SUONI '
-                      '${_sfx.enabled ? 'SÌ' : 'NO'}    INDIETRO: TORNA ALLA TV',
-                      style: Retro.text(compact ? 12 : 15, color: Retro.yellow),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
+      child: Stack(
+        fit: StackFit.expand,
+        children: [_hub(), if (_qr) _qrPanel()],
+      ),
+    );
+  }
+
+  /// Giocatori collegati: G1 è sempre il telecomando.
+  Widget _playersStrip(bool compact, {bool hint = true}) {
+    final phones = _pads?.players ?? const <PadPlayer>[];
+    final style = Retro.text(compact ? 11 : 13, color: Retro.white, glow: 0.3);
+    return Wrap(
+      spacing: compact ? 14 : 22,
+      alignment: WrapAlignment.center,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        Text(
+          'GIOCATORI',
+          style: Retro.text(compact ? 11 : 13, color: Retro.dim, glow: 0),
         ),
+        Text('G1 TV', style: style.copyWith(color: Retro.players[0])),
+        for (final p in phones)
+          Text(
+            'G${p.slot + 1} ${p.name}',
+            style: style.copyWith(color: Retro.players[p.slot]),
+          ),
+        if (hint && _pads != null && phones.length < GamePads.maxPads)
+          Text(
+            'BLU/G: COLLEGA UN TELEFONO',
+            style: Retro.text(compact ? 11 : 13, color: Retro.cyan, glow: 0.3),
+          ),
+      ],
+    );
+  }
+
+  Widget _qrPanel() {
+    final url = Provider.of<RemoteServer?>(context)?.padUrl;
+    final phones = _pads?.players ?? const <PadPlayer>[];
+    return GestureDetector(
+      onTap: () => setState(() => _qr = false),
+      child: ColoredBox(
+        color: Retro.bg.withValues(alpha: 0.88),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'COLLEGA UN TELEFONO',
+                style: Retro.text(30, color: Retro.cyan),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'INQUADRA IL CODICE (STESSA RETE WI-FI): IL TELEFONO DIVENTA UN CONTROLLER',
+                textAlign: TextAlign.center,
+                style: Retro.text(12, color: Retro.white, glow: 0),
+              ),
+              const SizedBox(height: 20),
+              if (url == null)
+                Text(
+                  'RETE NON DISPONIBILE',
+                  style: Retro.text(16, color: Retro.red),
+                )
+              else
+                QrCode(data: url, size: 170),
+              const SizedBox(height: 18),
+              Text(
+                '${phones.length + 1} DI 4 GIOCATORI',
+                style: Retro.text(15, color: Retro.yellow),
+              ),
+              const SizedBox(height: 8),
+              _playersStrip(false, hint: false),
+              const SizedBox(height: 18),
+              Blink(
+                child: Text(
+                  'PREMI UN TASTO PER TORNARE AI GIOCHI',
+                  style: Retro.text(13, color: Retro.yellow),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _hub() {
+    return CrtFrame(
+      child: LayoutBuilder(
+        builder: (context, box) {
+          final compact = box.maxHeight < 560;
+          return Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: compact ? 24 : 48,
+              vertical: compact ? 16 : 32,
+            ),
+            child: Column(
+              children: [
+                AnimatedBuilder(
+                  animation: _anim,
+                  builder: (context, _) {
+                    final c = Retro.rainbow[(_anim.value * 7).floor() % 7];
+                    return Text(
+                      'SALA GIOCHI',
+                      style: Retro.text(compact ? 34 : 52, color: c),
+                    );
+                  },
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '★ CINQUE CLASSICI DA SALOTTO ★ DA 1 A 4 GIOCATORI ★',
+                  style: Retro.text(
+                    compact ? 11 : 14,
+                    color: Retro.dim,
+                    glow: 0,
+                  ),
+                ),
+                SizedBox(height: compact ? 14 : 28),
+                Expanded(
+                  child: Center(
+                    child: Wrap(
+                      spacing: compact ? 14 : 22,
+                      runSpacing: compact ? 12 : 22,
+                      alignment: WrapAlignment.center,
+                      children: [
+                        for (var i = 0; i < _games.length; i++)
+                          _Cartridge(
+                            entry: _games[i],
+                            best:
+                                widget.prefs.getInt(
+                                  'games.best.${_games[i].make().id}',
+                                ) ??
+                                0,
+                            selected: i == _sel,
+                            compact: compact,
+                            onTap: () =>
+                                i == _sel ? _play(i) : setState(() => _sel = i),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+                _playersStrip(compact),
+                SizedBox(height: compact ? 8 : 12),
+                Blink(
+                  child: Text(
+                    'OK: GIOCA    GIALLO/S: SUONI '
+                    '${_sfx.enabled ? 'SÌ' : 'NO'}    INDIETRO: TORNA ALLA TV',
+                    style: Retro.text(compact ? 12 : 15, color: Retro.yellow),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }

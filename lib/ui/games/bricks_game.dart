@@ -187,6 +187,8 @@ class BricksGame extends RetroGame {
   @override
   String get title => 'MATTONCINI';
   @override
+  int get maxPlayers => 4;
+  @override
   List<String> get help => [
     '← →: MUOVI LA RACCHETTA   OK: LANCIA',
     'ARGENTO: DUE COLPI   ORO: INDISTRUTTIBILE',
@@ -199,7 +201,14 @@ class BricksGame extends RetroGame {
       'QUADRO ${(level - 1) % _stages.length + 1}/${_stages.length}  '
       'VITE ${'♥' * lives}';
 
-  double px = w / 2, pw = 28;
+  /// Racchette: una per giocatore, in squadra (si possono sovrapporre).
+  final paddles = <double>[w / 2];
+  double pw = 28;
+  double get px => paddles.first;
+  double get _basePw => players > 1 ? 24 : 28;
+
+  /// Chi ha la pallina attaccata alla racchetta prima del lancio.
+  int _server = 0;
   static const py = 110.0, ph = 3.0, r = 1.6;
   double speed = 85;
   bool stuck = true;
@@ -219,7 +228,13 @@ class BricksGame extends RetroGame {
   void reset() {
     lives = 3;
     level = 1;
-    px = w / 2;
+    final n = players.clamp(1, 4);
+    paddles
+      ..clear()
+      ..addAll([for (var i = 0; i < n; i++) w * (i + 1) / (n + 1)]);
+    pw = _basePw;
+    _server = 0;
+    lives = 3 + (n - 1);
     _build();
   }
 
@@ -264,7 +279,7 @@ class BricksGame extends RetroGame {
     stuck = true;
     balls
       ..clear()
-      ..add(_Ball(px, py - r - 0.5, 0, 0));
+      ..add(_Ball(paddles[_server], py - r - 0.5, 0, 0));
   }
 
   void _launch() {
@@ -282,17 +297,21 @@ class BricksGame extends RetroGame {
   double get _ballSpeed => _slow > 0 ? speed * 0.7 : speed;
 
   @override
-  void onKey(LogicalKeyboardKey k) {
+  void onPlayerKey(int p, LogicalKeyboardKey k) {
+    if (p >= paddles.length) return;
     if (isSelectKey(k) ||
         k == LogicalKeyboardKey.space ||
         k == LogicalKeyboardKey.arrowUp) {
       _launch();
     } else if (k == LogicalKeyboardKey.arrowLeft) {
-      px -= 6; // un tocco sposta un po' anche senza tenere premuto
+      paddles[p] -= 6; // un tocco sposta un po' anche senza tenere premuto
     } else if (k == LogicalKeyboardKey.arrowRight) {
-      px += 6;
+      paddles[p] += 6;
     }
   }
+
+  @override
+  void onKey(LogicalKeyboardKey k) => onPlayerKey(0, k);
 
   @override
   void update(double dt) {
@@ -304,11 +323,14 @@ class BricksGame extends RetroGame {
       _slow -= dt;
       if (_slow <= 0) _setSpeed(speed);
     }
-    final target = _wide > 0 ? 42.0 : 28.0;
+    final target = _wide > 0 ? _basePw * 1.5 : _basePw;
     pw += (target - pw) * min(1, dt * 10);
-    if (left) px -= 150 * dt;
-    if (right) px += 150 * dt;
-    px = px.clamp(pw / 2 + 1, w - pw / 2 - 1);
+    for (var i = 0; i < paddles.length; i++) {
+      var x = paddles[i];
+      if (heldBy(i, LogicalKeyboardKey.arrowLeft)) x -= 150 * dt;
+      if (heldBy(i, LogicalKeyboardKey.arrowRight)) x += 150 * dt;
+      paddles[i] = x.clamp(pw / 2 + 1, w - pw / 2 - 1);
+    }
     for (final s in sparks) {
       s
         ..x += s.vx * dt
@@ -320,7 +342,7 @@ class BricksGame extends RetroGame {
     _capsules(dt);
     if (stuck) {
       balls.first
-        ..x = px
+        ..x = paddles[_server.clamp(0, paddles.length - 1)]
         ..y = py - r - 0.5;
       return;
     }
@@ -338,7 +360,7 @@ class BricksGame extends RetroGame {
       if (c.y > h + 4) return true;
       if (c.y + 2.5 >= py &&
           c.y - 2.5 <= py + ph &&
-          (c.x - px).abs() <= pw / 2 + 5) {
+          paddles.any((x) => (c.x - x).abs() <= pw / 2 + 5)) {
         _take(c.kind);
         return true;
       }
@@ -404,6 +426,10 @@ class BricksGame extends RetroGame {
         over = true;
       } else {
         sound(Sfx.hurt);
+        for (var i = 1; i < paddles.length; i++) {
+          buzz(i, 300);
+        }
+        _server = (_server + 1) % paddles.length;
         _serve();
       }
     }
@@ -431,11 +457,16 @@ class BricksGame extends RetroGame {
       sound(Sfx.wall);
     }
     // Racchetta: l'angolo dipende da dove la si colpisce.
-    if (b.vy > 0 &&
-        b.y + r >= py &&
-        b.y - r <= py + ph &&
-        (b.x - px).abs() <= pw / 2 + r) {
+    final hit = b.vy > 0 && b.y + r >= py && b.y - r <= py + ph
+        ? paddles.indexed
+              .where((e) => (b.x - e.$2).abs() <= pw / 2 + r)
+              .map((e) => e.$1)
+              .firstOrNull
+        : null;
+    if (hit != null) {
+      final px = paddles[hit];
       final f = ((b.x - px) / (pw / 2)).clamp(-1.0, 1.0);
+      buzz(hit, 25);
       final a = -pi / 2 + f * 1.1;
       b
         ..vx = cos(a) * _ballSpeed
@@ -537,11 +568,15 @@ class BricksGame extends RetroGame {
         s.color.withValues(alpha: s.life.clamp(0, 1) / 0.6),
       );
     }
-    // Racchetta.
-    p.glow(px - pw / 2, py, pw, ph, Retro.cyan, r: 3);
-    p.rect(px - pw / 2, py, 3, ph, Retro.magenta);
-    p.rect(px + pw / 2 - 3, py, 3, ph, Retro.magenta);
-    p.rect(px - pw / 2 + 3, py, pw - 6, 1, Retro.white);
+    // Racchette.
+    for (final (i, px) in paddles.indexed) {
+      final body = players == 1 ? Retro.cyan : Retro.players[i];
+      final tips = players == 1 ? Retro.magenta : Retro.white;
+      p.glow(px - pw / 2, py, pw, ph, body, r: 3);
+      p.rect(px - pw / 2, py, 3, ph, tips);
+      p.rect(px + pw / 2 - 3, py, 3, ph, tips);
+      p.rect(px - pw / 2 + 3, py, pw - 6, 1, Retro.white);
+    }
     // Palline.
     for (final b in balls) {
       p.glow(

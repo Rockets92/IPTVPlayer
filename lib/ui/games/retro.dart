@@ -6,6 +6,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../remote/game_pads.dart';
 import 'sfx.dart';
 
 import '../widgets/focus_tile.dart';
@@ -26,6 +27,10 @@ abstract final class Retro {
   static const dim = Color(0xFF6E6A99);
 
   static const rainbow = [red, orange, yellow, green, cyan, blue, purple];
+
+  /// Colore di ciascun giocatore (1 = telecomando, 2-4 = telefoni), uguale
+  /// a quello mostrato sul controller del telefono.
+  static const players = [green, magenta, yellow, cyan];
 
   /// Testo a blocchi, con un leggero bagliore come sui vecchi monitor.
   static TextStyle text(
@@ -125,7 +130,31 @@ abstract class RetroGame {
   String get status => '';
 
   final rnd = Random();
-  final held = <LogicalKeyboardKey>{};
+
+  /// Tasti tenuti premuti da ciascun giocatore (0 = telecomando).
+  final pads = List.generate(4, (_) => <LogicalKeyboardKey>{});
+  Set<LogicalKeyboardKey> get held => pads[0];
+
+  /// Giocatori massimi: oltre 1, gli altri si collegano col telefono.
+  int get maxPlayers => 1;
+
+  /// Giocatori di questa partita (impostato dalla cornice prima di reset).
+  int players = 1;
+
+  /// Nomi dei giocatori, per i risultati.
+  List<String> names = const ['G1'];
+
+  /// Righe dei risultati a fine partita (classifica in multigiocatore).
+  List<String> get results => const [];
+
+  /// Titolo a fine partita al posto di "GAME OVER" (es. chi ha vinto).
+  String? get endTitle => null;
+
+  /// Vibrazione sul telefono del giocatore [p] (1-3).
+  void Function(int p, int ms)? onBuzz;
+  void buzz(int p, [int ms = 150]) {
+    if (p > 0) onBuzz?.call(p, ms);
+  }
 
   /// Effetti sonori (impostati dalla cornice).
   void Function(Sfx)? onSound;
@@ -142,7 +171,13 @@ abstract class RetroGame {
   /// Tasto premuto durante la partita.
   void onKey(LogicalKeyboardKey k) {}
 
+  /// Tasto premuto dal giocatore [p] (0 = telecomando).
+  void onPlayerKey(int p, LogicalKeyboardKey k) {
+    if (p == 0) onKey(k);
+  }
+
   bool isHeld(LogicalKeyboardKey k) => held.contains(k);
+  bool heldBy(int p, LogicalKeyboardKey k) => pads[p].contains(k);
   bool get left => isHeld(LogicalKeyboardKey.arrowLeft);
   bool get right => isHeld(LogicalKeyboardKey.arrowRight);
 }
@@ -157,9 +192,13 @@ class GameShell extends StatefulWidget {
     required this.prefs,
     required this.onExit,
     this.sfx,
+    this.pads,
   });
 
   final SfxPlayer? sfx;
+
+  /// Telefoni collegati come controller (giocatori 2-4).
+  final GamePads? pads;
   final RetroGame game;
   final SharedPreferences prefs;
   final VoidCallback onExit;
@@ -186,6 +225,10 @@ class _GameShellState extends State<GameShell>
     super.initState();
     _best = widget.prefs.getInt(_bestKey) ?? 0;
     g.onSound = (s) => widget.sfx?.play(s);
+    g.onBuzz = (p, ms) => widget.pads?.buzz(p, ms);
+    widget.pads?.onInput = _onPad;
+    widget.pads?.addListener(_padsChanged);
+    _syncPhones();
     g.reset();
     _ticker.start();
     WidgetsBinding.instance.addPostFrameCallback((_) => _focus.requestFocus());
@@ -193,6 +236,9 @@ class _GameShellState extends State<GameShell>
 
   @override
   void dispose() {
+    widget.pads?.removeListener(_padsChanged);
+    if (widget.pads?.onInput == _onPad) widget.pads?.onInput = null;
+    widget.pads?.setState(game: null);
     widget.sfx?.engineOff();
     _ticker.dispose();
     _frame.dispose();
@@ -222,12 +268,107 @@ class _GameShellState extends State<GameShell>
       _best = g.score;
       widget.prefs.setInt(_bestKey, _best);
     }
-    g.held.clear();
+    for (final p in g.pads) {
+      p.clear();
+    }
     widget.sfx?.play(g.won ? Sfx.win : Sfx.over);
     setState(() => _phase = _Phase.over);
+    _syncPhones();
+  }
+
+  /// Giocatori collegati col telefono, nell'ordine dei posti (1-3).
+  List<PadPlayer> get _phones =>
+      g.maxPlayers > 1 ? (widget.pads?.players ?? const []) : const [];
+
+  /// Posto del telefono (1-3) → giocatore della partita (1-3), o null se
+  /// non partecipa (collegato a partita iniziata, o gioco a un giocatore).
+  final _seat = <int, int>{};
+
+  void _padsChanged() {
+    if (mounted) setState(() {});
+    _syncPhones();
+  }
+
+  void _syncPhones() {
+    final pads = widget.pads;
+    if (pads == null) return;
+    pads.setState(
+      game: g.title,
+      playing: _phase == _Phase.playing,
+      message: g.maxPlayers <= 1
+          ? 'GIOCO A UN SOLO GIOCATORE: GUARDA LA TV'
+          : switch (_phase) {
+              _Phase.ready || _Phase.over => 'PREMI A PER INIZIARE',
+              _Phase.paused => 'PAUSA: A PER CONTINUARE',
+              _Phase.playing => '',
+            },
+    );
+  }
+
+  static const _padKeys = {
+    'up': LogicalKeyboardKey.arrowUp,
+    'down': LogicalKeyboardKey.arrowDown,
+    'left': LogicalKeyboardKey.arrowLeft,
+    'right': LogicalKeyboardKey.arrowRight,
+    'a': LogicalKeyboardKey.enter,
+    'b': LogicalKeyboardKey.keyB,
+  };
+
+  void _onPad(int slot, String key, bool down) {
+    if (!mounted || g.maxPlayers <= 1) return;
+    final k = _padKeys[key];
+    if (!down) {
+      final p = _seat[slot];
+      if (p != null && k != null) g.pads[p].remove(k);
+      return;
+    }
+    if (k == null) return;
+    final p = _seat[slot];
+    if (_phase != _Phase.playing) {
+      // A dal telefono: inizia o riprende la partita.
+      if (down && key == 'a') {
+        if (_phase == _Phase.paused) {
+          widget.sfx?.play(Sfx.select);
+          setState(() => _phase = _Phase.playing);
+          _syncPhones();
+        } else {
+          _start();
+        }
+      }
+      return;
+    }
+    if (p == null) {
+      if (down) {
+        widget.pads?.bySlot(slot)?.send({
+          't': 'state',
+          'game': g.title,
+          'message': 'ENTRI ALLA PROSSIMA PARTITA',
+        });
+      }
+      return;
+    }
+    if (down) {
+      g.pads[p].add(k);
+      g.onPlayerKey(p, k);
+    } else {
+      g.pads[p].remove(k);
+    }
   }
 
   void _start() {
+    _seat.clear();
+    final names = [widget.pads == null ? 'G1' : GamePads.tvPlayerName];
+    for (final ph in _phones.take(3)) {
+      _seat[ph.slot] = names.length;
+      names.add(ph.name);
+      // Colore e numero sul telefono uguali a quelli della partita.
+      ph.send({'t': 'welcome', 'player': names.length});
+    }
+    g.players = names.length;
+    g.names = names;
+    for (final p in g.pads) {
+      p.clear();
+    }
     g.reset();
     g.score = 0;
     g.over = false;
@@ -235,6 +376,7 @@ class _GameShellState extends State<GameShell>
     _newBest = false;
     widget.sfx?.play(Sfx.start);
     setState(() => _phase = _Phase.playing);
+    _syncPhones();
   }
 
   KeyEventResult _onKey(FocusNode node, KeyEvent e) {
@@ -261,17 +403,21 @@ class _GameShellState extends State<GameShell>
             k == LogicalKeyboardKey.keyP) {
           widget.sfx?.play(Sfx.select);
           setState(() => _phase = _Phase.playing);
+          _syncPhones();
         } else if (isBackKey(k)) {
           // Secondo Indietro in pausa: si torna alla sala giochi.
           widget.onExit();
         }
       case _Phase.playing:
         if (back && down) {
-          g.held.clear();
+          for (final p in g.pads) {
+            p.clear();
+          }
           widget.sfx?.play(Sfx.pause);
           setState(() => _phase = _Phase.paused);
+          _syncPhones();
         } else if (down) {
-          g.onKey(k);
+          g.onPlayerKey(0, k);
         }
     }
     return KeyEventResult.handled;
@@ -333,6 +479,19 @@ class _GameShellState extends State<GameShell>
     );
   }
 
+  /// Chi gioca la prossima partita (solo nei giochi a più giocatori).
+  List<String> _playersLine() {
+    if (g.maxPlayers <= 1 || widget.pads == null) return const [];
+    final phones = _phones;
+    if (phones.isEmpty) {
+      return const ['', 'BLU/G NELLA SALA GIOCHI: COLLEGA UN TELEFONO'];
+    }
+    return [
+      '',
+      'GIOCATORI: G1 TV  ${[for (final (i, p) in phones.take(3).indexed) 'G${i + 2} ${p.name}'].join('  ')}',
+    ];
+  }
+
   Widget _overlay() {
     final (
       String title,
@@ -340,7 +499,12 @@ class _GameShellState extends State<GameShell>
       List<String> lines,
       String action,
     ) = switch (_phase) {
-      _Phase.ready => (g.title, Retro.cyan, g.help, 'PREMI OK PER GIOCARE'),
+      _Phase.ready => (
+        g.title,
+        Retro.cyan,
+        [...g.help, ..._playersLine()],
+        'PREMI OK PER GIOCARE',
+      ),
       _Phase.paused => (
         'PAUSA',
         Retro.yellow,
@@ -348,11 +512,13 @@ class _GameShellState extends State<GameShell>
         '',
       ),
       _ => (
-        g.won ? 'COMPLIMENTI!' : 'GAME OVER',
-        g.won ? Retro.green : Retro.red,
+        g.endTitle ?? (g.won ? 'COMPLIMENTI!' : 'GAME OVER'),
+        g.won || g.endTitle != null ? Retro.green : Retro.red,
         [
+          ...g.results,
           'PUNTI ${g.score}',
           if (_newBest) '*** NUOVO RECORD! ***' else 'RECORD $_best',
+          ..._playersLine(),
         ],
         'OK: RIGIOCA   INDIETRO: ESCI',
       ),

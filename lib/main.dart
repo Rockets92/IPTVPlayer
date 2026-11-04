@@ -17,6 +17,7 @@ import 'core/theme.dart';
 import 'data/settings_store.dart';
 import 'player/media_kit_engine.dart';
 import 'player/playback_engine.dart';
+import 'remote/game_pads.dart';
 import 'remote/remote_server.dart';
 import 'state/app_controller.dart';
 import 'state/reminder_controller.dart';
@@ -83,6 +84,7 @@ Future<void> main() async {
         ChangeNotifierProvider<TunerController>.value(value: tuner),
         ChangeNotifierProvider<ReminderController>.value(value: reminders),
         ChangeNotifierProvider<RemoteServer>.value(value: remote),
+        ChangeNotifierProvider<GamePads>.value(value: remote.pads),
       ],
       child: const IptvApp(),
     ),

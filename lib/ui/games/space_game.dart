@@ -19,6 +19,15 @@ class _Enemy {
   double get half => kind == _Kind.boss ? 14 : 4.5;
 }
 
+class _Ship {
+  _Ship(this.player, this.x);
+  final int player;
+  double x, y = 104, hurt = 0, cool = 0;
+  int lives = 3, power = 1;
+  bool shield = false;
+  bool get alive => lives > 0;
+}
+
 class _Shot {
   _Shot(this.x, this.y, this.vx, this.vy);
   double x, y, vx, vy;
@@ -57,20 +66,35 @@ class SpaceGame extends RetroGame {
   @override
   String get title => 'ASTRO PATTUGLIA';
   @override
+  int get maxPlayers => 4;
+  @override
   List<String> get help => [
     'FRECCE: MUOVI LA NAVETTA (SPARA DA SOLA)',
-    'OK: BOMBA, RIPULISCE LO SCHERMO',
+    if (players > 1)
+      'OK O TASTO A: BOMBA (LE BOMBE SONO DI SQUADRA)'
+    else
+      'OK: BOMBA, RIPULISCE LO SCHERMO',
     'CAPSULE: P POTENZA  S SCUDO  B BOMBA',
   ];
   @override
   Size get size => const Size(w, h);
   @override
-  String get status => 'ONDATA $wave  BOMBE $bombs  VITE ${'♥' * lives}';
+  String get status => players == 1
+      ? 'ONDATA $wave  BOMBE $bombs  VITE ${'♥' * lives}'
+      : 'ONDATA $wave  BOMBE $bombs  '
+            '${[for (final s in ships) 'G${s.player + 1}${s.alive ? '♥' * s.lives : ' KO'}'].join(' ')}';
 
-  double x = w / 2, y = 104;
-  int lives = 3, bombs = 2, wave = 0, power = 1;
-  bool shield = false;
-  double _cool = 0, _hurt = 0, _flash = 0, _t = 0, _next = 0, _banner = 0;
+  final ships = <_Ship>[];
+  int bombs = 2, wave = 0;
+  double _flash = 0, _t = 0, _next = 0, _banner = 0;
+
+  /// La navetta del telecomando (gioco in singolo e test).
+  _Ship get _p1 => ships.first;
+  double get x => _p1.x;
+  double get y => _p1.y;
+  int get lives => _p1.lives;
+  int get power => _p1.power;
+  bool get shield => _p1.shield;
   final enemies = <_Enemy>[];
   final shots = <_Shot>[];
   final bullets = <_Shot>[];
@@ -80,14 +104,12 @@ class SpaceGame extends RetroGame {
 
   @override
   void reset() {
-    x = w / 2;
-    y = 104;
-    lives = 3;
-    bombs = 2;
+    final n = players.clamp(1, 4);
+    ships
+      ..clear()
+      ..addAll([for (var i = 0; i < n; i++) _Ship(i, w * (i + 1) / (n + 1))]);
+    bombs = n > 1 ? 3 : 2;
     wave = 0;
-    power = 1;
-    shield = false;
-    _hurt = 0;
     _next = 1;
     enemies.clear();
     shots.clear();
@@ -101,9 +123,17 @@ class SpaceGame extends RetroGame {
   }
 
   @override
-  void onKey(LogicalKeyboardKey k) {
-    if (isSelectKey(k) || k == LogicalKeyboardKey.space) _bomb();
+  void onPlayerKey(int p, LogicalKeyboardKey k) {
+    if (p >= ships.length || !ships[p].alive) return;
+    if (isSelectKey(k) ||
+        k == LogicalKeyboardKey.space ||
+        k == LogicalKeyboardKey.keyB) {
+      _bomb();
+    }
   }
+
+  @override
+  void onKey(LogicalKeyboardKey k) => onPlayerKey(0, k);
 
   void _bomb() {
     if (bombs <= 0) return;
@@ -181,35 +211,12 @@ class SpaceGame extends RetroGame {
     _t += dt;
     _flash = max(0, _flash - dt);
     _banner = max(0, _banner - dt);
-    if (_hurt > 0) _hurt -= dt;
     for (final s in _stars.indexed) {
       final (sx, sy, v) = s.$2;
       _stars[s.$1] = (sx, (sy + v * dt) % h, v);
     }
-    // Navetta.
-    const sp = 75.0;
-    if (left) x -= sp * dt;
-    if (right) x += sp * dt;
-    if (isHeld(LogicalKeyboardKey.arrowUp)) y -= sp * dt;
-    if (isHeld(LogicalKeyboardKey.arrowDown)) y += sp * dt;
-    x = x.clamp(6, w - 6);
-    y = y.clamp(50, h - 7);
-    // Fuoco automatico.
-    _cool -= dt;
-    if (_cool <= 0) {
-      _cool = 0.2;
-      sound(Sfx.shoot);
-      shots.add(_Shot(x, y - 6, 0, -150));
-      if (power >= 2) {
-        shots
-          ..add(_Shot(x - 4, y - 3, -12, -145))
-          ..add(_Shot(x + 4, y - 3, 12, -145));
-      }
-      if (power >= 3) {
-        shots
-          ..add(_Shot(x - 5, y - 2, -40, -130))
-          ..add(_Shot(x + 5, y - 2, 40, -130));
-      }
+    for (final sh in ships) {
+      if (sh.alive) _ship(sh, dt);
     }
     for (final s in [...shots, ...bullets]) {
       s
@@ -232,9 +239,11 @@ class SpaceGame extends RetroGame {
     }
     items.removeWhere((i) {
       if (i.y > h + 4) return true;
-      if ((i.x - x).abs() < 7 && (i.y - y).abs() < 7) {
-        _take(i.kind);
-        return true;
+      for (final sh in ships) {
+        if (sh.alive && (i.x - sh.x).abs() < 7 && (i.y - sh.y).abs() < 7) {
+          _take(sh, i.kind);
+          return true;
+        }
       }
       return false;
     });
@@ -255,24 +264,26 @@ class SpaceGame extends RetroGame {
     }
     enemies.removeWhere((e) => e.hp <= 0 || e.y > h + 16);
     // Colpi nemici e scontri.
-    if (_hurt <= 0) {
+    for (final sh in ships) {
+      if (!sh.alive || sh.hurt > 0) continue;
       for (final b in bullets) {
-        if ((b.x - x).abs() < 3.5 && (b.y - y).abs() < 4.5) {
+        if ((b.x - sh.x).abs() < 3.5 && (b.y - sh.y).abs() < 4.5) {
           bullets.remove(b);
-          _hit();
+          _hit(sh);
           break;
         }
       }
-    }
-    if (_hurt <= 0) {
+      if (sh.hurt > 0) continue;
       for (final e in enemies) {
-        if ((e.x - x).abs() < e.half + 4 && (e.y - y).abs() < e.half + 4) {
+        if ((e.x - sh.x).abs() < e.half + 4 &&
+            (e.y - sh.y).abs() < e.half + 4) {
           if (e.kind != _Kind.boss) _damage(e, 99);
-          _hit();
+          _hit(sh);
           break;
         }
       }
     }
+    enemies.removeWhere((e) => e.hp <= 0);
     if (enemies.isEmpty) {
       _next -= dt;
       if (_next <= 0) {
@@ -299,7 +310,7 @@ class SpaceGame extends RetroGame {
           e.x += e.vx * dt;
         } else {
           // In picchiata verso la navetta.
-          final dx = x - e.x;
+          final dx = (_target(e)?.x ?? e.x) - e.x;
           e
             ..vy = min(e.vy + 90 * dt, 70)
             ..x += dx.sign * min(dx.abs(), 30 * dt)
@@ -340,7 +351,9 @@ class SpaceGame extends RetroGame {
   }
 
   void _aim(_Enemy e, double v) {
-    final dx = x - e.x, dy = y - e.y;
+    final t = _target(e);
+    if (t == null) return;
+    final dx = t.x - e.x, dy = t.y - e.y;
     final d = sqrt(dx * dx + dy * dy);
     if (d < 1 || dy < 10) return;
     sound(Sfx.enemyShot);
@@ -364,11 +377,26 @@ class SpaceGame extends RetroGame {
       _Kind.boss => 500 + wave * 20,
     };
     sound(big ? Sfx.crash : Sfx.boom);
+    if (big) {
+      // Nave madre abbattuta: i compagni eliminati rientrano in gioco.
+      for (final sh in ships) {
+        if (!sh.alive) {
+          sh
+            ..lives = 1
+            ..hurt = 2
+            ..y = 104;
+          buzz(sh.player, 200);
+        }
+      }
+    }
     _explode(e.x, e.y, big ? 40 : 12, big ? Retro.yellow : Retro.orange);
     final chance = big ? 1.0 : (e.kind == _Kind.turret ? 0.3 : 0.06);
     if (rnd.nextDouble() < chance) {
       final r = rnd.nextDouble();
-      final kind = power < 3 && r < 0.5
+      final weakest = ships
+          .where((s) => s.alive)
+          .fold(3, (a, s) => min(a, s.power));
+      final kind = weakest < 3 && r < 0.5
           ? _Drop.power
           : r < 0.8
           ? _Drop.shield
@@ -394,37 +422,89 @@ class SpaceGame extends RetroGame {
     }
   }
 
-  void _take(_Drop d) {
+  void _take(_Ship sh, _Drop d) {
     sound(Sfx.power);
+    buzz(sh.player, 60);
     score += 25;
     switch (d) {
       case _Drop.power:
-        power = min(3, power + 1);
+        sh.power = min(3, sh.power + 1);
       case _Drop.shield:
-        shield = true;
+        sh.shield = true;
       case _Drop.bomb:
         bombs = min(5, bombs + 1);
     }
   }
 
-  void _hit() {
-    if (shield) {
-      shield = false;
-      _hurt = 1;
+  void _hit(_Ship sh) {
+    buzz(sh.player, sh.shield ? 120 : 350);
+    if (sh.shield) {
+      sh
+        ..shield = false
+        ..hurt = 1;
       sound(Sfx.wall);
-      _explode(x, y, 10, Retro.cyan);
+      _explode(sh.x, sh.y, 10, Retro.cyan);
       return;
     }
-    lives--;
-    power = max(1, power - 1);
-    sound(Sfx.hurt);
-    _explode(x, y, 24, Retro.magenta);
-    bullets.clear();
-    _hurt = 2;
-    if (lives <= 0) over = true;
+    sh
+      ..lives -= 1
+      ..power = max(1, sh.power - 1)
+      ..hurt = 2;
+    sound(sh.alive ? Sfx.hurt : Sfx.crash);
+    _explode(sh.x, sh.y, 24, _color(sh));
+    if (players == 1) bullets.clear();
+    if (!ships.any((s) => s.alive)) over = true;
   }
 
-  static const _ship = [
+  Color _color(_Ship sh) =>
+      players == 1 ? Retro.magenta : Retro.players[sh.player];
+
+  /// La navetta più vicina ancora in gioco.
+  _Ship? _target(_Enemy e) {
+    _Ship? best;
+    var bd = double.infinity;
+    for (final sh in ships) {
+      if (!sh.alive) continue;
+      final d = (sh.x - e.x).abs() + (sh.y - e.y).abs() * 0.5;
+      if (d < bd) {
+        bd = d;
+        best = sh;
+      }
+    }
+    return best;
+  }
+
+  void _ship(_Ship sh, double dt) {
+    if (sh.hurt > 0) sh.hurt -= dt;
+    const sp = 75.0;
+    final p = sh.player;
+    if (heldBy(p, LogicalKeyboardKey.arrowLeft)) sh.x -= sp * dt;
+    if (heldBy(p, LogicalKeyboardKey.arrowRight)) sh.x += sp * dt;
+    if (heldBy(p, LogicalKeyboardKey.arrowUp)) sh.y -= sp * dt;
+    if (heldBy(p, LogicalKeyboardKey.arrowDown)) sh.y += sp * dt;
+    sh
+      ..x = sh.x.clamp(6, w - 6)
+      ..y = sh.y.clamp(50, h - 7);
+    // Fuoco automatico (più navette: un po' sfasate, suono più leggero).
+    sh.cool -= dt;
+    if (sh.cool > 0) return;
+    sh.cool = 0.2;
+    if (p == 0 || players == 1) sound(Sfx.shoot);
+    final x = sh.x, y = sh.y;
+    shots.add(_Shot(x, y - 6, 0, -150));
+    if (sh.power >= 2) {
+      shots
+        ..add(_Shot(x - 4, y - 3, -12, -145))
+        ..add(_Shot(x + 4, y - 3, 12, -145));
+    }
+    if (sh.power >= 3) {
+      shots
+        ..add(_Shot(x - 5, y - 2, -40, -130))
+        ..add(_Shot(x + 5, y - 2, 40, -130));
+    }
+  }
+
+  static const _shipSprite = [
     '....W....',
     '...WCW...',
     '...CCC...',
@@ -546,23 +626,28 @@ class SpaceGame extends RetroGame {
         b.color.withValues(alpha: (b.life * 2).clamp(0, 1)),
       );
     }
-    if (!over && (_hurt <= 0 || (_t * 14).floor().isEven)) {
+    for (final sh in ships) {
+      if (!sh.alive || (sh.hurt > 0 && (_t * 14).floor().isOdd)) continue;
+      final x = sh.x, y = sh.y;
       // Fiamma dei motori.
       final f = (_t * 20).floor().isEven;
       p.rect(x - 3, y + 3.5, 1, f ? 2 : 1, Retro.yellow);
       p.rect(x + 2, y + 3.5, 1, f ? 1 : 2, Retro.yellow);
-      p.sprite(x - 4.5, y - 3.5, _ship, {
+      p.sprite(x - 4.5, y - 3.5, _shipSprite, {
         'W': Retro.white,
         'C': Retro.cyan,
-        'M': Retro.magenta,
+        'M': _color(sh),
         'O': Retro.orange,
       });
-      if (shield) {
+      if (sh.shield) {
         final a = 0.35 + 0.25 * sin(_t * 8);
         p.rect(x - 7, y - 6, 14, 1, Retro.cyan.withValues(alpha: a));
         p.rect(x - 7, y + 5, 14, 1, Retro.cyan.withValues(alpha: a));
         p.rect(x - 7, y - 6, 1, 12, Retro.cyan.withValues(alpha: a));
         p.rect(x + 6, y - 6, 1, 12, Retro.cyan.withValues(alpha: a));
+      }
+      if (players > 1) {
+        p.label('${sh.player + 1}', x, y + 5, _color(sh), size: 4);
       }
     }
     if (_banner > 0) {
