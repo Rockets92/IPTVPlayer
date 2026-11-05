@@ -83,6 +83,10 @@ class _Hero {
   bool grounded = false, alive = true, facingLeft = false;
   double coyote = 0, jumpBuffer = 0, dead = 0, walk = 0, resetHold = 0;
 
+  /// Appena atterrato su una cassa o su un compagno: un attimo fermo, così
+  /// col telecomando non si scivola giù dall'altra parte.
+  double settle = 0;
+
   /// Su chi sta in piedi (per farsi trasportare).
   _Hero? on;
   static const w = 6.0, h = 10.0;
@@ -437,14 +441,17 @@ class TandemGame extends RetroGame {
   }
 
   /// Sposta una cassa in orizzontale; restituisce di quanto si è mossa.
-  double _push(_Crate k, double dx) {
+  double _push(_Crate k, double dx, _Hero pusher) {
     final x0 = k.x;
     k.x += dx;
     if (_hitsSolid(k.rect) ||
         _bodies(except: k).any((b) => b.overlaps(k.rect)) ||
         heroes.any(
           (o) =>
-              o.alive && o.rect.deflate(0.5).overlaps(k.rect) && o.on == null,
+              !identical(o, pusher) &&
+              o.alive &&
+              o.rect.deflate(0.5).overlaps(k.rect) &&
+              o.on == null,
         )) {
       k.x = x0;
     }
@@ -461,8 +468,12 @@ class TandemGame extends RetroGame {
     final l = heldBy(i, LogicalKeyboardKey.arrowLeft);
     final r = heldBy(i, LogicalKeyboardKey.arrowRight);
     const speed = 56.0;
-    final target = l == r ? 0.0 : (l ? -speed : speed);
-    p.vx += (target - p.vx) * min(1, dt * (p.grounded ? 18 : 9));
+    p.settle = max(0, p.settle - dt);
+    final target = l == r || p.settle > 0 ? 0.0 : (l ? -speed : speed);
+    // A terra ci si ferma subito (niente pattinate giù dalle casse), in aria
+    // si cambia direzione con un po' meno prontezza.
+    final grip = p.grounded ? (target == 0 ? 45.0 : 22.0) : 14.0;
+    p.vx += (target - p.vx) * min(1, dt * grip);
     if (target != 0) p.facingLeft = target < 0;
     if (p.grounded && target != 0) p.walk += dt * 10;
 
@@ -514,10 +525,12 @@ class TandemGame extends RetroGame {
     } else {
       for (final k in crates) {
         if (!k.rect.overlaps(p.rect)) continue;
-        // Spinta: la cassa si muove più piano di chi la spinge.
-        final moved = p.grounded ? _push(k, dx * 0.7) : 0.0;
+        // Quasi sopra la cassa: ci si sta atterrando, non la si urta di lato.
+        if (p.rect.bottom - k.y < 3) continue;
+        // Spinta: la cassa si muove un po' più piano di chi la spinge.
+        final moved = p.grounded ? _push(k, dx * 0.8, p) : 0.0;
         p.x = dx > 0 ? k.x - _Hero.w : k.x + _Crate.s;
-        if (moved == 0) p.vx = 0;
+        if (moved == 0 && p.grounded) p.vx = 0;
         if (_hitsSolid(p.rect)) p.x = before.left;
       }
     }
@@ -529,6 +542,7 @@ class TandemGame extends RetroGame {
     p.vy = min(p.vy + 400 * dt, 230);
     final b2 = p.rect;
     p.y += p.vy * dt;
+    final wasStanding = p.grounded;
     p.grounded = false;
     p.on = null;
     if (_hitsSolid(p.rect)) {
@@ -551,12 +565,14 @@ class TandemGame extends RetroGame {
     }
     for (final k in crates) {
       if (!k.rect.overlaps(p.rect)) continue;
-      if (p.vy >= 0 && b2.bottom <= k.y + 0.5) {
+      if (p.vy >= 0 && b2.bottom <= k.y + 3) {
         p
           ..y = k.y - _Hero.h
           ..vy = 0
           ..grounded = true;
-      } else if (p.vy < 0) {
+        if (!wasStanding) _settleOn(p, k.x, _Crate.s);
+      } else if (p.vy < 0 && b2.top >= k.rect.bottom - 3) {
+        // Testata contro una cassa sopra di sé.
         p
           ..y = k.rect.bottom
           ..vy = 0;
@@ -572,10 +588,22 @@ class TandemGame extends RetroGame {
           ..vy = 0
           ..grounded = true
           ..on = o;
+        if (!wasStanding) _settleOn(p, o.x, _Hero.w);
       }
     }
 
     _touch(p);
+  }
+
+  /// Atterraggio su un appoggio stretto: ci si ferma e ci si centra un po',
+  /// purché non si finisca dentro un muro.
+  void _settleOn(_Hero p, double left, double width) {
+    final x0 = p.x;
+    p
+      ..vx = 0
+      ..settle = 0.16
+      ..x = p.x.clamp(left - 1, left + width - _Hero.w + 1);
+    if (_hitsSolid(p.rect)) p.x = x0;
   }
 
   void _touch(_Hero p) {

@@ -229,6 +229,35 @@ void main() {
     expect(g.won, isTrue);
   });
 
+  test('cassa: si spinge, ci si salta sopra e ci si resta', () {
+    for (final dt in [1 / 60, 1 / 30, 0.05]) {
+      final g = start(1);
+      final hero = g.heroes[0], crate = g.crates.first;
+      hero.x = 19 * 8;
+      g.pads[0].add(_r);
+      // Spinge tenendo premuto: la cassa avanza.
+      for (var i = 0; i < 0.8 / dt; i++) {
+        g.update(dt);
+      }
+      expect(crate.x, greaterThan(23 * 8 + 4), reason: 'spinta a $dt');
+      // Salto mentre spinge, sempre tenendo premuto a destra: atterra sopra.
+      g.onPlayerKey(0, _up);
+      var lowest = 0.0;
+      for (var i = 0; i < 0.2 / dt; i++) {
+        g.update(dt);
+        lowest = hero.y > lowest ? hero.y : lowest;
+      }
+      expect(lowest, lessThanOrEqualTo(94), reason: 'mai dentro il terreno');
+      // Lascia il tasto in volo: atterra sulla cassa e non scivola giù.
+      g.pads[0].clear();
+      for (var i = 0; i < 1 / dt; i++) {
+        g.update(dt);
+      }
+      expect(hero.y, closeTo(crate.y - 10, 0.01), reason: 'fermo sulla cassa');
+      expect(hero.grounded, isTrue);
+    }
+  });
+
   test('chi aspetta all\'uscita non basta: servono tutti', () {
     final g = start(2);
     g.heroes[0]
