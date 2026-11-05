@@ -11,6 +11,7 @@ TandemGame start(int players, {int level = 1}) {
     ..players = players
     ..reset();
   if (level > 1) g.goTo(level);
+  g.skipStory();
   // Le prove riguardano gli enigmi: i mostriciattoli restano a casa.
   for (final w in g.walkers) {
     w.alive = false;
@@ -28,6 +29,7 @@ bool walk(TandemGame g, Map<int, double> cols, {bool hop = true}) {
     }
     for (final e in cols.entries) {
       final h = g.heroes[e.key];
+      if (h.inside) continue;
       final target = e.value * 8 + 1;
       final dx = target - h.x;
       if (dx.abs() < 1.2 && h.grounded) continue;
@@ -56,6 +58,21 @@ bool walk(TandemGame g, Map<int, double> cols, {bool hop = true}) {
     expect(g.over, isFalse, reason: 'nessuno deve morire');
   }
   return false;
+}
+
+/// Aspetta la festa di fine livello e salta la scena della storia.
+/// Restituisce il livello raggiunto.
+int finish(TandemGame g) {
+  final from = g.level;
+  for (var i = 0; i < 60 * 5 && g.level == from && !g.inStory; i++) {
+    g.update(1 / 60);
+  }
+  expect(g.inStory, isTrue, reason: 'dopo la porta parte la storia');
+  g.skipStory();
+  for (final w in g.walkers) {
+    w.alive = false;
+  }
+  return g.over ? -1 : g.level;
 }
 
 /// Salto di [p] verso la colonna [col] (sulla testa del compagno, su un
@@ -108,10 +125,7 @@ void main() {
     expect(walk(g, {1: 53}), isTrue);
     expect(walk(g, {0: 55}), isTrue);
     expect(walk(g, {0: 67.2, 1: 67.9}), isTrue);
-    for (var i = 0; i < 60 && g.level == 1; i++) {
-      g.update(1 / 60);
-    }
-    expect(g.level, 2);
+    expect(finish(g), 2);
   });
 
   test('livello 1 da soli con la cassa', () {
@@ -129,10 +143,7 @@ void main() {
     // La cassa resta sulla pedana: la si scavalca.
     jump(g, 0, 42);
     expect(walk(g, {0: 67.5}), isTrue);
-    for (var i = 0; i < 60 && g.level == 1; i++) {
-      g.update(1 / 60);
-    }
-    expect(g.level, 2);
+    expect(finish(g), 2);
   });
 
   test('livello 2 in due: porta a pedane e scalino che compare', () {
@@ -156,10 +167,7 @@ void main() {
       jump(g, p, 75);
     }
     expect(walk(g, {0: 88.2, 1: 88.9}), isTrue);
-    for (var i = 0; i < 60 && g.level == 2; i++) {
-      g.update(1 / 60);
-    }
-    expect(g.level, 3);
+    expect(finish(g), 3);
   });
 
   test('livello 3 in due: porta a tempo e gran finale', () {
@@ -182,10 +190,7 @@ void main() {
       expect(walk(g, {p: 93.0 - p}), isTrue);
     }
     expect(walk(g, {0: 96.2, 1: 96.9}), isTrue);
-    for (var i = 0; i < 60 && !g.over; i++) {
-      g.update(1 / 60);
-    }
-    expect(g.won, isTrue);
+    expect(finish(g), 4);
   });
 
   test('livelli 2 e 3 da soli con le casse', () {
@@ -202,10 +207,7 @@ void main() {
     jump(g, 0, 70.5);
     jump(g, 0, 75);
     expect(walk(g, {0: 88.5}), isTrue);
-    for (var i = 0; i < 60 && g.level == 2; i++) {
-      g.update(1 / 60);
-    }
-    expect(g.level, 3);
+    expect(finish(g), 3);
     for (final w in g.walkers) {
       w.alive = false;
     }
@@ -225,10 +227,159 @@ void main() {
     jump(g, 0, 85.5);
     jump(g, 0, 90);
     expect(walk(g, {0: 96.5}), isTrue);
-    for (var i = 0; i < 60 && !g.over; i++) {
-      g.update(1 / 60);
-    }
+    expect(finish(g), 4);
+  });
+
+  test('livello 4 in due: chiavi, ponte e gabbia', () {
+    final g = start(2, level: 4);
+    expect(walk(g, {0: 11, 1: 13}), isTrue);
+    jump(g, 0, 13);
+    jump(g, 0, 15);
+    expect(g.heroes[0].key, isNotNull, reason: 'prima chiave');
+    expect(walk(g, {0: 23, 1: 22}), isTrue);
+    walk(g, {0: 25.4}, hop: false);
+    expect(g.heroes[0].key, isNull, reason: 'lucchetto aperto');
+    expect(walk(g, {0: 30, 1: 29}), isTrue);
+    expect(walk(g, {1: 32}), isTrue);
+    expect(walk(g, {0: 43}), isTrue);
+    expect(walk(g, {1: 45}), isTrue);
+    // Gabbia: uno tiene la pedana fuori, l'altro entra e tiene quella dentro.
+    expect(walk(g, {1: 48}), isTrue);
+    expect(walk(g, {0: 52}), isTrue);
+    expect(walk(g, {1: 55}), isTrue);
+    jump(g, 0, 55);
+    jump(g, 0, 56.5);
+    expect(g.heroes[0].key, isNotNull, reason: 'seconda chiave');
+    walk(g, {0: 58.4}, hop: false);
+    expect(g.heroes[0].key, isNull);
+    expect(walk(g, {0: 63, 1: 61}), isTrue);
+    expect(walk(g, {0: 84.2, 1: 84.9}), isTrue);
+    expect(finish(g), 5);
+  });
+
+  test('livello 4 da soli', () {
+    final g = start(1, level: 4);
+    expect(walk(g, {0: 9}), isTrue);
+    walk(g, {0: 12.2}, hop: false);
+    jump(g, 0, 13.3);
+    jump(g, 0, 15);
+    expect(g.heroes[0].key, isNotNull);
+    walk(g, {0: 25.4});
+    expect(g.heroes[0].key, isNull);
+    expect(walk(g, {0: 29}), isTrue);
+    walk(g, {0: 31.2}, hop: false);
+    jump(g, 0, 32);
+    expect(walk(g, {0: 45}), isTrue);
+    walk(g, {0: 47.2}, hop: false);
+    jump(g, 0, 48);
+    expect(walk(g, {0: 53}), isTrue);
+    walk(g, {0: 54.2}, hop: false);
+    jump(g, 0, 55.3);
+    jump(g, 0, 56.5);
+    expect(g.heroes[0].key, isNotNull);
+    walk(g, {0: 58.4}, hop: false);
+    expect(g.heroes[0].key, isNull);
+    expect(walk(g, {0: 84.5}), isTrue);
+    expect(finish(g), 5);
+  });
+
+  test('livello 5 in due: uno sopra e uno sotto', () {
+    final g = start(2, level: 5);
+    expect(walk(g, {0: 12, 1: 10}), isTrue);
+    jump(g, 0, 14.5);
+    jump(g, 0, 17.5);
+    jump(g, 0, 21);
+    expect(g.heroes[0].y, lessThan(64));
+    expect(walk(g, {0: 27}), isTrue);
+    expect(walk(g, {1: 34}), isTrue);
+    expect(walk(g, {0: 44}), isTrue);
+    expect(walk(g, {1: 51}), isTrue);
+    expect(walk(g, {0: 60}), isTrue);
+    expect(walk(g, {0: 65, 1: 64}), isTrue);
+    expect(walk(g, {0: 82.2, 1: 82.9}), isTrue);
+    expect(finish(g), 6);
+  });
+
+  test('livello 5: senza il compagno sopra la porta di sotto resta chiusa', () {
+    final g = start(2, level: 5);
+    expect(walk(g, {0: 33, 1: 32}), isFalse);
+  });
+
+  test('livello 5 da soli sul camminamento', () {
+    final g = start(1, level: 5);
+    expect(walk(g, {0: 12}), isTrue);
+    jump(g, 0, 14.5);
+    jump(g, 0, 17.5);
+    jump(g, 0, 21);
+    expect(walk(g, {0: 64}), isTrue);
+    expect(walk(g, {0: 82.5}), isTrue);
+    expect(finish(g), 6);
+  });
+
+  test('livello 6 in due e finale della storia', () {
+    final g = start(2, level: 6);
+    expect(walk(g, {0: 8, 1: 18}), isTrue);
+    expect(walk(g, {0: 24, 1: 23}), isTrue, reason: 'porta a tempo');
+    expect(walk(g, {1: 27}), isTrue);
+    expect(walk(g, {0: 38}), isTrue);
+    expect(walk(g, {1: 41}), isTrue);
+    jump(g, 0, 41);
+    jump(g, 0, 43);
+    expect(g.heroes[0].key, isNotNull);
+    walk(g, {0: 45.4}, hop: false);
+    expect(g.heroes[0].key, isNull);
+    expect(walk(g, {0: 49, 1: 51}), isTrue);
+    jump(g, 0, 51);
+    jump(g, 0, 56);
+    expect(walk(g, {1: 61}), isTrue);
+    expect(walk(g, {0: 66, 1: 68}), isTrue);
+    jump(g, 0, 68);
+    jump(g, 0, 72);
+    expect(walk(g, {0: 74}), isTrue);
+    expect(walk(g, {1: 72}), isTrue);
+    expect(walk(g, {0: 88.2, 1: 88.9}), isTrue);
+    expect(finish(g), -1);
     expect(g.won, isTrue);
+  });
+
+  test('livello 6 da soli', () {
+    final g = start(1, level: 6);
+    expect(walk(g, {0: 4}), isTrue);
+    walk(g, {0: 7.2}, hop: false);
+    jump(g, 0, 8.5);
+    expect(walk(g, {0: 18}), isTrue);
+    expect(walk(g, {0: 23}), isTrue, reason: 'porta a tempo');
+    walk(g, {0: 26.2}, hop: false);
+    jump(g, 0, 27);
+    expect(walk(g, {0: 39}), isTrue);
+    walk(g, {0: 40.2}, hop: false);
+    jump(g, 0, 41);
+    jump(g, 0, 43);
+    expect(g.heroes[0].key, isNotNull);
+    walk(g, {0: 45.4}, hop: false);
+    expect(g.heroes[0].key, isNull);
+    expect(walk(g, {0: 48}), isTrue);
+    walk(g, {0: 50.2}, hop: false);
+    jump(g, 0, 51);
+    jump(g, 0, 55);
+    expect(walk(g, {0: 63}), isTrue);
+    walk(g, {0: 68.2}, hop: false);
+    jump(g, 0, 69.2);
+    jump(g, 0, 72);
+    expect(walk(g, {0: 88.5}), isTrue);
+    expect(finish(g), -1);
+    expect(g.won, isTrue);
+  });
+
+  test('la storia si sfoglia con OK', () {
+    final g = TandemGame()
+      ..players = 1
+      ..reset();
+    expect(g.inStory, isTrue);
+    for (var i = 0; i < 40 && g.inStory; i++) {
+      g.onPlayerKey(0, LogicalKeyboardKey.enter);
+    }
+    expect(g.inStory, isFalse);
   });
 
   test('cassa: si spinge, ci si salta sopra e ci si resta', () {

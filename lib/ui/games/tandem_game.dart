@@ -16,11 +16,76 @@ import 'sfx.dart';
 /// `a b c` aprono le porte `A B C` finché qualcuno ci sta sopra;
 /// `d` aprono la porta `D` per qualche secondo, ma solo se premute tutte
 /// insieme; `x y z` fanno comparire i ponti e gli scalini `X Y Z`.
+/// `k` è una chiave: chi la prende apre il lucchetto `K` più vicino.
 class _Level {
-  const _Level(this.name, this.rows);
+  const _Level(this.name, this.rows, {this.soloBridges = ''});
   final String name;
   final List<String> rows;
+
+  /// Ponti sempre presenti giocando da soli (dove servirebbe un compagno).
+  final String soloBridges;
 }
+
+/// Una battuta della storia.
+class _Say {
+  const _Say(this.who, this.lines);
+  final String who;
+  final List<String> lines;
+}
+
+const _pip = 'PIP', _pop = 'POP', _baron = 'BARONE BUIO', _tale = '';
+
+/// La storia: una scena prima di ogni livello e il gran finale.
+const _story = <List<_Say>>[
+  [
+    _Say(_tale, [
+      'LUCCIOLA, LA CITTA\' DELLE LUCI.',
+      'UNA NOTTE... BUIO TOTALE!',
+    ]),
+    _Say(_pop, ['CHI HA SPENTO IL MONDO?', 'HO PESTATO UN GATTO. CREDO.']),
+    _Say(_pip, ['IL BARONE BUIO HA RUBATO', 'LA GRANDE LAMPADINA!']),
+    _Say(_pop, ['ANDIAMO A RIPRENDERLA.', 'IO SALGO SU DI TE, OK?']),
+    _Say(_pip, ['PERCHE\' SEMPRE TU SOPRA?']),
+  ],
+  [
+    _Say(_baron, ['MUAHAHA! NESSUNO PASSERA\'', 'LA MIA VALLE OSCURA!']),
+    _Say(_pop, ['HA UNA VOCE BUFFA.']),
+    _Say(_pip, ['PARLA AL MEGAFONO.', 'CON LE PILE SCARICHE.']),
+  ],
+  [
+    _Say(_pip, ['LA FORTEZZA DEL BARONE!']),
+    _Say(_pop, ['PORTE CHE SI APRONO IN DUE...', 'SENZA DI TE SAREI PERSO.']),
+    _Say(_pip, ['SENZA DI ME SARESTI A LETTO.']),
+  ],
+  [
+    _Say(_tale, [
+      'NELLE CANTINE, CHIAVI D\'ORO',
+      'APRONO I LUCCHETTI DEL BARONE.',
+    ]),
+    _Say(_pop, ['LA PRENDO IO! ...NON CI ARRIVO.']),
+    _Say(_pip, ['SALI. LE MIE SPALLE SONO TUE.', 'MA TOGLI LE SCARPE.']),
+  ],
+  [
+    _Say(_baron, ['VI DIVIDERO\'! UNO SOPRA,', 'UNO SOTTO! MUAHAHA... COFF.']),
+    _Say(_pip, ['IO APRO A TE, TU APRI A ME.']),
+    _Say(_pop, ['COME I CASSETTI DELLA NONNA.']),
+  ],
+  [
+    _Say(_pop, ['SENTO PROFUMO DI LAMPADINA.']),
+    _Say(_pip, ['LE LAMPADINE NON PROFUMANO.']),
+    _Say(_pop, ['QUESTA SI\'. SA DI VITTORIA.']),
+    _Say(_baron, ['FERMI! LA LAMPADINA E\' MIA!']),
+  ],
+  [
+    _Say(_pip, ['BARONE, PERCHE\' L\'HAI RUBATA?']),
+    _Say(_baron, ['...HO PAURA DEL BUIO.', 'NON DITELO A NESSUNO.']),
+    _Say(_pop, ['TIENI: UNA LUCINA DA NOTTE.', 'A FORMA DI PAPERA.']),
+    _Say(_baron, ['...E\' BELLISSIMA. SNIF.']),
+    _Say(_tale, ['LUCCIOLA SI RIACCENDE,', 'IL BARONE DORME SERENO.']),
+    _Say(_pip, ['LA PROSSIMA VOLTA', 'STO SOPRA IO.']),
+    _Say(_pop, ['NO.']),
+  ],
+];
 
 const _levels = [
   _Level('PRIMI PASSI', [
@@ -74,6 +139,57 @@ const _levels = [
     '###############...#######################YYYYYYYY#########################...#######################',
     '###############...#######################^^^^^^^^#########################...#######################',
   ]),
+  _Level('LE CANTINE', [
+    '..........................#........................#.......#................................',
+    '..........................#........................#.......#................................',
+    '..........................#........................#.......#................................',
+    '..........................#........................#.......#................................',
+    '..........................#........................#.......#................................',
+    '..........................#........................#.......#................................',
+    '..........................#........................#.......#................................',
+    '..........................#........................#.......#................................',
+    '..........................#........................#.......#................................',
+    '...............k..........#........................#....k..#.............o.o................',
+    '....o.o.o.....===.........K.........o.o.o..........B....==.K................................',
+    '..........................K........................B.......K.............===........EE......',
+    '..........C...............K..FC.x..........x..C.b..Bb.C....K..F..w...........w......EE......',
+    '###################...############XXXXXXXX##########################...#####################',
+    '###################...############^^^^^^^^##########################...#####################',
+  ]),
+  _Level('IL CAMMINO DI RONDA', soloBridges: 'YZ', [
+    '..........................................................................................',
+    '..........................................................................................',
+    '..........................................................................................',
+    '..........................................................................................',
+    '..........................................................................................',
+    '..........................................................................................',
+    '......................o.o.................................................................',
+    '...........................a................b...............w.............................',
+    '....................################YYYYYY############ZZZZZ#####..........................',
+    '.................==...........A...............B...........................................',
+    '....o.o.o.....................A...............B..........................ooo..............',
+    '..............==..............A.o.....o.o.....B..o................................EE......',
+    '.........................F....Aa..y...........B....z..............F...w...........EE......',
+    '#########################################################################...##############',
+    '#########################################################################...##############',
+  ]),
+  _Level('LA SALA DEL BARONE', [
+    '......................#.......................#.................................................',
+    '......................#.......................#.................................................',
+    '......................#.......................#.................................................',
+    '......................#.......................#.................................................',
+    '......................#.......................#.................................................',
+    '......................#.......................#.................................................',
+    '......................#.......................#.................................................',
+    '......................#.......................#.................................................',
+    '......................#.......................#.......oo.o..................o...o...o...EE......',
+    '......................#....................k..#.........a.................z....w........EE......',
+    '...........o.o.o......D........o.o.o......==..K.....########..........#######################...',
+    '......................D.......................K.....A......A..........#######################...',
+    '.....C..d.........d...D.CF.y..........y.C.....K..C..A......A..F.C.w..Z#######################...',
+    '#############################YYYYYYYY###########################################################',
+    '#############################^^^^^^^^###########################################################',
+  ]),
 ];
 
 class _Hero {
@@ -82,6 +198,16 @@ class _Hero {
   double x, y, vx = 0, vy = 0;
   bool grounded = false, alive = true, facingLeft = false;
   double coyote = 0, jumpBuffer = 0, dead = 0, walk = 0, resetHold = 0;
+
+  /// Entrato nella porta d'uscita: aspetta i compagni lì dentro.
+  bool inside = false;
+  double insideT = 0;
+
+  /// Porta una chiave (e da dove l'ha presa, se dovesse cadere).
+  int? key;
+
+  /// Ultimo punto sicuro su terreno vero, per ripartire dopo una caduta.
+  double safeX = 0, safeY = 0;
 
   /// Su chi sta in piedi (per farsi trasportare).
   _Hero? on;
@@ -129,6 +255,7 @@ class TandemGame extends RetroGame {
     '← →: CAMMINA   OK O ↑: SALTA',
     'DA SOLI: SPINGI LE CASSE SU PEDANE E MURI',
     'IN SQUADRA: SALI SUL COMPAGNO, TENETE LE PEDANE',
+    'TUTTI NELLA PORTA PER FINIRE (↑ PER USCIRNE)',
     '↓ TENUTO: RIPARTI (SE TI BLOCCHI)',
   ];
   @override
@@ -151,11 +278,28 @@ class TandemGame extends RetroGame {
   /// Ponti appena comparsi addosso a qualcuno: restano vuoti finché non si
   /// sposta, così nessuno ci resta incastrato dentro.
   final _ghost = <int>{};
-  double cam = 0, _t = 0, _banner = 0, _flash = 0, _exitWait = 0;
+  double cam = 0, _t = 0, _banner = 0, _flash = 0;
+
+  /// Tutti nella porta: festa, poi livello successivo.
+  double _finish = 0;
+
+  /// Scena della storia in corso (null: si gioca).
+  List<_Say>? _scene;
+  int _sayIndex = 0;
+  double _sayChars = 0;
   double spawnX = 16, spawnY = 94;
 
   _Level get _level => _levels[level - 1];
   bool get coop => players > 1;
+
+  /// Si sta guardando una scena della storia.
+  bool get inStory => _scene != null;
+
+  /// Per le prove: salta la scena in corso.
+  @visibleForTesting
+  void skipStory() {
+    if (_scene != null) _endScene();
+  }
 
   /// Per le prove: la casella è piena?
   @visibleForTesting
@@ -179,6 +323,41 @@ class TandemGame extends RetroGame {
     _load();
   }
 
+  void _startScene(List<_Say> scene) {
+    _scene = scene;
+    _sayIndex = 0;
+    _sayChars = 0;
+  }
+
+  void _endScene() {
+    _scene = null;
+    if (level > _levels.length || _finale) {
+      won = true;
+      over = true;
+      return;
+    }
+    _banner = 3.5;
+  }
+
+  /// La scena finale è quella dopo l'ultimo livello.
+  bool _finale = false;
+
+  /// OK o salto durante una scena: completa la frase o passa alla prossima.
+  void _advanceScene() {
+    final scene = _scene!;
+    final full = scene[_sayIndex].lines.join(' ').length;
+    if (_sayChars < full) {
+      _sayChars = full.toDouble();
+      return;
+    }
+    sound(Sfx.select);
+    if (++_sayIndex >= scene.length) {
+      _endScene();
+    } else {
+      _sayChars = 0;
+    }
+  }
+
   void _load() {
     grid = [for (final r in _level.rows) r.split('')];
     cols = grid.first.length;
@@ -188,6 +367,8 @@ class TandemGame extends RetroGame {
     _pressed.clear();
     _timedOpen.clear();
     _ghost.clear();
+    _finish = 0;
+    _finale = false;
     for (var r = 0; r < grid.length; r++) {
       for (var c = 0; c < cols; c++) {
         switch (grid[r][c]) {
@@ -207,11 +388,13 @@ class TandemGame extends RetroGame {
       ..clear()
       ..addAll([
         for (var i = 0; i < players.clamp(1, 4); i++)
-          _Hero(i, spawnX + i * 9, spawnY),
+          _Hero(i, spawnX + i * 9, spawnY)
+            ..safeX = spawnX + i * 9
+            ..safeY = spawnY,
       ]);
     cam = 0;
-    _banner = 3.5;
-    _exitWait = 0;
+    _banner = 0;
+    _startScene(_story[level - 1]);
   }
 
   // --- Mappa ----------------------------------------------------------------
@@ -232,9 +415,10 @@ class TandemGame extends RetroGame {
   /// Pieno per i corpi (non per le piattaforme attraversabili).
   bool _solid(int c, int r) {
     final ch = _at(c, r);
-    if (ch == '#') return true;
+    if (ch == '#' || ch == 'K') return true;
     if (_isDoor(ch)) return !_open(ch);
     if (_isBridge(ch)) {
+      if (!coop && _level.soloBridges.contains(ch)) return true;
       return _pressed.contains(ch) && !_ghost.contains(r * 1000 + c);
     }
     return false;
@@ -250,12 +434,28 @@ class TandemGame extends RetroGame {
 
   @override
   void onPlayerKey(int p, LogicalKeyboardKey k) {
-    if (p >= heroes.length) return;
-    if (k == LogicalKeyboardKey.arrowUp ||
+    final jump =
+        k == LogicalKeyboardKey.arrowUp ||
         isSelectKey(k) ||
-        k == LogicalKeyboardKey.keyB) {
-      heroes[p].jumpBuffer = 0.14;
+        k == LogicalKeyboardKey.keyB;
+    if (_scene != null) {
+      if (jump) _advanceScene();
+      return;
     }
+    if (p >= heroes.length || _finish > 0) return;
+    final hero = heroes[p];
+    if (!jump) return;
+    if (hero.inside) {
+      // Si può riuscire dalla porta (se il compagno ha ancora bisogno).
+      if (hero.insideT > 0.5) {
+        hero
+          ..inside = false
+          ..vy = -60;
+        sound(Sfx.move);
+      }
+      return;
+    }
+    hero.jumpBuffer = 0.14;
   }
 
   @override
@@ -266,6 +466,17 @@ class TandemGame extends RetroGame {
   @override
   void update(double dt) {
     _t += dt;
+    final scene = _scene;
+    if (scene != null) {
+      // Testo che compare lettera per lettera.
+      _sayChars += dt * 28;
+      _camera();
+      return;
+    }
+    if (_finish > 0) {
+      _celebrate(dt);
+      return;
+    }
     _banner = max(0, _banner - dt);
     _flash = max(0, _flash - dt);
     for (final k in _timedOpen.keys.toList()) {
@@ -301,7 +512,7 @@ class TandemGame extends RetroGame {
     for (final wk in walkers) {
       if (wk.alive) _walker(wk, dt);
     }
-    _exit(dt);
+    _exit();
   }
 
   void _plates() {
@@ -309,7 +520,7 @@ class TandemGame extends RetroGame {
     _pressed.clear();
     final feet = <Rect>[
       for (final hero in heroes)
-        if (hero.alive) hero.rect,
+        if (hero.alive && !hero.inside) hero.rect,
       for (final k in crates) k.rect,
     ];
     final d = <String, int>{};
@@ -446,6 +657,7 @@ class TandemGame extends RetroGame {
           (o) =>
               !identical(o, pusher) &&
               o.alive &&
+              !o.inside &&
               o.rect.deflate(0.5).overlaps(k.rect) &&
               o.on == null,
         )) {
@@ -458,6 +670,10 @@ class TandemGame extends RetroGame {
     if (!p.alive) {
       p.dead -= dt;
       if (p.dead <= 0 && lives > 0) _respawn(p);
+      return;
+    }
+    if (p.inside) {
+      p.insideT += dt;
       return;
     }
     final i = p.player;
@@ -485,7 +701,7 @@ class TandemGame extends RetroGame {
               ..vy = 0;
           }
         }
-        _respawn(p, lose: false);
+        _respawn(p, toFlag: !coop);
         return;
       }
     } else {
@@ -575,7 +791,7 @@ class TandemGame extends RetroGame {
     }
     // La testa dei compagni è un appoggio: si sale uno sull'altro.
     for (final o in heroes) {
-      if (identical(o, p) || !o.alive || p.vy < 0) continue;
+      if (identical(o, p) || !o.alive || o.inside || p.vy < 0) continue;
       final ox = p.x + _Hero.w > o.x + 1 && p.x < o.x + _Hero.w - 1;
       if (ox && b2.bottom <= o.y + 0.5 && p.y + _Hero.h >= o.y) {
         p
@@ -587,7 +803,22 @@ class TandemGame extends RetroGame {
       }
     }
 
+    _remember(p);
     _touch(p);
+  }
+
+  /// Annota dove si è appoggiati su terreno vero (non casse, ponti o teste):
+  /// dopo una caduta si riparte da lì.
+  void _remember(_Hero p) {
+    if (!p.grounded || p.on != null) return;
+    final r = ((p.y + _Hero.h) / t).floor();
+    final cl = (p.x / t).floor(), cr = ((p.x + _Hero.w - 0.01) / t).floor();
+    bool firm(int c) => _at(c, r) == '#' && _at(c, r - 1) != '^';
+    if (firm(cl) && firm(cr) && firm(cl - 1) && firm(cr + 1)) {
+      p
+        ..safeX = p.x
+        ..safeY = p.y;
+    }
   }
 
   /// Atterraggio su un appoggio stretto: chi non tiene premuta una
@@ -614,6 +845,15 @@ class TandemGame extends RetroGame {
           case '^':
             final spike = Rect.fromLTWH(c * t + 1, r * t + 4, t - 2, 4);
             if (rect.overlaps(spike)) return _die(p);
+          case 'k':
+            if (p.key == null) {
+              grid[r][c] = '.';
+              p.key = r * 1000 + c;
+              sound(Sfx.power);
+              buzz(p.player, 60);
+            }
+          case 'E':
+            if (p.grounded) return _enter(p, c);
           case 'o':
             grid[r][c] = '.';
             coins++;
@@ -631,6 +871,20 @@ class TandemGame extends RetroGame {
         }
       }
     }
+    if (p.key != null) {
+      // Un lucchetto toccato (anche solo sfiorato di lato) si apre.
+      for (var c = c0 - 1; c <= c1 + 1; c++) {
+        for (var r = r0; r <= r1; r++) {
+          if (_at(c, r) != 'K') continue;
+          final cell = Rect.fromLTWH(c * t - 0.5, r * t, t + 1, t);
+          if (cell.overlaps(rect)) {
+            _unlock(c);
+            p.key = null;
+            return;
+          }
+        }
+      }
+    }
     for (final wk in walkers) {
       if (!wk.alive || !wk.rect.overlaps(rect)) continue;
       if (p.vy > 0 && rect.bottom - wk.rect.top < 5) {
@@ -645,8 +899,43 @@ class TandemGame extends RetroGame {
     }
   }
 
+  /// Apre il lucchetto della colonna [col] (e quelli accanto).
+  void _unlock(int col) {
+    for (var r = 0; r < grid.length; r++) {
+      for (var c = col - 2; c <= col + 2; c++) {
+        if (_at(c, r) == 'K') {
+          grid[r][c] = '.';
+          _burst(c * t + 4, r * t + 4, Retro.yellow, 4);
+        }
+      }
+    }
+    sound(Sfx.level);
+    _flash = 0.2;
+  }
+
+  /// Entra nella porta d'uscita e aspetta lì i compagni.
+  void _enter(_Hero p, int c) {
+    final left = _at(c - 1, ((p.y + 5) / t).floor()) == 'E' ? c - 1 : c;
+    p
+      ..inside = true
+      ..insideT = 0
+      ..x = left * t + 5
+      ..vx = 0
+      ..vy = 0
+      ..on = null;
+    sound(Sfx.bonus);
+    buzz(p.player, 80);
+    _burst(p.x + 3, p.y + 5, Retro.yellow, 8);
+  }
+
   void _die(_Hero p) {
     if (!p.alive) return;
+    final key = p.key;
+    if (key != null) {
+      // La chiave torna al suo posto.
+      grid[key ~/ 1000][key % 1000] = 'k';
+      p.key = null;
+    }
     p
       ..alive = false
       ..dead = 1.1
@@ -660,23 +949,28 @@ class TandemGame extends RetroGame {
     }
   }
 
-  void _respawn(_Hero p, {bool lose = true}) {
-    // Si rinasce accanto a un compagno ancora in gioco, altrimenti
+  void _respawn(_Hero p, {bool toFlag = false}) {
+    // Si riparte dall'ultimo punto sicuro; se è troppo lontano dai compagni
+    // ancora in gioco, accanto a uno di loro. Da soli, ↓ tenuto riporta
     // all'ultima bandierina.
     final mate = heroes
-        .where((x) => x.alive && !identical(x, p) && x.grounded)
+        .where((x) => x.alive && !x.inside && !identical(x, p) && x.grounded)
         .firstOrNull;
-    if (mate != null) {
-      p
-        ..x = mate.x
-        ..y = mate.y;
-    } else {
+    if (toFlag) {
       p
         ..x = spawnX
         ..y = spawnY;
-      if (!coop || heroes.every((x) => !x.alive || identical(x, p))) {
-        cam = (spawnX - 60).clamp(0, max(0, cols * t - w));
-      }
+    } else if (mate == null || (mate.x - p.safeX).abs() < 120) {
+      p
+        ..x = p.safeX
+        ..y = p.safeY;
+    } else {
+      p
+        ..x = mate.x
+        ..y = mate.y;
+    }
+    if (heroes.every((x) => !x.alive || identical(x, p) || x.inside)) {
+      cam = (p.x - 60).clamp(0, max(0, cols * t - w));
     }
     p
       ..alive = true
@@ -701,52 +995,50 @@ class TandemGame extends RetroGame {
     }
   }
 
-  void _exit(double dt) {
-    final alive = heroes.where((x) => x.alive).toList();
-    if (alive.length < heroes.length || alive.isEmpty) {
-      _exitWait = 0;
-      return;
-    }
-    bool inExit(_Hero p) {
-      final c0 = (p.rect.left / t).floor(),
-          c1 = ((p.rect.right - 0.01) / t).floor();
-      final r = ((p.rect.bottom - 1) / t).floor();
-      for (var c = c0; c <= c1; c++) {
-        if (_at(c, r) == 'E') return true;
-      }
-      return false;
-    }
-
-    if (alive.every(inExit)) {
-      _exitWait += dt;
-      if (_exitWait > 0.4) _nextLevel();
-    } else {
-      _exitWait = 0;
-    }
-  }
-
-  /// Qualcuno è all'uscita ma mancano dei compagni.
-  bool get _someoneWaiting {
-    if (!coop) return false;
-    var any = false, all = true;
-    for (final p in heroes) {
-      final c = ((p.x + 3) / t).floor(), r = ((p.y + _Hero.h - 1) / t).floor();
-      final ok = p.alive && _at(c, r) == 'E';
-      any |= ok;
-      all &= ok;
-    }
-    return any && !all;
-  }
-
-  void _nextLevel() {
+  void _exit() {
+    if (heroes.isEmpty || !heroes.every((x) => x.alive && x.inside)) return;
+    // Tutti dentro: la porta si chiude e si fa festa.
+    _finish = 2.6;
     score += 500 + max(0, lives) * 20;
-    sound(Sfx.level);
+    sound(Sfx.win);
     for (final p in heroes) {
       buzz(p.player, 150);
     }
+  }
+
+  /// Qualcuno è già nella porta ma mancano dei compagni.
+  bool get _someoneWaiting =>
+      coop && heroes.any((x) => x.inside) && !heroes.every((x) => x.inside);
+
+  void _celebrate(double dt) {
+    final before = _finish;
+    _finish -= dt;
+    // Fuochi d'artificio sopra la porta.
+    if ((before * 5).floor() != (_finish * 5).floor()) {
+      final door = heroes.first;
+      final fx = door.x + 3 + (rnd.nextDouble() - 0.5) * 60;
+      final fy = 20 + rnd.nextDouble() * 30;
+      _burst(fx, fy, Retro.rainbow[rnd.nextInt(7)], 14);
+      sound(Sfx.boom);
+    }
+    for (final b in bits) {
+      b
+        ..x += b.vx * dt
+        ..y += b.vy * dt
+        ..vy += 60 * dt
+        ..life -= dt * 0.6;
+    }
+    bits.removeWhere((b) => b.life <= 0);
+    if (_finish <= 0) {
+      _finish = 0;
+      _nextLevel();
+    }
+  }
+
+  void _nextLevel() {
     if (level >= _levels.length) {
-      won = true;
-      over = true;
+      _finale = true;
+      _startScene(_story.last);
       return;
     }
     level++;
@@ -794,11 +1086,17 @@ class TandemGame extends RetroGame {
             'SALITE SULLA TESTA DEL COMPAGNO',
             'UNO TIENE LA PEDANA, L\'ALTRO PASSA',
             'LE DUE PEDANE ROSSE VANNO PREMUTE INSIEME',
+            'LA CHIAVE APRE IL LUCCHETTO D\'ORO',
+            'UNO SOPRA, UNO SOTTO: APRITEVI A VICENDA',
+            'TUTTO INSIEME, FINO AL TRONO',
           ]
         : const [
             'SPINGI LA CASSA PER SALIRE',
             'LA CASSA PUO\' TENERE GIU\' UNA PEDANA',
             'CASSA SU UNA PEDANA, TU SULL\'ALTRA',
+            'LA CHIAVE APRE IL LUCCHETTO D\'ORO',
+            'IL CAMMINAMENTO TI PORTA AVANTI',
+            'TUTTO QUELLO CHE HAI IMPARATO',
           ];
     return hints[(level - 1) % hints.length];
   }
@@ -869,8 +1167,21 @@ class TandemGame extends RetroGame {
         {'P': Retro.purple, 'W': Retro.white, 'K': Retro.bg},
       );
     }
+    if (level == _levels.length) {
+      // Il Barone aspetta accanto al trono, con la lampadina rubata.
+      final bx = (cols - 5) * t, by = 10 * t - 13;
+      p.glow(bx + 10, by + 1, 6, 7, Retro.yellow, r: 4);
+      p.rect(bx + 11, by + 2, 4, 4, Retro.yellow);
+      p.rect(bx + 12, by + 6, 2, 2, Retro.dim);
+      p.sprite(
+        bx,
+        by + sin(_t * 2).roundToDouble() * 0,
+        _baronSprite,
+        _baronColors,
+      );
+    }
     for (final hero in heroes) {
-      if (hero.alive) _paintHero(p, hero);
+      if (hero.alive && !hero.inside) _paintHero(p, hero);
     }
     for (final b in bits) {
       p.rect(
@@ -883,7 +1194,19 @@ class TandemGame extends RetroGame {
     }
     canvas.restore();
 
-    if (_banner > 0) {
+    if (_finish > 0) {
+      p.rect(0, 28, w, 30, Retro.bg.withValues(alpha: 0.7));
+      p.label(
+        level == _levels.length
+            ? 'LAMPADINA RITROVATA!'
+            : 'LIVELLO COMPLETATO!',
+        w / 2,
+        31,
+        Retro.rainbow[(_t * 8).floor() % 7],
+        size: 8,
+      );
+      p.label('MONETE $coins   PUNTI $score', w / 2, 45, Retro.white, size: 5);
+    } else if (_banner > 0 && _scene == null) {
       p.rect(0, 30, w, 26, Retro.bg.withValues(alpha: min(0.75, _banner)));
       p.label(
         'LIVELLO $level  ${_level.name}',
@@ -902,6 +1225,106 @@ class TandemGame extends RetroGame {
     }
     if (_flash > 0) {
       p.rect(0, 0, w, h, Retro.green.withValues(alpha: _flash * 0.5));
+    }
+    final scene = _scene;
+    if (scene != null) _paintScene(p, scene);
+  }
+
+  /// Fumetto della storia: ritratto, nome e testo che compare a lettere.
+  void _paintScene(Pix p, List<_Say> scene) {
+    p.rect(0, 0, w, h, Retro.bg.withValues(alpha: 0.55));
+    final say = scene[_sayIndex];
+    const bx = 6.0, by = 66.0, bw = w - 12, bh = 48.0;
+    p.rect(bx - 1, by - 1, bw + 2, bh + 2, Retro.dim);
+    p.rect(bx, by, bw, bh, const Color(0xFF0E0B22));
+    // Ritratto.
+    final face = Rect.fromLTWH(bx + 4, by + 6, 26, 30);
+    p.rect(face.left, face.top, face.width, face.height, Retro.screen);
+    final who = say.who;
+    if (who == _baron) {
+      p.sprite(
+        face.left + 3,
+        face.top + 2,
+        _baronSprite,
+        _baronColors,
+        size: 2,
+      );
+    } else if (who == _tale) {
+      // Il narratore: la Grande Lampadina.
+      p.glow(face.left + 7, face.top + 5, 12, 14, Retro.yellow, r: 5);
+      p.sprite(
+        face.left + 5,
+        face.top + 4,
+        const [
+          '..YYYY..',
+          '.YYWYYY.',
+          'YYWYYYYY',
+          'YYYYYYYY',
+          '.YYYYYY.',
+          '..YYYY..',
+          '..KKKK..',
+          '..KKKK..',
+          '...KK...',
+        ],
+        {'Y': Retro.yellow, 'W': Retro.white, 'K': Retro.dim},
+        size: 2,
+      );
+    } else {
+      final c = who == _pip ? Retro.players[0] : Retro.players[1];
+      p.sprite(
+        face.left + 1,
+        face.top + 5,
+        const [
+          '..HHHHHHHH..',
+          '.HHHHHHHHHH.',
+          'HHHHHHHHHHHH',
+          'HHSSSSSSSSHH',
+          '.SSEESSEESS.',
+          '.SSEESSEESS.',
+          '.SSSSSSSSSS.',
+          '..SSSMMSSS..',
+          '...SSSSSS...',
+          '.BBBBBBBBBB.',
+          'BBBBBBBBBBBB',
+        ],
+        {
+          'H': c,
+          'S': const Color(0xFFFFD8B0),
+          'E': Retro.bg,
+          'M': Retro.red,
+          'B': c,
+        },
+        size: 2,
+      );
+    }
+    final name = who == _tale ? 'NARRATORE' : who;
+    final nameColor = who == _baron
+        ? Retro.purple
+        : who == _pip
+        ? Retro.players[0]
+        : who == _pop
+        ? Retro.players[1]
+        : Retro.yellow;
+    final tx = (bx + 34 + bx + bw) / 2;
+    p.label(name, tx, by + 5, nameColor, size: 5);
+    var left = _sayChars.floor();
+    for (var i = 0; i < say.lines.length; i++) {
+      final line = say.lines[i];
+      final shown = line.substring(0, left.clamp(0, line.length));
+      left -= line.length + 1;
+      if (shown.isEmpty) break;
+      // Riga completa centrata; quella che sta comparendo cresce da sinistra.
+      final full = shown.length == line.length;
+      p.label(
+        full ? line : shown.padRight(line.length),
+        tx,
+        by + 16 + i * 9,
+        Retro.white,
+        size: 5,
+      );
+    }
+    if (_sayChars >= say.lines.join(' ').length && (_t * 2).floor().isEven) {
+      p.label('OK ▶', bx + bw - 10, by + bh - 9, Retro.yellow, size: 4);
     }
   }
 
@@ -963,7 +1386,41 @@ class TandemGame extends RetroGame {
         p.rect(x + 2, y + 1, 12, 1, Retro.yellow);
         p.rect(x + 2, y + 1, 1, 15, Retro.yellow);
         p.rect(x + 13, y + 1, 1, 15, Retro.yellow);
-        p.label('ESCI', x + 8, y - 6, Retro.yellow, size: 4);
+        final waiting = heroes.where((h) => h.inside).toList();
+        // Dentro la porta si vedono gli occhi di chi aspetta.
+        for (var i = 0; i < waiting.length; i++) {
+          final ex = x + 4 + (i % 2) * 5, ey = y + 5 + (i ~/ 2) * 4;
+          final blink = ((_t + i) * 1.3) % 3 < 0.15;
+          if (!blink) {
+            p.rect(ex, ey, 1, 1, _color(waiting[i]));
+            p.rect(ex + 2, ey, 1, 1, _color(waiting[i]));
+          }
+        }
+        if (_finish > 0) {
+          // La porta si chiude dall'alto.
+          final closed = min(1.0, (2.6 - _finish) / 0.6);
+          p.rect(x + 3, y + 2, 10, 14 * closed, const Color(0xFF8A4B22));
+          p.rect(x + 3, y + 2 + 14 * closed - 1, 10, 1, Retro.yellow);
+        }
+        p.label(
+          coop && waiting.isNotEmpty && _finish == 0
+              ? '${waiting.length}/${heroes.length}'
+              : 'ESCI',
+          x + 8,
+          y - 6,
+          Retro.yellow,
+          size: 4,
+        );
+      case 'k':
+        final bob = sin(_t * 3 + c) * 1;
+        p.glow(x + 1, y + 1 + bob, 6, 6, Retro.yellow, r: 2);
+        _key(p, x + 1, y + 2 + bob);
+      case 'K':
+        p.rect(x, y, t, t, const Color(0xFFB8860B));
+        p.rect(x + 1, y + 1, 6, 6, const Color(0xFFFFC93D));
+        p.rect(x + 1, y + 1, 6, 1, const Color(0xFFFFF0A0));
+        p.rect(x + 3, y + 2, 2, 2, const Color(0xFF5A3A00));
+        p.rect(x + 3.5, y + 4, 1, 2, const Color(0xFF5A3A00));
       default:
         if ('abcdxyz'.contains(ch)) {
           final up = ch.toUpperCase();
@@ -984,7 +1441,8 @@ class TandemGame extends RetroGame {
           }
         } else if (_isBridge(ch)) {
           final color = _letterColors[ch]!;
-          if (_pressed.contains(ch)) {
+          if (_pressed.contains(ch) ||
+              (!coop && _level.soloBridges.contains(ch))) {
             p.glow(x, y, t, 3, color, r: 2);
             p.rect(x, y, t, 1, Retro.white);
           } else {
@@ -994,6 +1452,34 @@ class TandemGame extends RetroGame {
         }
     }
   }
+
+  void _key(Pix p, double x, double y) {
+    p.sprite(x, y, const ['YYY...', 'Y.YYYY', 'YYY.Y.'], {'Y': Retro.yellow});
+  }
+
+  static const _baronSprite = [
+    '...KKKK...',
+    '...KKKK...',
+    '...RRRR...',
+    '.KKKKKKKK.',
+    '...SSSS...',
+    '..SESSES..',
+    '..SMMMMS..',
+    '...SSSS...',
+    '.PPKKKKPP.',
+    'PPKKKKKKPP',
+    'PPKKKKKKPP',
+    'P..KK.KK.P',
+    '...KK.KK..',
+  ];
+  static const _baronColors = {
+    'K': Color(0xFF6A58A0),
+    'R': Retro.red,
+    'S': Color(0xFFE8D8F0),
+    'E': Retro.red,
+    'M': Color(0xFF120B2E),
+    'P': Retro.purple,
+  };
 
   bool _plateDown(int c, int r) {
     final top = (r + 1) * t;
@@ -1037,8 +1523,10 @@ class TandemGame extends RetroGame {
       'B': c,
       'D': dark,
     });
+    if (hero.key != null) _key(p, hero.x, hero.y - 4);
     if (coop && !heroes.any((o) => identical(o.on, hero))) {
-      p.label('${hero.player + 1}', hero.x + 3, hero.y - 7, c, size: 4);
+      final ly = hero.key != null ? hero.y - 11 : hero.y - 7;
+      p.label('${hero.player + 1}', hero.x + 3, ly, c, size: 4);
     }
   }
 }
