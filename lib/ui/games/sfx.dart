@@ -27,6 +27,8 @@ enum Sfx {
   boom,
   power,
   enemyShot,
+  jump,
+  plate,
 }
 
 /// Suoni a 8 bit come le console dei primi anni '90: onde quadre e rumore,
@@ -257,6 +259,10 @@ abstract final class _Synth {
         tone(500, 300, 70, duty: 0.25, vol: 0.18);
       case Sfx.boom:
         noise(180, vol: 0.45, period: 4);
+      case Sfx.jump:
+        tone(280, 760, 90, duty: 0.25, vol: 0.32);
+      case Sfx.plate:
+        notes(['C5', 'G5'], 40, duty: 0.125, vol: 0.35);
       case Sfx.power:
         tone(400, 1600, 160, duty: 0.25, vol: 0.4, vibrato: true);
         notes(['C6', 'G6'], 50, duty: 0.125);

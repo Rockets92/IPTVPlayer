@@ -12,6 +12,7 @@ import 'package:iptv_player/ui/games/retro.dart';
 import 'package:iptv_player/ui/games/snake_game.dart';
 import 'package:iptv_player/ui/games/space_game.dart';
 import 'package:iptv_player/ui/games/stars_game.dart';
+import 'package:iptv_player/ui/games/tandem_game.dart';
 
 /// Gioca [g] con [n] giocatori premendo tasti a caso finché finisce.
 void play(RetroGame g, int n, {int seconds = 240}) {
@@ -46,13 +47,14 @@ void main() {
       StarsGame.new,
       SpaceGame.new,
       RacerGame.new,
+      TandemGame.new,
     ]) {
       for (var n = 1; n <= 4; n++) {
         final g = make();
         expect(g.maxPlayers, 4);
         play(g, n, seconds: 60);
         // Nei giochi a sfida c'è la classifica; in quelli di squadra no.
-        final versus = g is! BricksGame && g is! SpaceGame;
+        final versus = g is! BricksGame && g is! SpaceGame && g is! TandemGame;
         if (g.over && n > 1 && versus) {
           expect(g.results, hasLength(n), reason: '${g.id} con $n');
         }

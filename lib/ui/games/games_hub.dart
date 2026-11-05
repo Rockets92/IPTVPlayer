@@ -18,6 +18,7 @@ import '../../remote/remote_server.dart';
 import '../widgets/qr_card.dart';
 import 'snake_game.dart';
 import 'stars_game.dart';
+import 'tandem_game.dart';
 
 class _Entry {
   const _Entry(this.make, this.title, this.tagline, this.color, this.icon);
@@ -102,6 +103,23 @@ final _games = <_Entry>[
       'K.W.....K.',
     ],
   ),
+  _Entry(
+    TandemGame.new,
+    'TANDEM',
+    'SI VA AVANTI SOLO INSIEME',
+    Retro.green,
+    const [
+      '........YY',
+      '..GG....YY',
+      '..GG......',
+      '..GG......',
+      '..MM...###',
+      '..MM...###',
+      '..MM...###',
+      '##########',
+      '##########',
+    ],
+  ),
 ];
 
 const _iconColors = <String, Color>{
@@ -115,9 +133,10 @@ const _iconColors = <String, Color>{
   'K': Color(0xFF8A86B0),
   'M': Retro.magenta,
   'P': Retro.purple,
+  '#': Color(0xFF5A3A7A),
 };
 
-/// SALA GIOCHI: cinque giochi in stile anni '90, col telecomando.
+/// SALA GIOCHI: sei giochi in stile anni '90, col telecomando.
 class GamesHub extends StatefulWidget {
   const GamesHub({super.key, required this.prefs, required this.onClose});
   final SharedPreferences prefs;
@@ -347,7 +366,7 @@ class _GamesHubState extends State<GamesHub>
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  '★ CINQUE CLASSICI DA SALOTTO ★ DA 1 A 4 GIOCATORI ★',
+                  '★ SEI GIOCHI DA SALOTTO ★ DA 1 A 4 GIOCATORI ★',
                   style: Retro.text(
                     compact ? 11 : 14,
                     color: Retro.dim,
@@ -357,25 +376,32 @@ class _GamesHubState extends State<GamesHub>
                 SizedBox(height: compact ? 14 : 28),
                 Expanded(
                   child: Center(
-                    child: Wrap(
-                      spacing: compact ? 14 : 22,
-                      runSpacing: compact ? 12 : 22,
-                      alignment: WrapAlignment.center,
-                      children: [
-                        for (var i = 0; i < _games.length; i++)
-                          _Cartridge(
-                            entry: _games[i],
-                            best:
-                                widget.prefs.getInt(
-                                  'games.best.${_games[i].make().id}',
-                                ) ??
-                                0,
-                            selected: i == _sel,
-                            compact: compact,
-                            onTap: () =>
-                                i == _sel ? _play(i) : setState(() => _sel = i),
-                          ),
-                      ],
+                    child: SizedBox(
+                      // Tre cartucce per fila, come i tasti ↑↓ si aspettano.
+                      width:
+                          3 * _Cartridge.cartridgeWidth(compact) +
+                          2 * (compact ? 14 : 22),
+                      child: Wrap(
+                        spacing: compact ? 14 : 22,
+                        runSpacing: compact ? 12 : 22,
+                        alignment: WrapAlignment.center,
+                        children: [
+                          for (var i = 0; i < _games.length; i++)
+                            _Cartridge(
+                              entry: _games[i],
+                              best:
+                                  widget.prefs.getInt(
+                                    'games.best.${_games[i].make().id}',
+                                  ) ??
+                                  0,
+                              selected: i == _sel,
+                              compact: compact,
+                              onTap: () => i == _sel
+                                  ? _play(i)
+                                  : setState(() => _sel = i),
+                            ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -399,6 +425,8 @@ class _GamesHubState extends State<GamesHub>
 
 /// Una "cartuccia" del gioco, con anteprima a pixel e record.
 class _Cartridge extends StatelessWidget {
+  static double cartridgeWidth(bool compact) => compact ? 262 : 340;
+
   const _Cartridge({
     required this.entry,
     required this.best,
@@ -415,7 +443,7 @@ class _Cartridge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final w = compact ? 150.0 : 210.0;
+    final w = cartridgeWidth(compact);
     final c = entry.color;
     return GestureDetector(
       onTap: onTap,
@@ -438,44 +466,51 @@ class _Cartridge extends StatelessWidget {
                 ? [BoxShadow(color: c.withValues(alpha: 0.45), blurRadius: 24)]
                 : null,
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Row(
             children: [
-              AspectRatio(
-                aspectRatio: 10 / 9,
-                child: Container(
-                  color: Retro.screen,
-                  padding: const EdgeInsets.all(8),
-                  child: CustomPaint(painter: _IconPainter(entry.icon)),
+              SizedBox(
+                width: compact ? 74 : 104,
+                child: AspectRatio(
+                  aspectRatio: 10 / 9,
+                  child: Container(
+                    color: Retro.screen,
+                    padding: const EdgeInsets.all(6),
+                    child: CustomPaint(painter: _IconPainter(entry.icon)),
+                  ),
                 ),
               ),
-              SizedBox(height: compact ? 8 : 12),
-              Text(
-                entry.title,
-                maxLines: 1,
-                overflow: TextOverflow.fade,
-                softWrap: false,
-                style: Retro.text(compact ? 12 : 15, color: c),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                entry.tagline,
-                maxLines: 1,
-                softWrap: false,
-                overflow: TextOverflow.fade,
-                style: Retro.text(
-                  compact ? 9 : 11,
-                  color: Retro.white,
-                  glow: 0,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'RECORD ${best.toString().padLeft(5, '0')}',
-                style: Retro.text(
-                  compact ? 9 : 11,
-                  color: Retro.yellow,
-                  glow: 0,
+              SizedBox(width: compact ? 10 : 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      entry.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.fade,
+                      softWrap: false,
+                      style: Retro.text(compact ? 13 : 17, color: c),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      entry.tagline,
+                      maxLines: 2,
+                      style: Retro.text(
+                        compact ? 9 : 11,
+                        color: Retro.white,
+                        glow: 0,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'RECORD ${best.toString().padLeft(5, '0')}',
+                      style: Retro.text(
+                        compact ? 9 : 11,
+                        color: Retro.yellow,
+                        glow: 0,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
