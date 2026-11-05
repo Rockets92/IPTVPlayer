@@ -83,10 +83,6 @@ class _Hero {
   bool grounded = false, alive = true, facingLeft = false;
   double coyote = 0, jumpBuffer = 0, dead = 0, walk = 0, resetHold = 0;
 
-  /// Appena atterrato su una cassa o su un compagno: un attimo fermo, così
-  /// col telecomando non si scivola giù dall'altra parte.
-  double settle = 0;
-
   /// Su chi sta in piedi (per farsi trasportare).
   _Hero? on;
   static const w = 6.0, h = 10.0;
@@ -468,8 +464,7 @@ class TandemGame extends RetroGame {
     final l = heldBy(i, LogicalKeyboardKey.arrowLeft);
     final r = heldBy(i, LogicalKeyboardKey.arrowRight);
     const speed = 56.0;
-    p.settle = max(0, p.settle - dt);
-    final target = l == r || p.settle > 0 ? 0.0 : (l ? -speed : speed);
+    final target = l == r ? 0.0 : (l ? -speed : speed);
     // A terra ci si ferma subito (niente pattinate giù dalle casse), in aria
     // si cambia direzione con un po' meno prontezza.
     final grip = p.grounded ? (target == 0 ? 45.0 : 22.0) : 14.0;
@@ -595,14 +590,16 @@ class TandemGame extends RetroGame {
     _touch(p);
   }
 
-  /// Atterraggio su un appoggio stretto: ci si ferma e ci si centra un po',
-  /// purché non si finisca dentro un muro.
+  /// Atterraggio su un appoggio stretto: chi non tiene premuta una
+  /// direzione si ferma lì sopra (niente scivolate), chi la tiene continua a
+  /// correre. Se si arriva proprio sul bordo ci si sposta un pelo verso
+  /// l'interno, purché non si finisca dentro un muro.
   void _settleOn(_Hero p, double left, double width) {
     final x0 = p.x;
-    p
-      ..vx = 0
-      ..settle = 0.16
-      ..x = p.x.clamp(left - 1, left + width - _Hero.w + 1);
+    final l = heldBy(p.player, LogicalKeyboardKey.arrowLeft);
+    final r = heldBy(p.player, LogicalKeyboardKey.arrowRight);
+    if (l == r) p.vx = 0;
+    p.x = p.x.clamp(left - 1, left + width - _Hero.w + 1);
     if (_hitsSolid(p.rect)) p.x = x0;
   }
 

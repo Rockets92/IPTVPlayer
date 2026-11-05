@@ -178,6 +178,8 @@ void main() {
     for (final p in [0, 1]) {
       jump(g, p, 85.5);
       jump(g, p, 90);
+      // Chi è passato fa spazio, così l'altro non gli atterra in testa.
+      expect(walk(g, {p: 93.0 - p}), isTrue);
     }
     expect(walk(g, {0: 96.2, 1: 96.9}), isTrue);
     for (var i = 0; i < 60 && !g.over; i++) {
