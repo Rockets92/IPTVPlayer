@@ -35,8 +35,55 @@ class _Say {
 
 const _pip = 'PIP', _pop = 'POP', _baron = 'BARONE BUIO', _tale = '';
 
-/// La storia: una scena prima di ogni livello e il gran finale.
-const _story = <List<_Say>>[
+/// La storia giocando da soli: Pip contro il Barone, con le casse.
+const _storySolo = <List<_Say>>[
+  [
+    _Say(_tale, [
+      'LUCCIOLA, LA CITTA\' DELLE LUCI.',
+      'UNA NOTTE... BUIO TOTALE!',
+    ]),
+    _Say(_pip, ['CHI HA SPENTO IL MONDO?', 'HO PESTATO UN GATTO. CREDO.']),
+    _Say(_tale, ['IL BARONE BUIO HA RUBATO', 'LA GRANDE LAMPADINA!']),
+    _Say(_pip, ['DA SOLO, CON QUESTE GAMBETTE?', 'MI SERVIRANNO DELLE CASSE.']),
+  ],
+  [
+    _Say(_baron, ['MUAHAHA! NESSUNO PASSERA\'', 'LA MIA VALLE OSCURA!']),
+    _Say(_pip, ['PARLA AL MEGAFONO.', 'CON LE PILE SCARICHE.']),
+  ],
+  [
+    _Say(_pip, ['LA FORTEZZA DEL BARONE!']),
+    _Say(_pip, ['PORTE CHE SI APRONO IN DUE...', 'MENO MALE CHE HO LE CASSE.']),
+  ],
+  [
+    _Say(_tale, [
+      'NELLE CANTINE, CHIAVI D\'ORO',
+      'APRONO I LUCCHETTI DEL BARONE.',
+    ]),
+    _Say(_pip, ['CASSA, TI NOMINO MIA SPALLA.', 'NON DIRE NIENTE. BRAVA.']),
+  ],
+  [
+    _Say(_baron, [
+      'IL CAMMINO DI RONDA E\' LUNGO!',
+      'E PIENO DI... COFF... SPIFFERI.',
+    ]),
+    _Say(_pip, ['RESTO IN ALTO, COME LE STELLE.']),
+  ],
+  [
+    _Say(_pip, ['SENTO PROFUMO DI LAMPADINA.']),
+    _Say(_baron, ['FERMO! LA LAMPADINA E\' MIA!']),
+  ],
+  [
+    _Say(_pip, ['BARONE, PERCHE\' L\'HAI RUBATA?']),
+    _Say(_baron, ['...HO PAURA DEL BUIO.', 'NON DIRLO A NESSUNO.']),
+    _Say(_pip, ['TIENI: UNA LUCINA DA NOTTE.', 'A FORMA DI PAPERA.']),
+    _Say(_baron, ['...E\' BELLISSIMA. SNIF.']),
+    _Say(_tale, ['LUCCIOLA SI RIACCENDE,', 'IL BARONE DORME SERENO.']),
+    _Say(_pip, ['E LE CASSE? IN VACANZA.']),
+  ],
+];
+
+/// La storia in due: Pip e Pop, che senza l'altro non vanno da nessuna parte.
+const _storyDuo = <List<_Say>>[
   [
     _Say(_tale, [
       'LUCCIOLA, LA CITTA\' DELLE LUCI.',
@@ -184,9 +231,9 @@ const _levels = [
     '......................#.......................#.................................................',
     '......................#.......................#.......oo.o..................o...o...o...EE......',
     '......................#....................k..#.........a.................z....w........EE......',
-    '...........o.o.o......D........o.o.o......==..K.....########..........#######################...',
-    '......................D.......................K.....A......A..........#######################...',
-    '.....C..d.........d...D.CF.y..........y.C.....K..C..A......A..F.C.w..Z#######################...',
+    '...........o.o.o......D........o.o.o......==..K.....########..........##########################',
+    '......................D.......................K.....A......A..........##########################',
+    '.....C..d.........d...D.CF.y..........y.C.....K..C..A......A..F.C.w..Z##########################',
     '#############################YYYYYYYY###########################################################',
     '#############################^^^^^^^^###########################################################',
   ]),
@@ -198,6 +245,9 @@ class _Hero {
   double x, y, vx = 0, vy = 0;
   bool grounded = false, alive = true, facingLeft = false;
   double coyote = 0, jumpBuffer = 0, dead = 0, walk = 0, resetHold = 0;
+
+  /// Sta passando attraverso una piattaforma (↓).
+  double dropT = 0;
 
   /// Entrato nella porta d'uscita: aspetta i compagni lì dentro.
   bool inside = false;
@@ -249,7 +299,7 @@ class TandemGame extends RetroGame {
   @override
   String get title => 'TANDEM';
   @override
-  int get maxPlayers => 4;
+  int get maxPlayers => 2;
   @override
   List<String> get help => [
     '← →: CAMMINA   OK O ↑: SALTA',
@@ -292,8 +342,17 @@ class TandemGame extends RetroGame {
   _Level get _level => _levels[level - 1];
   bool get coop => players > 1;
 
+  List<List<_Say>> get _scenes => coop ? _storyDuo : _storySolo;
+
   /// Si sta guardando una scena della storia.
   bool get inStory => _scene != null;
+
+  /// Per le prove: chi parla e cosa dice nella scena in corso.
+  @visibleForTesting
+  String get storyText => [
+    for (final say in _scene ?? const <_Say>[])
+      '${say.who}: ${say.lines.join(' ')}',
+  ].join('\n');
 
   /// Per le prove: salta la scena in corso.
   @visibleForTesting
@@ -394,7 +453,7 @@ class TandemGame extends RetroGame {
       ]);
     cam = 0;
     _banner = 0;
-    _startScene(_story[level - 1]);
+    _startScene(_scenes[level - 1]);
   }
 
   // --- Mappa ----------------------------------------------------------------
@@ -444,6 +503,10 @@ class TandemGame extends RetroGame {
     }
     if (p >= heroes.length || _finish > 0) return;
     final hero = heroes[p];
+    if (k == LogicalKeyboardKey.arrowDown) {
+      _dropDown(hero);
+      return;
+    }
     if (!jump) return;
     if (hero.inside) {
       // Si può riuscire dalla porta (se il compagno ha ancora bisogno).
@@ -666,6 +729,50 @@ class TandemGame extends RetroGame {
     return k.x - x0;
   }
 
+  /// ↓ per scendere: da una piattaforma si passa attraverso, da una cassa o
+  /// dalla testa del compagno si scivola giù dal lato verso cui si guarda.
+  void _dropDown(_Hero p) {
+    if (!p.alive || p.inside || !p.grounded) return;
+    final row = ((p.y + _Hero.h) / t).floor();
+    final c0 = (p.x / t).floor(), c1 = ((p.x + _Hero.w - 0.01) / t).floor();
+    var plat = false, firm = false;
+    for (var c = c0; c <= c1; c++) {
+      if (_at(c, row) == '=') plat = true;
+      if (_solid(c, row)) firm = true;
+    }
+    if (plat && !firm && (p.rect.bottom - row * t).abs() < 0.6) {
+      p
+        ..dropT = 0.2
+        ..grounded = false
+        ..y += 1;
+      return;
+    }
+    final under =
+        p.on?.rect ??
+        crates
+            .where(
+              (k) =>
+                  (p.rect.bottom - k.y).abs() < 0.6 &&
+                  p.x + _Hero.w > k.x &&
+                  p.x < k.x + _Crate.s,
+            )
+            .map((k) => k.rect)
+            .firstOrNull;
+    if (under == null) return;
+    final x0 = p.x;
+    for (final side in p.facingLeft ? [-1, 1] : [1, -1]) {
+      p.x = side < 0 ? under.left - _Hero.w - 0.2 : under.right + 0.2;
+      if (!_hitsSolid(p.rect) && !crates.any((k) => k.rect.overlaps(p.rect))) {
+        p
+          ..vx = side * 20.0
+          ..grounded = false
+          ..on = null;
+        return;
+      }
+    }
+    p.x = x0;
+  }
+
   void _hero(_Hero p, double dt) {
     if (!p.alive) {
       p.dead -= dt;
@@ -701,7 +808,7 @@ class TandemGame extends RetroGame {
               ..vy = 0;
           }
         }
-        _respawn(p, toFlag: !coop);
+        _respawn(p, toFlag: !coop, nearMate: coop);
         return;
       }
     } else {
@@ -722,6 +829,7 @@ class TandemGame extends RetroGame {
     }
 
     // Trasportato da chi sta sotto.
+    p.dropT = max(0, p.dropT - dt);
     final carrier = p.on;
     double carry = 0;
     if (carrier != null && carrier.alive) carry = carrier.vx * dt;
@@ -766,7 +874,7 @@ class TandemGame extends RetroGame {
       }
       p.vy = 0;
     } else if (p.vy >= 0) {
-      final top = _oneWayTop(b2, p.rect);
+      final top = p.dropT > 0 ? null : _oneWayTop(b2, p.rect);
       if (top != null) {
         p
           ..y = top - _Hero.h
@@ -949,7 +1057,7 @@ class TandemGame extends RetroGame {
     }
   }
 
-  void _respawn(_Hero p, {bool toFlag = false}) {
+  void _respawn(_Hero p, {bool toFlag = false, bool nearMate = false}) {
     // Si riparte dall'ultimo punto sicuro; se è troppo lontano dai compagni
     // ancora in gioco, accanto a uno di loro. Da soli, ↓ tenuto riporta
     // all'ultima bandierina.
@@ -960,6 +1068,11 @@ class TandemGame extends RetroGame {
       p
         ..x = spawnX
         ..y = spawnY;
+    } else if (mate != null && nearMate) {
+      // Bloccati (es. chiusi in un tunnel): si torna dal compagno.
+      p
+        ..x = mate.x
+        ..y = mate.y - 12;
     } else if (mate == null || (mate.x - p.safeX).abs() < 120) {
       p
         ..x = p.safeX
@@ -1038,7 +1151,7 @@ class TandemGame extends RetroGame {
   void _nextLevel() {
     if (level >= _levels.length) {
       _finale = true;
-      _startScene(_story.last);
+      _startScene(_scenes.last);
       return;
     }
     level++;
@@ -1170,9 +1283,7 @@ class TandemGame extends RetroGame {
     if (level == _levels.length) {
       // Il Barone aspetta accanto al trono, con la lampadina rubata.
       final bx = (cols - 5) * t, by = 10 * t - 13;
-      p.glow(bx + 10, by + 1, 6, 7, Retro.yellow, r: 4);
-      p.rect(bx + 11, by + 2, 4, 4, Retro.yellow);
-      p.rect(bx + 12, by + 6, 2, 2, Retro.dim);
+      p.sprite(bx + 10, by + 3, _bulb, _bulbColors);
       p.sprite(
         bx,
         by + sin(_t * 2).roundToDouble() * 0,
@@ -1251,24 +1362,7 @@ class TandemGame extends RetroGame {
       );
     } else if (who == _tale) {
       // Il narratore: la Grande Lampadina.
-      p.glow(face.left + 7, face.top + 5, 12, 14, Retro.yellow, r: 5);
-      p.sprite(
-        face.left + 5,
-        face.top + 4,
-        const [
-          '..YYYY..',
-          '.YYWYYY.',
-          'YYWYYYYY',
-          'YYYYYYYY',
-          '.YYYYYY.',
-          '..YYYY..',
-          '..KKKK..',
-          '..KKKK..',
-          '...KK...',
-        ],
-        {'Y': Retro.yellow, 'W': Retro.white, 'K': Retro.dim},
-        size: 2,
-      );
+      p.sprite(face.left + 5, face.top + 4, _bulb, _bulbColors, size: 2);
     } else {
       final c = who == _pip ? Retro.players[0] : Retro.players[1];
       p.sprite(
@@ -1412,9 +1506,12 @@ class TandemGame extends RetroGame {
           size: 4,
         );
       case 'k':
-        final bob = sin(_t * 3 + c) * 1;
-        p.glow(x + 1, y + 1 + bob, 6, 6, Retro.yellow, r: 2);
-        _key(p, x + 1, y + 2 + bob);
+        final bob = (sin(_t * 3 + c) * 1).roundToDouble();
+        _key(p, x, y + 1 + bob);
+        // Scintilla che gira attorno alla chiave.
+        if ((_t * 2 + c).floor() % 3 == 0) {
+          p.rect(x + 6, y + bob, 1, 1, Retro.white);
+        }
       case 'K':
         p.rect(x, y, t, t, const Color(0xFFB8860B));
         p.rect(x + 1, y + 1, 6, 6, const Color(0xFFFFC93D));
@@ -1453,9 +1550,32 @@ class TandemGame extends RetroGame {
     }
   }
 
+  /// Chiave d'oro: anello a sinistra, asta e dentini a destra.
   void _key(Pix p, double x, double y) {
-    p.sprite(x, y, const ['YYY...', 'Y.YYYY', 'YYY.Y.'], {'Y': Retro.yellow});
+    p.sprite(
+      x,
+      y,
+      const ['.YY.....', 'Y..Y....', 'Y..WYYYY', 'Y..Y.D.D', '.YY.....'],
+      {'Y': Retro.yellow, 'W': Retro.white, 'D': Color(0xFFC8A020)},
+    );
   }
+
+  static const _bulb = [
+    '..YYYY..',
+    '.YYWYYY.',
+    'YYWYYYYY',
+    'YYYYYYYY',
+    '.YYYYYY.',
+    '..YYYY..',
+    '..KKKK..',
+    '..KKKK..',
+    '...KK...',
+  ];
+  static const _bulbColors = {
+    'Y': Retro.yellow,
+    'W': Retro.white,
+    'K': Retro.dim,
+  };
 
   static const _baronSprite = [
     '...KKKK...',
@@ -1523,9 +1643,9 @@ class TandemGame extends RetroGame {
       'B': c,
       'D': dark,
     });
-    if (hero.key != null) _key(p, hero.x, hero.y - 4);
+    if (hero.key != null) _key(p, hero.x - 1, hero.y - 6);
     if (coop && !heroes.any((o) => identical(o.on, hero))) {
-      final ly = hero.key != null ? hero.y - 11 : hero.y - 7;
+      final ly = hero.key != null ? hero.y - 13 : hero.y - 7;
       p.label('${hero.player + 1}', hero.x + 3, ly, c, size: 4);
     }
   }

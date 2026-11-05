@@ -371,6 +371,72 @@ void main() {
     expect(g.won, isTrue);
   });
 
+  test('↓ per scendere dalla cassa e dalla piattaforma', () {
+    final g = start(1);
+    final hero = g.heroes[0], crate = g.crates.first;
+    hero
+      ..x = crate.x + 1
+      ..y = crate.y - 20;
+    for (var i = 0; i < 40; i++) {
+      g.update(1 / 60);
+    }
+    expect(hero.y, closeTo(crate.y - 10, 0.01), reason: 'sopra la cassa');
+    g.onPlayerKey(0, LogicalKeyboardKey.arrowDown);
+    for (var i = 0; i < 40; i++) {
+      g.update(1 / 60);
+    }
+    expect(hero.y, 94, reason: 'a terra accanto alla cassa');
+    expect(hero.x + 6 <= crate.x || hero.x >= crate.x + 8, isTrue);
+    // Piattaforma attraversabile del livello 2 (colonne 8-11, riga 11).
+    g.goTo(2);
+    g.skipStory();
+    final h2 = g.heroes[0];
+    h2
+      ..x = 9 * 8
+      ..y = 11 * 8 - 10 - 4;
+    for (var i = 0; i < 40; i++) {
+      g.update(1 / 60);
+    }
+    expect(h2.y, 78, reason: 'sopra la piattaforma');
+    g.onPlayerKey(0, LogicalKeyboardKey.arrowDown);
+    for (var i = 0; i < 40; i++) {
+      g.update(1 / 60);
+    }
+    expect(h2.y, 94, reason: 'passato attraverso');
+  });
+
+  test('↓ per scendere dalla testa del compagno', () {
+    final g = start(2);
+    walk(g, {0: 6, 1: 4});
+    jump(g, 1, 6);
+    expect(g.heroes[1].y, closeTo(g.heroes[0].y - 10, 0.5));
+    g.onPlayerKey(1, LogicalKeyboardKey.arrowDown);
+    for (var i = 0; i < 40; i++) {
+      g.update(1 / 60);
+    }
+    expect(g.heroes[1].y, 94);
+  });
+
+  test('nessun fosso senza uscita dopo il trono', () {
+    final g = start(1, level: 6);
+    // L'altopiano finale arriva fino al bordo del livello.
+    for (var c = 70; c < g.cols; c++) {
+      expect(g.solidAt(c, 10), isTrue, reason: 'colonna $c');
+    }
+  });
+
+  test('storia diversa da soli e in due, al massimo due giocatori', () {
+    expect(TandemGame().maxPlayers, 2);
+    final solo = TandemGame()
+      ..players = 1
+      ..reset();
+    final duo = TandemGame()
+      ..players = 2
+      ..reset();
+    expect(solo.storyText, isNot(duo.storyText));
+    expect(solo.storyText, isNot(contains('POP')));
+  });
+
   test('la storia si sfoglia con OK', () {
     final g = TandemGame()
       ..players = 1

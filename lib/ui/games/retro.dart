@@ -358,7 +358,7 @@ class _GameShellState extends State<GameShell>
   void _start() {
     _seat.clear();
     final names = [widget.pads == null ? 'G1' : GamePads.tvPlayerName];
-    for (final ph in _phones.take(3)) {
+    for (final ph in _phones.take(g.maxPlayers - 1)) {
       _seat[ph.slot] = names.length;
       names.add(ph.name);
       // Colore e numero sul telefono uguali a quelli della partita.

@@ -49,9 +49,9 @@ void main() {
       RacerGame.new,
       TandemGame.new,
     ]) {
-      for (var n = 1; n <= 4; n++) {
+      for (var n = 1; n <= make().maxPlayers; n++) {
         final g = make();
-        expect(g.maxPlayers, 4);
+        expect(g.maxPlayers, g is TandemGame ? 2 : 4);
         play(g, n, seconds: 60);
         // Nei giochi a sfida c'è la classifica; in quelli di squadra no.
         final versus = g is! BricksGame && g is! SpaceGame && g is! TandemGame;
