@@ -296,6 +296,37 @@ void main() {
     expect(list.any((c) => c.name == 'Canale Locale'), isFalse);
   });
 
+  test('categoria Disney dal 760, prima di Eventi', () {
+    final mapping = ChannelMapping.fromJson({
+      'channels': [
+        {'number': 101, 'name': 'Rai 1', 'group': 'A'},
+      ],
+    });
+    final list = const ChannelMatcher().build(
+      mapping: mapping,
+      streams: const [
+        XtreamLiveStream(streamId: 1, name: 'Rai 1 FHD'),
+        XtreamLiveStream(streamId: 2, name: 'DAZN 1 FHD'),
+        XtreamLiveStream(streamId: 3, name: 'Disney Junior HD'),
+        XtreamLiveStream(streamId: 4, name: 'DISNEY CHANNEL ( hermes )'),
+        XtreamLiveStream(streamId: 5, name: 'Disney+ Eventi 1'),
+      ],
+    );
+    final groups = [
+      for (final c in list)
+        if (c.group == 'Disney' || c.group == 'Eventi') c.group,
+    ];
+    expect(groups.first, 'Disney');
+    expect(groups.lastIndexOf('Disney'), lessThan(groups.indexOf('Eventi')));
+    final disney = list.where((c) => c.group == 'Disney').toList();
+    expect(disney.length, 3);
+    expect(disney.first.number, 760);
+    // Un canale Disney con "eventi" nel nome resta in Disney.
+    expect(list.where((c) => c.group == 'Eventi').map((c) => c.name), [
+      'DAZN 1',
+    ]);
+  });
+
   test('nome del canale tra categoria e fonte', () {
     final mapping = ChannelMapping.fromJson({
       'dynamicGroups': [],

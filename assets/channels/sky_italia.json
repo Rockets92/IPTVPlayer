@@ -14,6 +14,7 @@
   ],
   "preferredSources": ["hermes +", "hermes"],
   "dynamicGroups": [
+    { "name": "Disney", "startNumber": 760, "keywords": ["disney"] },
     { "name": "Eventi", "startNumber": 800, "keywords": ["dazn", "eventi", "event"] },
     { "name": "Vetrina", "startNumber": 870, "keywords": ["vetrina"] }
   ],

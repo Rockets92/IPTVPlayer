@@ -158,8 +158,10 @@ class ChannelMapping {
   /// Fonti preferite quando un canale è disponibile da più stream.
   static const defaultPreferredSources = ['hermes +', 'hermes'];
 
-  /// Canali evento: prima DAZN, poi quelli con "eventi" nel nome, dall'800.
+  /// Canali Disney dal 760; canali evento: prima DAZN, poi quelli con
+  /// "eventi" nel nome, dall'800.
   static const defaultDynamicGroups = [
+    DynamicGroup(name: 'Disney', startNumber: 760, keywords: ['disney']),
     DynamicGroup(
       name: 'Eventi',
       startNumber: 800,
