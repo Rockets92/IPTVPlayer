@@ -442,11 +442,22 @@ class _SettingsPanelState extends State<SettingsPanel> {
                     const _Shortcuts(),
                     const SizedBox(height: 18),
                     Center(
-                      child: Text(
-                        '${Brand.name} 0.1',
-                        style: AppText.label.copyWith(
-                          color: Palette.textTertiary,
-                        ),
+                      child: Column(
+                        children: [
+                          Image.asset(
+                            Brand.logo,
+                            width: 150,
+                            semanticLabel: Brand.name,
+                            filterQuality: FilterQuality.medium,
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            '${Brand.name} 0.1',
+                            style: AppText.label.copyWith(
+                              color: Palette.textTertiary,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],

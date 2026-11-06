@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/brand.dart';
 import '../../core/performance.dart';
 import '../../core/theme.dart';
 import '../../data/vod/vod_models.dart';
@@ -263,6 +264,17 @@ class _HomeHubState extends State<HomeHub> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(compact ? 12 : 18),
+          child: Image.asset(
+            Brand.icon,
+            width: compact ? 54 : 84,
+            height: compact ? 54 : 84,
+            semanticLabel: Brand.name,
+            filterQuality: FilterQuality.medium,
+          ),
+        ),
+        SizedBox(width: compact ? 14 : 22),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

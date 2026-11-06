@@ -38,6 +38,7 @@ flutter:
   assets:
     - assets/channels/
     - assets/remote/
+    - assets/brand/
 
   fonts:
     - family: Inter

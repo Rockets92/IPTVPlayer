@@ -6,7 +6,8 @@
     <uses-feature android:name="android.software.leanback" android:required="false" />
 
     <application
-        android:label="IPTV Player"
+        android:label="B&amp;B IPTV Player"
+        android:banner="@drawable/banner"
         android:usesCleartextTraffic="true"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">

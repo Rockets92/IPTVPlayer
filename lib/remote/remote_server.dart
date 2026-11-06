@@ -475,7 +475,7 @@ class RemoteServer extends ChangeNotifier {
   }
 
   Map<String, Object?> _manifest() => {
-    'name': 'Telecomando IPTV',
+    'name': 'Telecomando B&B IPTV Player',
     'short_name': 'Telecomando',
     'start_url': '/remote?t=$token',
     'scope': '/',

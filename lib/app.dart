@@ -120,12 +120,11 @@ class _Splash extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                Brand.name,
-                style: AppText.display.copyWith(
-                  fontSize: 40,
-                  letterSpacing: -1.2,
-                ),
+              Image.asset(
+                Brand.logo,
+                width: 380,
+                semanticLabel: Brand.name,
+                filterQuality: FilterQuality.medium,
               ),
               const SizedBox(height: 28),
               const SizedBox(

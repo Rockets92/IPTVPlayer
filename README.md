@@ -1,4 +1,4 @@
-# IPTV Player
+# B&B IPTV Player
 
 Player IPTV per liste **Xtream Codes** con interfaccia in vetro e
 interazione da decoder: si accende, riparte dall'ultimo canale, si cambia

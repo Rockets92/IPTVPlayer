@@ -500,16 +500,11 @@ class _BrandBlock extends StatelessWidget {
       crossAxisAlignment: align,
       mainAxisSize: MainAxisSize.min,
       children: [
-        const BrandMark(size: 56),
-        SizedBox(height: compact ? 18 : 28),
-        Text(
-          Brand.name,
-          textAlign: compact ? TextAlign.center : TextAlign.start,
-          style: AppText.display.copyWith(
-            fontSize: compact ? 34 : 54,
-            fontWeight: FontWeight.w600,
-            letterSpacing: compact ? -0.8 : -1.6,
-          ),
+        Image.asset(
+          Brand.logo,
+          width: compact ? 300 : 460,
+          semanticLabel: Brand.name,
+          filterQuality: FilterQuality.medium,
         ),
         const SizedBox(height: 10),
         Text(
@@ -585,30 +580,14 @@ class BrandMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: size * 1.3,
-      height: size,
-      child: Glass(
-        radius: size * 0.3,
-        shadow: false,
-        child: Center(
-          child: Container(
-            width: size * 0.26,
-            height: size * 0.26,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: const RadialGradient(
-                colors: [Colors.white, Palette.accent],
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Palette.accent.withValues(alpha: 0.8),
-                  blurRadius: size * 0.4,
-                ),
-              ],
-            ),
-          ),
-        ),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(size * 0.22),
+      child: Image.asset(
+        Brand.icon,
+        width: size,
+        height: size,
+        semanticLabel: Brand.name,
+        filterQuality: FilterQuality.medium,
       ),
     );
   }
