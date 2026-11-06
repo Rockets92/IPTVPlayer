@@ -18,7 +18,9 @@ import '../../state/reminder_controller.dart';
 import '../../state/tuner_controller.dart';
 import '../../state/vod_controller.dart';
 import '../home/home_hub.dart';
+import '../../data/vod/vod_models.dart';
 import '../vod/vod_browser.dart';
+import '../vod/vod_detail.dart';
 import '../keys.dart';
 import '../settings/settings_panel.dart';
 import '../widgets/focus_tile.dart';
@@ -238,6 +240,18 @@ class _PlayerScreenState extends State<PlayerScreen> {
       );
     }
     if (_panel == _Panel.vod) _tuner.resume();
+  }
+
+  /// Da "Continua a guardare": catalogo sotto, scheda del titolo sopra.
+  void _resumeVod(VodKind kind, VodItem item) {
+    _openVod(kind);
+    if (_panel != _Panel.vod) return;
+    // Dopo che il catalogo ha preso il focus.
+    Future<void>.delayed(const Duration(milliseconds: 250), () {
+      if (mounted && _panel == _Panel.vod) {
+        showVodDetail(context, kind: kind, item: item);
+      }
+    });
   }
 
   /// Scelta dalla schermata TV / Film / Serie / Giochi.
@@ -697,6 +711,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                         key: const ValueKey(_Panel.home),
                         onPick: _onHome,
                         onClose: _close,
+                        onResume: _resumeVod,
                       ),
                       _Panel.vod => VodBrowser(
                         key: const ValueKey(_Panel.vod),
