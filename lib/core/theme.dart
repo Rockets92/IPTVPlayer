@@ -2,18 +2,22 @@ import 'package:flutter/material.dart';
 
 /// Palette e tipografia. Tutti i valori estetici vivono qui.
 abstract final class Palette {
-  static const Color ink = Color(0xFF04060B);
-  static const Color night = Color(0xFF080C16);
-  static const Color deep = Color(0xFF0D1424);
+  // Fondi: nero con una punta di indaco, come lo sfondo del logo.
+  static const Color ink = Color(0xFF05040E);
+  static const Color night = Color(0xFF0B0920);
+  static const Color deep = Color(0xFF16103A);
 
   static const Color textPrimary = Color(0xF5FFFFFF);
   static const Color textSecondary = Color(0xC7E6ECF7);
   static const Color textTertiary = Color(0x94D5DEEE);
 
-  /// Accento freddo, usato con parsimonia: focus, avanzamento, "ORA".
-  static const Color accent = Color(0xFF8AC6FF);
-  static const Color accentDeep = Color(0xFF3D7BFF);
-  static const Color warm = Color(0xFFFFC27A);
+  /// Colori del logo B&B: blu elettrico, viola, magenta neon e tramonto.
+  static const Color accent = Color(0xFF52B8FF);
+  static const Color accentDeep = Color(0xFF2E6BFF);
+  static const Color violet = Color(0xFF8A3DFF);
+  static const Color magenta = Color(0xFFE53DF5);
+  static const Color sunset = Color(0xFFFF8A3D);
+  static const Color warm = Color(0xFFFFC94A);
   static const Color danger = Color(0xFFFF7A7A);
 
   /// Vetro: riempimento e bordo.
@@ -22,11 +26,20 @@ abstract final class Palette {
   static const Color glassStroke = Color(0x2EFFFFFF);
 
   /// Vetro "solido" per il profilo light (nessun blur).
-  static const Color frostedSolid = Color(0xE5121A2B);
-  static const Color frostedSolidStrong = Color(0xF0182238);
+  static const Color frostedSolid = Color(0xE5151034);
+  static const Color frostedSolidStrong = Color(0xF01C1642);
 
+  /// Avanzamento: dal blu al magenta, come le scritte del logo.
   static const LinearGradient progress = LinearGradient(
-    colors: [accentDeep, accent],
+    colors: [accent, violet, magenta],
+  );
+
+  /// Riflesso del logo (pulsante play): blu, viola, magenta, arancio.
+  static const LinearGradient neon = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [accent, violet, magenta, sunset],
+    stops: [0, 0.4, 0.75, 1],
   );
 }
 
@@ -124,7 +137,7 @@ ThemeData buildTheme() {
     scaffoldBackgroundColor: Palette.ink,
     colorScheme: const ColorScheme.dark(
       primary: Palette.accent,
-      secondary: Palette.accent,
+      secondary: Palette.magenta,
       surface: Palette.night,
       error: Palette.danger,
     ),
@@ -136,7 +149,7 @@ ThemeData buildTheme() {
   return base.copyWith(
     textSelectionTheme: const TextSelectionThemeData(
       cursorColor: Palette.accent,
-      selectionColor: Color(0x553D7BFF),
+      selectionColor: Color(0x558A3DFF),
       selectionHandleColor: Palette.accent,
     ),
     pageTransitionsTheme: const PageTransitionsTheme(

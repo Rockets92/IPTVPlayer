@@ -231,8 +231,8 @@ class _GlassButtonState extends State<GlassButton> {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: lit
-                        ? const [Color(0xFFB4DBFF), Color(0xFF6FA8FF)]
-                        : const [Color(0xFF9CCEFF), Color(0xFF5B95FF)],
+                        ? const [Palette.accent, Palette.magenta]
+                        : const [Palette.accent, Palette.violet],
                   )
                 : null,
             color: widget.primary

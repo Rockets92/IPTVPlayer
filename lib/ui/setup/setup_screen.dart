@@ -447,7 +447,7 @@ class _SetupScreenState extends State<SetupScreen> {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             gradient: const LinearGradient(
-              colors: [Color(0xFF9CCEFF), Color(0xFF5B95FF)],
+              colors: [Palette.accent, Palette.violet],
             ),
             boxShadow: [
               BoxShadow(

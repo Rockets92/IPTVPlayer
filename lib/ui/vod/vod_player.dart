@@ -532,9 +532,9 @@ class _VodPlayerScreenState extends State<VodPlayerScreen> {
                     ),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(10),
-                      color: _trackCol == col && _trackRow == i
-                          ? Colors.white
-                          : Colors.transparent,
+                      gradient: _trackCol == col && _trackRow == i
+                          ? Palette.neon
+                          : null,
                     ),
                     child: Row(
                       children: [
@@ -545,7 +545,7 @@ class _VodPlayerScreenState extends State<VodPlayerScreen> {
                                   Icons.check_rounded,
                                   size: 17,
                                   color: _trackCol == col && _trackRow == i
-                                      ? Palette.ink
+                                      ? Palette.textPrimary
                                       : Palette.accent,
                                 )
                               : null,
@@ -558,7 +558,7 @@ class _VodPlayerScreenState extends State<VodPlayerScreen> {
                             style: AppText.label.copyWith(
                               fontSize: 14,
                               color: _trackCol == col && _trackRow == i
-                                  ? Palette.ink
+                                  ? Palette.textPrimary
                                   : Palette.textPrimary,
                             ),
                           ),

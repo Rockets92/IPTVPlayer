@@ -651,9 +651,8 @@ class _RoundActionState extends State<_RoundAction> {
       height: f ? 44 : 38,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: f
-            ? Colors.white.withValues(alpha: 0.92)
-            : Colors.white.withValues(alpha: _hover ? 0.18 : 0.08),
+        gradient: f ? Palette.neon : null,
+        color: f ? null : Colors.white.withValues(alpha: _hover ? 0.18 : 0.08),
         border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
         boxShadow: f
             ? [
@@ -666,17 +665,13 @@ class _RoundActionState extends State<_RoundAction> {
       ),
       alignment: Alignment.center,
       child: widget.icon != null
-          ? Icon(
-              widget.icon,
-              size: f ? 20 : 18,
-              color: f ? Palette.ink : Palette.textPrimary,
-            )
+          ? Icon(widget.icon, size: f ? 20 : 18, color: Palette.textPrimary)
           : Text(
               widget.label ?? '',
               style: AppText.overline.copyWith(
                 fontSize: (widget.label ?? '').length > 2 ? 9 : 12,
                 letterSpacing: 0.2,
-                color: f ? Palette.ink : Palette.textPrimary,
+                color: Palette.textPrimary,
               ),
             ),
     );

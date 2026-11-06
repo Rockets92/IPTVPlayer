@@ -137,16 +137,11 @@ class PosterTile extends StatelessWidget {
                 duration: perf.fast,
                 curve: Curves.easeOutCubic,
                 scale: focused ? 1.05 : 1,
-                child: DecoratedBox(
-                  position: DecorationPosition.foreground,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      width: focused ? 3 : 1,
-                      color: focused
-                          ? Palette.accent
-                          : Colors.white.withValues(alpha: 0.10),
-                    ),
+                child: CustomPaint(
+                  foregroundPainter: NeonBorderPainter(
+                    radius: 14,
+                    width: focused ? 3 : 1,
+                    neon: focused,
                   ),
                   child: Stack(
                     fit: StackFit.expand,
@@ -290,13 +285,13 @@ class Pill extends StatelessWidget {
   Widget build(BuildContext context) {
     final perf = context.read<PerformanceProfile>();
     final bg = focused
-        ? Colors.white
+        ? null
         : primary
         ? Palette.accentDeep.withValues(alpha: 0.55)
         : active
         ? Colors.white.withValues(alpha: 0.16)
         : Colors.white.withValues(alpha: 0.06);
-    final fg = focused ? Palette.ink : Palette.textPrimary;
+    const fg = Palette.textPrimary;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
@@ -308,6 +303,7 @@ class Pill extends StatelessWidget {
         ),
         decoration: BoxDecoration(
           color: bg,
+          gradient: focused ? Palette.neon : null,
           borderRadius: BorderRadius.circular(100),
           border: Border.all(
             color: active && !focused
@@ -391,24 +387,23 @@ class SearchKeyboard extends StatelessWidget {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(9),
                     color: focusedIndex == i
-                        ? Colors.white
+                        ? null
                         : Colors.white.withValues(alpha: 0.07),
+                    gradient: focusedIndex == i ? Palette.neon : null,
                   ),
                   child: keys[i] == space
                       ? Icon(
                           Icons.space_bar_rounded,
                           size: 18,
                           color: focusedIndex == i
-                              ? Palette.ink
+                              ? Palette.textPrimary
                               : Palette.textSecondary,
                         )
                       : Text(
                           keys[i],
                           style: AppText.headline.copyWith(
                             fontSize: 15,
-                            color: focusedIndex == i
-                                ? Palette.ink
-                                : Palette.textPrimary,
+                            color: Palette.textPrimary,
                           ),
                         ),
                 ),
@@ -418,4 +413,38 @@ class SearchKeyboard extends StatelessWidget {
       },
     );
   }
+}
+
+/// Bordo arrotondato: col focus è un filo neon coi colori del logo.
+class NeonBorderPainter extends CustomPainter {
+  const NeonBorderPainter({
+    required this.radius,
+    this.width = 3,
+    this.neon = true,
+  });
+
+  final double radius;
+  final double width;
+  final bool neon;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final p = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = width;
+    if (neon) {
+      p.shader = Palette.neon.createShader(rect);
+    } else {
+      p.color = Colors.white.withValues(alpha: 0.10);
+    }
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(rect.deflate(width / 2), Radius.circular(radius)),
+      p,
+    );
+  }
+
+  @override
+  bool shouldRepaint(NeonBorderPainter old) =>
+      old.neon != neon || old.width != width || old.radius != radius;
 }

@@ -50,10 +50,10 @@ class _Accent {
 }
 
 const _accents = [
-  _Accent(Color(0xFF2F6BFF), Color(0xFF0C1C52), Color(0xFF3D7BFF)),
-  _Accent(Color(0xFFE0483F), Color(0xFF3E0D1A), Color(0xFFFF5A4E)),
-  _Accent(Color(0xFF9452E6), Color(0xFF1F0E45), Color(0xFFA463FF)),
-  _Accent(Color(0xFF17B377), Color(0xFF07291E), Color(0xFF2BE39A)),
+  _Accent(Color(0xFF2E7BFF), Color(0xFF0E1758), Color(0xFF52B8FF)),
+  _Accent(Color(0xFFE53DB0), Color(0xFF3A0A3F), Color(0xFFFF4FD0)),
+  _Accent(Color(0xFF8A3DFF), Color(0xFF1C0C4E), Color(0xFFA463FF)),
+  _Accent(Color(0xFFFF8A3D), Color(0xFF4A1430), Color(0xFFFFB24A)),
 ];
 
 class _HomeHubState extends State<HomeHub> {
@@ -511,50 +511,55 @@ class _Shell extends StatelessWidget {
       child: AnimatedOpacity(
         duration: perf.fast,
         opacity: !enabled ? 0.4 : (selected ? 1 : 0.78),
-        child: AnimatedContainer(
-          duration: perf.medium,
-          curve: Curves.easeOutCubic,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(r),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [accent.top, accent.bottom],
+        child: CustomPaint(
+          foregroundPainter: focused
+              ? NeonBorderPainter(radius: r, width: 3.5)
+              : null,
+          child: AnimatedContainer(
+            duration: perf.medium,
+            curve: Curves.easeOutCubic,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(r),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [accent.top, accent.bottom],
+              ),
+              border: Border.all(
+                width: focused ? 3 : 1,
+                color: focused
+                    ? Colors.transparent
+                    : Colors.white.withValues(alpha: 0.14),
+              ),
+              boxShadow: focused && !perf.isLight
+                  ? [
+                      BoxShadow(
+                        color: accent.glow.withValues(alpha: 0.45),
+                        blurRadius: 40,
+                        spreadRadius: -6,
+                        offset: const Offset(0, 14),
+                      ),
+                    ]
+                  : null,
             ),
-            border: Border.all(
-              width: focused ? 3 : 1,
-              color: focused
-                  ? Colors.white
-                  : Colors.white.withValues(alpha: 0.14),
-            ),
-            boxShadow: focused && !perf.isLight
-                ? [
-                    BoxShadow(
-                      color: accent.glow.withValues(alpha: 0.45),
-                      blurRadius: 40,
-                      spreadRadius: -6,
-                      offset: const Offset(0, 14),
-                    ),
-                  ]
-                : null,
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(r - 1),
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                // Riflesso lucido in alto.
-                const DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.center,
-                      colors: [Color(0x33FFFFFF), Color(0x00FFFFFF)],
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(r - 1),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  // Riflesso lucido in alto.
+                  const DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.center,
+                        colors: [Color(0x33FFFFFF), Color(0x00FFFFFF)],
+                      ),
                     ),
                   ),
-                ),
-                child,
-              ],
+                  child,
+                ],
+              ),
             ),
           ),
         ),
@@ -867,81 +872,86 @@ class _ResumeTile extends StatelessWidget {
       child: AnimatedScale(
         duration: perf.fast,
         scale: focused ? 1.05 : 1,
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            color: const Color(0xFF111827),
-            border: Border.all(
-              width: focused ? 3 : 1,
-              color: focused
-                  ? Colors.white
-                  : Colors.white.withValues(alpha: 0.10),
+        child: CustomPaint(
+          foregroundPainter: focused
+              ? const NeonBorderPainter(radius: 16, width: 3)
+              : null,
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              color: Palette.night,
+              border: Border.all(
+                width: focused ? 3 : 1,
+                color: focused
+                    ? Colors.transparent
+                    : Colors.white.withValues(alpha: 0.10),
+              ),
             ),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(15),
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                Poster(
-                  url: entry.poster,
-                  title: entry.title,
-                  radius: 0,
-                  decodeWidth: 320,
-                ),
-                const DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      stops: [0.25, 1],
-                      colors: [Color(0x00000000), Color(0xE6000000)],
-                    ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(15),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Poster(
+                    url: entry.poster,
+                    title: entry.title,
+                    radius: 0,
+                    decodeWidth: 320,
                   ),
-                ),
-                Positioned(
-                  left: 12,
-                  top: 10,
-                  child: Text(
-                    kind == VodKind.movies ? 'FILM' : 'SERIE',
-                    style: AppText.overline.copyWith(
-                      fontSize: 9.5,
-                      color: Colors.white.withValues(alpha: 0.8),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  left: 12,
-                  right: 12,
-                  bottom: 10,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        entry.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppText.headline.copyWith(fontSize: 14.5),
+                  const DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        stops: [0.25, 1],
+                        colors: [Color(0x00000000), Color(0xE6000000)],
                       ),
-                      if (sub.isNotEmpty) ...[
-                        const SizedBox(height: 2),
+                    ),
+                  ),
+                  Positioned(
+                    left: 12,
+                    top: 10,
+                    child: Text(
+                      kind == VodKind.movies ? 'FILM' : 'SERIE',
+                      style: AppText.overline.copyWith(
+                        fontSize: 9.5,
+                        color: Colors.white.withValues(alpha: 0.8),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    left: 12,
+                    right: 12,
+                    bottom: 10,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
                         Text(
-                          sub,
+                          entry.title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: AppText.label.copyWith(
-                            fontSize: 11.5,
-                            color: Palette.textTertiary,
-                          ),
+                          style: AppText.headline.copyWith(fontSize: 14.5),
                         ),
+                        if (sub.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            sub,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppText.label.copyWith(
+                              fontSize: 11.5,
+                              color: Palette.textTertiary,
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 8),
+                        ProgressBar(value: entry.fraction, height: 4),
                       ],
-                      const SizedBox(height: 8),
-                      ProgressBar(value: entry.fraction, height: 4),
-                    ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

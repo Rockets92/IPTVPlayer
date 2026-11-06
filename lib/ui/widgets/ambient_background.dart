@@ -87,7 +87,7 @@ class _AuroraPainter extends CustomPainter {
         size.height * (0.28 + 0.05 * math.cos(a)),
       ),
       d * 0.75,
-      const Color(0x553D7BFF),
+      const Color(0x5C2E6BFF),
     );
     glow(
       Offset(
@@ -95,7 +95,7 @@ class _AuroraPainter extends CustomPainter {
         size.height * (0.72 + 0.06 * math.sin(a * 0.7)),
       ),
       d * 0.7,
-      const Color(0x3D2BD4C8),
+      const Color(0x44E53DF5),
     );
     glow(
       Offset(
@@ -103,7 +103,7 @@ class _AuroraPainter extends CustomPainter {
         size.height * (0.12 + 0.04 * math.sin(a)),
       ),
       d * 0.45,
-      const Color(0x2E9B7BFF),
+      const Color(0x388A3DFF),
     );
   }
 

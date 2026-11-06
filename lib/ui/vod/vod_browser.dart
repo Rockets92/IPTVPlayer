@@ -487,7 +487,7 @@ class _VodBrowserState extends State<VodBrowser> {
             gradient: RadialGradient(
               center: Alignment(-0.8, -1),
               radius: 1.6,
-              colors: [Color(0xFF14213D), Palette.ink],
+              colors: [Color(0xFF1E1250), Palette.ink],
             ),
           ),
           child: SafeArea(
@@ -640,8 +640,9 @@ class _VodBrowserState extends State<VodBrowser> {
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(11),
+                    gradient: f ? Palette.neon : null,
                     color: f
-                        ? Colors.white
+                        ? null
                         : active
                         ? Colors.white.withValues(alpha: 0.10)
                         : Colors.transparent,
@@ -652,7 +653,7 @@ class _VodBrowserState extends State<VodBrowser> {
                         Icon(
                           c.icon,
                           size: 17,
-                          color: f ? Palette.ink : Palette.accent,
+                          color: f ? Palette.textPrimary : Palette.accent,
                         ),
                         const SizedBox(width: 9),
                       ],
@@ -664,7 +665,7 @@ class _VodBrowserState extends State<VodBrowser> {
                           style: AppText.label.copyWith(
                             fontSize: 14,
                             color: f
-                                ? Palette.ink
+                                ? Palette.textPrimary
                                 : active
                                 ? Palette.textPrimary
                                 : Palette.textSecondary,
@@ -679,7 +680,7 @@ class _VodBrowserState extends State<VodBrowser> {
                         style: AppText.label.copyWith(
                           fontSize: 12,
                           color: f
-                              ? Palette.ink.withValues(alpha: 0.6)
+                              ? Palette.textPrimary.withValues(alpha: 0.75)
                               : Palette.textTertiary,
                         ),
                       ),

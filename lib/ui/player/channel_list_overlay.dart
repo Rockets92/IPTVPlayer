@@ -344,9 +344,8 @@ class _GroupStripState extends State<GroupStrip> {
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(18),
-                  color: sel
-                      ? Colors.white.withValues(alpha: 0.92)
-                      : Colors.white.withValues(alpha: 0.07),
+                  gradient: sel ? Palette.neon : null,
+                  color: sel ? null : Colors.white.withValues(alpha: 0.07),
                   border: Border.all(
                     width: ring ? 2 : 1,
                     color: ring
@@ -361,7 +360,7 @@ class _GroupStripState extends State<GroupStrip> {
                       Icon(
                         icon,
                         size: 15,
-                        color: sel ? Palette.ink : Palette.warm,
+                        color: sel ? Palette.textPrimary : Palette.warm,
                       ),
                       const SizedBox(width: 6),
                     ],
@@ -369,7 +368,9 @@ class _GroupStripState extends State<GroupStrip> {
                       widget.groups[i],
                       style: AppText.label.copyWith(
                         fontWeight: FontWeight.w600,
-                        color: sel ? Palette.ink : Palette.textSecondary,
+                        color: sel
+                            ? Palette.textPrimary
+                            : Palette.textSecondary,
                       ),
                     ),
                   ],

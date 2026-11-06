@@ -296,9 +296,8 @@ class _PadKey extends StatelessWidget {
           duration: const Duration(milliseconds: 140),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            color: focused
-                ? Colors.white.withValues(alpha: 0.9)
-                : Colors.white.withValues(alpha: 0.08),
+            gradient: focused ? Palette.neon : null,
+            color: focused ? null : Colors.white.withValues(alpha: 0.08),
             border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
           ),
           alignment: Alignment.center,
@@ -306,13 +305,13 @@ class _PadKey extends StatelessWidget {
               ? Icon(
                   icon,
                   size: 20,
-                  color: focused ? Palette.ink : Palette.textSecondary,
+                  color: focused ? Palette.textPrimary : Palette.textSecondary,
                 )
               : Text(
                   label,
                   style: AppText.title.copyWith(
                     fontSize: 22,
-                    color: focused ? Palette.ink : Palette.textPrimary,
+                    color: Palette.textPrimary,
                   ),
                 ),
         ),

@@ -80,7 +80,7 @@ class Glass extends StatelessWidget {
 
     // Velatura: nel profilo completo è sottile, il colore arriva dallo sfondo.
     final Color tint = blur
-        ? (strong ? const Color(0x940A101E) : const Color(0x570A101E))
+        ? (strong ? const Color(0x940C0824) : const Color(0x570C0824))
         : (strong ? Palette.frostedSolidStrong : Palette.frostedSolid);
 
     Widget body = CustomPaint(
@@ -312,10 +312,10 @@ class GlassEdgePainter extends CustomPainter {
                 ),
               ]
             : [
-                a,
-                a.withValues(alpha: 0.55),
-                a.withValues(alpha: 0.35),
-                a.withValues(alpha: 0.8),
+                Color.lerp(a, Palette.accent, 0.5)!,
+                Palette.violet.withValues(alpha: a.a),
+                Palette.magenta.withValues(alpha: a.a * 0.85),
+                Palette.sunset.withValues(alpha: a.a),
               ],
       ).createShader(rect);
     canvas.drawRRect(rrect, paint);
