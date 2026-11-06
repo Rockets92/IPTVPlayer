@@ -17,6 +17,7 @@ import '../../state/app_controller.dart';
 import '../../state/reminder_controller.dart';
 import '../../state/tuner_controller.dart';
 import '../../state/vod_controller.dart';
+import '../home/home_hub.dart';
 import '../vod/vod_browser.dart';
 import '../keys.dart';
 import '../settings/settings_panel.dart';
@@ -34,7 +35,7 @@ import 'source_picker.dart';
 import 'volume_indicator.dart';
 import 'zap_banner.dart';
 
-enum _Panel { none, list, guide, settings, sources, games, vod }
+enum _Panel { none, list, guide, settings, sources, games, vod, home }
 
 bool get _isDesktop =>
     !kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS);
@@ -121,7 +122,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     if (r == null || !mounted || identical(r, _reminderShown)) return;
     _reminderShown = r;
     if (_panel != _Panel.none || _menu != null) {
-      if (_panel == _Panel.vod) _tuner.resume();
+      _leavePanel(_Panel.none);
       setState(() {
         _panel = _Panel.none;
         _menu = null;
@@ -221,12 +222,35 @@ class _PlayerScreenState extends State<PlayerScreen> {
       return;
     }
     _vodKind = k;
+    _leavePanel(_Panel.vod);
     _tuner.suspend();
     _open(_Panel.vod);
   }
 
+  /// Si esce dal pannello aperto: audio e diretta tornano come prima.
+  void _leavePanel(_Panel next) {
+    if (_panel == next) return;
+    if (_panel == _Panel.games) {
+      unawaited(
+        context.read<PlaybackEngine>().setMuted(
+          !SystemVolume.supported && _tuner.muted,
+        ),
+      );
+    }
+    if (_panel == _Panel.vod) _tuner.resume();
+  }
+
+  /// Scelta dalla schermata TV / Film / Serie / Giochi.
+  void _onHome(HomeChoice c) => switch (c) {
+    HomeChoice.live => _close(),
+    HomeChoice.movies => _openVod(VodKind.movies),
+    HomeChoice.series => _openVod(VodKind.series),
+    HomeChoice.games => _open(_Panel.games),
+  };
+
   void _open(_Panel p) {
     _tuner.hideBanner();
+    _leavePanel(p);
     // Nella sala giochi il canale resta sotto, ma senza audio.
     if (p == _Panel.games) {
       unawaited(context.read<PlaybackEngine>().setMuted(true));
@@ -239,10 +263,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   /// Menu del banner col telecomando: ←→ scelgono, OK apre, ↑/Indietro esce.
   KeyEventResult _onMenuKey(KeyEvent e, LogicalKeyboardKey k) {
-    final actions = bannerActions(
-      _tuner,
-      vod: context.read<VodController>().available,
-    );
+    final actions = bannerActions(_tuner);
     final i = (_menu ?? 0).clamp(0, actions.length - 1);
     if (k == LogicalKeyboardKey.arrowLeft ||
         k == LogicalKeyboardKey.arrowRight) {
@@ -267,14 +288,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
   }
 
   void _close() {
-    if (_panel == _Panel.games) {
-      unawaited(
-        context.read<PlaybackEngine>().setMuted(
-          !SystemVolume.supported && _tuner.muted,
-        ),
-      );
-    }
-    if (_panel == _Panel.vod) _tuner.resume();
+    _leavePanel(_Panel.none);
     setState(() => _panel = _Panel.none);
     _rootFocus.requestFocus();
   }
@@ -425,6 +439,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
     } else if (k == LogicalKeyboardKey.keyT ||
         k == LogicalKeyboardKey.colorF3Blue) {
       _openVod(VodKind.series);
+    } else if (k == LogicalKeyboardKey.keyH) {
+      _open(_Panel.home);
     } else if (k == LogicalKeyboardKey.keyJ) {
       _open(_Panel.games);
     } else if (k == LogicalKeyboardKey.keyG || k == LogicalKeyboardKey.guide) {
@@ -506,9 +522,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     BannerAction.settings => _open(_Panel.settings),
     BannerAction.sources => _open(_Panel.sources),
     BannerAction.plusOne => _plusOne(),
-    BannerAction.games => _open(_Panel.games),
-    BannerAction.movies => _openVod(VodKind.movies),
-    BannerAction.series => _openVod(VodKind.series),
+    BannerAction.home => _open(_Panel.home),
   };
 
   @override
@@ -679,10 +693,16 @@ class _PlayerScreenState extends State<PlayerScreen> {
                         prefs: context.read<AppController>().settings.prefs,
                         onClose: _close,
                       ),
+                      _Panel.home => HomeHub(
+                        key: const ValueKey(_Panel.home),
+                        onPick: _onHome,
+                        onClose: _close,
+                      ),
                       _Panel.vod => VodBrowser(
                         key: const ValueKey(_Panel.vod),
                         initial: _vodKind,
                         onClose: _close,
+                        onGames: () => _open(_Panel.games),
                       ),
                       _Panel.settings => SettingsPanel(
                         key: const ValueKey(_Panel.settings),

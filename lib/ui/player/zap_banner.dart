@@ -8,7 +8,6 @@ import '../../player/playback_engine.dart';
 import '../../state/app_controller.dart';
 import '../../state/reminder_controller.dart';
 import '../../state/tuner_controller.dart';
-import '../../state/vod_controller.dart';
 import '../format.dart';
 import '../widgets/channel_logo.dart';
 import '../widgets/epg_progress.dart';
@@ -109,26 +108,15 @@ class ZapBanner extends StatelessWidget {
   }
 }
 
-enum BannerAction {
-  list,
-  guide,
-  settings,
-  sources,
-  plusOne,
-  games,
-  movies,
-  series,
-}
+enum BannerAction { list, guide, home, settings, sources, plusOne }
 
 /// Azioni mostrate nel banner, nell'ordine in cui le si percorre con ←→.
-List<BannerAction> bannerActions(TunerController t, {bool vod = false}) => [
+List<BannerAction> bannerActions(TunerController t) => [
   BannerAction.list,
   BannerAction.guide,
-  if (vod) BannerAction.movies,
-  if (vod) BannerAction.series,
+  BannerAction.home,
   if (t.canTogglePlusOne) BannerAction.plusOne,
   if (t.activeSources.length > 1) BannerAction.sources,
-  BannerAction.games,
   BannerAction.settings,
 ];
 
@@ -581,10 +569,7 @@ class _ActionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tuner = context.watch<TunerController>();
-    final actions = bannerActions(
-      tuner,
-      vod: context.watch<VodController>().available,
-    );
+    final actions = bannerActions(tuner);
     final onPlusOne = tuner.timeshift || tuner.current?.baseChannelId != null;
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -616,23 +601,11 @@ class _ActionRow extends StatelessWidget {
               focused: menuIndex == i,
               onTap: () => onAction(BannerAction.sources),
             ),
-            BannerAction.movies => _RoundAction(
-              icon: Icons.movie_outlined,
-              tooltip: 'Film',
+            BannerAction.home => _RoundAction(
+              icon: Icons.grid_view_rounded,
+              tooltip: 'TV, film, serie e giochi',
               focused: menuIndex == i,
-              onTap: () => onAction(BannerAction.movies),
-            ),
-            BannerAction.series => _RoundAction(
-              icon: Icons.video_library_outlined,
-              tooltip: 'Serie TV',
-              focused: menuIndex == i,
-              onTap: () => onAction(BannerAction.series),
-            ),
-            BannerAction.games => _RoundAction(
-              icon: Icons.sports_esports_rounded,
-              tooltip: 'Giochi',
-              focused: menuIndex == i,
-              onTap: () => onAction(BannerAction.games),
+              onTap: () => onAction(BannerAction.home),
             ),
             BannerAction.settings => _RoundAction(
               icon: Icons.tune_rounded,

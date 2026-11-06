@@ -26,9 +26,17 @@ class _Cat {
 /// Sezione Film / Serie TV: categorie a sinistra, locandine a destra,
 /// ricerca con tastiera a schermo e ordinamento.
 class VodBrowser extends StatefulWidget {
-  const VodBrowser({super.key, required this.initial, required this.onClose});
+  const VodBrowser({
+    super.key,
+    required this.initial,
+    required this.onClose,
+    this.onGames,
+  });
 
   final VodKind initial;
+
+  /// Va alla sala giochi.
+  final VoidCallback? onGames;
 
   /// Torna alla TV in diretta.
   final VoidCallback onClose;
@@ -255,12 +263,14 @@ class _VodBrowserState extends State<VodBrowser> {
       case 2:
         _switchKind(VodKind.series);
       case 3:
+        widget.onGames?.call();
+      case 4:
         setState(() {
           _keyboard = true;
           _zone = _Zone.side;
           _keyIdx = 0;
         });
-      case 4:
+      case 5:
         setState(() {
           _sort = VodSort.values[(_sort.index + 1) % VodSort.values.length];
           _gridIdx = 0;
@@ -332,7 +342,7 @@ class _VodBrowserState extends State<VodBrowser> {
     switch (_zone) {
       case _Zone.top:
         if (left || right) {
-          setState(() => _top = (_top + (right ? 1 : -1)).clamp(0, 4));
+          setState(() => _top = (_top + (right ? 1 : -1)).clamp(0, 5));
         } else if (down) {
           setState(() => _zone = _Zone.grid);
           if (_items.isEmpty) setState(() => _zone = _Zone.side);
@@ -356,7 +366,7 @@ class _VodBrowserState extends State<VodBrowser> {
             } else if (up) {
               setState(() {
                 _zone = _Zone.top;
-                _top = 3;
+                _top = 4;
               });
             }
           } else if (ok) {
@@ -489,14 +499,15 @@ class _VodBrowserState extends State<VodBrowser> {
           Icons.video_library_outlined,
           active: _kind == VodKind.series,
         ),
+        pill(3, 'Giochi', Icons.sports_esports_rounded),
         const Spacer(),
         pill(
-          3,
+          4,
           _search.isEmpty ? 'Cerca' : '“$_search”',
           Icons.search_rounded,
           active: _keyboard || _search.isNotEmpty,
         ),
-        pill(4, _sort.label, Icons.sort_rounded),
+        pill(5, _sort.label, Icons.sort_rounded),
       ],
     );
   }
