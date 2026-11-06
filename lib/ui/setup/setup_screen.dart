@@ -580,15 +580,12 @@ class BrandMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(size * 0.22),
-      child: Image.asset(
-        Brand.icon,
-        width: size,
-        height: size,
-        semanticLabel: Brand.name,
-        filterQuality: FilterQuality.medium,
-      ),
+    return Image.asset(
+      Brand.icon,
+      width: size,
+      height: size,
+      semanticLabel: Brand.name,
+      filterQuality: FilterQuality.medium,
     );
   }
 }

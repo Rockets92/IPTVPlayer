@@ -242,15 +242,11 @@ class _HomeHubState extends State<HomeHub> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(compact ? 12 : 18),
-          child: Image.asset(
-            Brand.icon,
-            width: compact ? 54 : 84,
-            height: compact ? 54 : 84,
-            semanticLabel: Brand.name,
-            filterQuality: FilterQuality.medium,
-          ),
+        Image.asset(
+          Brand.logo,
+          height: compact ? 62 : 96,
+          semanticLabel: Brand.name,
+          filterQuality: FilterQuality.medium,
         ),
         SizedBox(width: compact ? 14 : 22),
         Expanded(

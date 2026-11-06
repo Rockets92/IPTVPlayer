@@ -187,6 +187,12 @@ class RemoteServer extends ChangeNotifier {
     switch (path) {
       case '/icon-192.png' || '/icon-512.png' || '/apple-touch-icon.png':
         return _asset(res, 'assets/remote$path', ContentType('image', 'png'));
+      case '/logo.png':
+        return _asset(
+          res,
+          'assets/brand/logo.png',
+          ContentType('image', 'png'),
+        );
       case '/sw.js':
         return _text(
           res,
