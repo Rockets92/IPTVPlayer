@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
@@ -21,6 +22,37 @@ bool isBackKey(LogicalKeyboardKey k) =>
     k == LogicalKeyboardKey.backspace ||
     k == LogicalKeyboardKey.gameButtonB;
 
+/// Fa scorrere la lista che contiene [context] perché l'elemento resti ad
+/// almeno [margin] dai bordi visibili.
+void revealWithMargin(BuildContext context, double margin) {
+  final box = context.findRenderObject();
+  final pos = Scrollable.maybeOf(context)?.position;
+  if (box == null || pos == null || !box.attached) return;
+  final vp = RenderAbstractViewport.maybeOf(box);
+  if (vp == null) return;
+  final atTop = vp.getOffsetToReveal(box, 0).offset;
+  final atBottom = vp.getOffsetToReveal(box, 1).offset;
+  double? target;
+  if (pos.pixels > atTop - margin) {
+    target = atTop - margin;
+  } else if (pos.pixels < atBottom + margin) {
+    target = atBottom + margin;
+  }
+  if (target == null) return;
+  target = target.clamp(pos.minScrollExtent, pos.maxScrollExtent);
+  if ((target - pos.pixels).abs() < 1) return;
+  final light = context.read<PerformanceProfile>().isLight;
+  if (light) {
+    pos.jumpTo(target);
+  } else {
+    pos.animateTo(
+      target,
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOutCubic,
+    );
+  }
+}
+
 /// Elemento selezionabile con D-pad, mouse e tocco, con stato di focus
 /// evidente da 3 metri (proiettore) ma discreto.
 class FocusTile extends StatefulWidget {
@@ -34,6 +66,7 @@ class FocusTile extends StatefulWidget {
     this.padding = const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
     this.selected = false,
     this.onFocusChange,
+    this.revealMargin,
   });
 
   final Widget child;
@@ -47,6 +80,10 @@ class FocusTile extends StatefulWidget {
   final bool selected;
   final ValueChanged<bool>? onFocusChange;
 
+  /// Se impostato, la lista scorre per lasciare almeno questo spazio tra la
+  /// voce col focus e i bordi, invece di fermarla a filo del bordo.
+  final double? revealMargin;
+
   @override
   State<FocusTile> createState() => _FocusTileState();
 }
@@ -59,12 +96,22 @@ class _FocusTileState extends State<FocusTile> {
   Widget build(BuildContext context) {
     final perf = context.read<PerformanceProfile>();
     final active = _focused || _hover;
+    // Sul profilo leggero niente dissolvenza: il focus salta e basta.
+    final duration = perf.isLight
+        ? Duration.zero
+        : const Duration(milliseconds: 110);
     return Focus(
       focusNode: widget.focusNode,
       autofocus: widget.autofocus,
       onFocusChange: (f) {
         setState(() => _focused = f);
         widget.onFocusChange?.call(f);
+        final m = widget.revealMargin;
+        if (f && m != null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) revealWithMargin(context, m);
+          });
+        }
       },
       onKeyEvent: (node, e) {
         if (e is KeyDownEvent && isSelectKey(e.logicalKey)) {
@@ -82,55 +129,95 @@ class _FocusTileState extends State<FocusTile> {
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: widget.onSelect,
-          child: CustomPaint(
-            foregroundPainter: _focused
-                ? GlassEdgePainter(
-                    radius: widget.radius,
-                    accent: Palette.accent.withValues(alpha: 0.85),
-                  )
-                : (active
-                      ? GlassEdgePainter(radius: widget.radius, intensity: 0.5)
-                      : null),
-            child: AnimatedContainer(
-              duration: perf.fast,
-              curve: Curves.easeOutCubic,
-              padding: widget.padding,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(widget.radius),
-                gradient: _focused
-                    ? LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          Colors.white.withValues(alpha: 0.20),
-                          Colors.white.withValues(alpha: 0.08),
-                        ],
-                      )
-                    : null,
-                color: _focused
-                    ? null
-                    : _hover
-                    ? Colors.white.withValues(alpha: 0.07)
-                    : widget.selected
-                    ? Colors.white.withValues(alpha: 0.05)
-                    : Colors.transparent,
-                boxShadow: _focused && !perf.isLight
-                    ? [
-                        BoxShadow(
-                          color: Palette.accent.withValues(alpha: 0.18),
-                          blurRadius: 24,
-                          spreadRadius: -4,
-                        ),
-                      ]
-                    : null,
+          // Sfondo e contorno del focus sono un unico strato che appare e
+          // scompare insieme: prima il contorno saltava subito sulla voce
+          // nuova mentre lo sfondo sfumava, lasciando un alone in ritardo.
+          child: Stack(
+            children: [
+              if (widget.selected && !active)
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(widget.radius),
+                      color: Colors.white.withValues(alpha: 0.05),
+                    ),
+                  ),
+                ),
+              Positioned.fill(
+                child: _Layer(
+                  visible: _hover && !_focused,
+                  duration: duration,
+                  child: CustomPaint(
+                    foregroundPainter: GlassEdgePainter(
+                      radius: widget.radius,
+                      intensity: 0.5,
+                    ),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(widget.radius),
+                        color: Colors.white.withValues(alpha: 0.07),
+                      ),
+                    ),
+                  ),
+                ),
               ),
-              child: widget.child,
-            ),
+              Positioned.fill(
+                child: _Layer(
+                  visible: _focused,
+                  duration: duration,
+                  child: CustomPaint(
+                    foregroundPainter: GlassEdgePainter(
+                      radius: widget.radius,
+                      accent: Palette.accent.withValues(alpha: 0.85),
+                    ),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(widget.radius),
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Colors.white.withValues(alpha: 0.20),
+                            Colors.white.withValues(alpha: 0.08),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Padding(padding: widget.padding, child: widget.child),
+            ],
           ),
         ),
       ),
     );
   }
+}
+
+/// Strato che compare e scompare in dissolvenza, tutto insieme.
+class _Layer extends StatelessWidget {
+  const _Layer({
+    required this.visible,
+    required this.duration,
+    required this.child,
+  });
+
+  final bool visible;
+  final Duration duration;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => IgnorePointer(
+    child: duration == Duration.zero
+        ? Visibility.maintain(visible: visible, child: child)
+        : AnimatedOpacity(
+            opacity: visible ? 1 : 0,
+            duration: duration,
+            curve: Curves.easeOutCubic,
+            child: child,
+          ),
+  );
 }
 
 /// Tasto stilizzato per i suggerimenti ("OK", "G", "↑↓").

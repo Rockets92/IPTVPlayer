@@ -235,7 +235,9 @@ class _SettingsPanelState extends State<SettingsPanel> {
                   padding: const EdgeInsets.fromLTRB(14, 26, 14, 26),
                   children: [
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: _Row.inset,
+                      ),
                       child: Text(
                         'Impostazioni',
                         style: AppText.display.copyWith(fontSize: 26),
@@ -259,6 +261,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
                       onSelect: _editMapping,
                     ),
                     _ToggleRow(
+                      icon: Icons.playlist_add_rounded,
                       title: 'Mostra canali non in lista',
                       subtitle:
                           'Gli altri canali del provider, dal numero ${mapping?.unmappedStartNumber ?? 1000}',
@@ -270,6 +273,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
                       },
                     ),
                     _ChoiceRow<AdultMode>(
+                      icon: Icons.no_adult_content_rounded,
                       title: 'Abilita contenuti per adulti',
                       value: s.adultMode,
                       options: const {
@@ -333,6 +337,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
                       },
                     ),
                     _ToggleRow(
+                      icon: Icons.event_note_rounded,
                       title: 'Usa la guida del provider',
                       subtitle:
                           'Completa i canali non coperti dalle fonti esterne',
@@ -345,6 +350,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
 
                     const _Section('Riproduzione'),
                     _ChoiceRow<StreamFormat>(
+                      icon: Icons.stream_rounded,
                       title: 'Formato stream',
                       value: s.streamFormat,
                       options: const {
@@ -360,6 +366,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
                       },
                     ),
                     _ChoiceRow<PerformanceMode>(
+                      icon: Icons.speed_rounded,
                       title: 'Prestazioni',
                       value: s.performanceMode,
                       options: const {
@@ -374,6 +381,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
                       },
                     ),
                     _ChoiceRow<UiScale>(
+                      icon: Icons.format_size_rounded,
                       title: 'Dimensione interfaccia',
                       value: s.uiScale,
                       options: const {
@@ -476,13 +484,33 @@ class _SettingsPanelState extends State<SettingsPanel> {
   }
 }
 
+/// Misure comuni delle voci: testo sempre sulla stessa colonna, dietro
+/// la colonna delle icone, e stessa altezza minima per ogni voce.
+abstract final class _Row {
+  /// Margine orizzontale del contenuto dentro la voce.
+  static const inset = 16.0;
+  static const iconSlot = 22.0;
+  static const iconGap = 16.0;
+
+  /// Dove inizia il testo, rispetto al bordo della voce.
+  static const text = inset + iconSlot + iconGap;
+  static const minHeight = 44.0;
+  static const padding = EdgeInsets.symmetric(horizontal: inset, vertical: 10);
+
+  /// Spazio lasciato tra la voce col focus e i bordi del pannello.
+  static const reveal = 72.0;
+
+  /// Spazio tra una voce e l'altra.
+  static const gap = EdgeInsets.symmetric(vertical: 3);
+}
+
 class _Section extends StatelessWidget {
   const _Section(this.title);
   final String title;
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(14, 30, 14, 10),
+    padding: const EdgeInsets.fromLTRB(_Row.inset, 26, _Row.inset, 8),
     child: Text(title.toUpperCase(), style: AppText.overline),
   );
 }
@@ -495,17 +523,12 @@ class _InfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+    padding: const EdgeInsets.fromLTRB(_Row.text, 6, _Row.inset, 6),
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SizedBox(
-          width: 130,
-          child: Text(
-            label,
-            style: AppText.label.copyWith(color: Palette.textTertiary),
-          ),
-        ),
+        Text(label, style: AppText.label.copyWith(color: Palette.textTertiary)),
+        const SizedBox(width: 16),
         Expanded(
           child: Text(
             value,
@@ -517,6 +540,62 @@ class _InfoRow extends StatelessWidget {
             ),
           ),
         ),
+      ],
+    ),
+  );
+}
+
+/// Struttura di ogni voce selezionabile: icona, titolo con sottotitolo e
+/// un elemento a destra (freccia, interruttore, scelte).
+class _RowBody extends StatelessWidget {
+  const _RowBody({
+    required this.icon,
+    required this.title,
+    this.subtitle,
+    this.trailing,
+  });
+
+  final IconData? icon;
+  final String title;
+  final String? subtitle;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) => ConstrainedBox(
+    constraints: const BoxConstraints(minHeight: _Row.minHeight),
+    child: Row(
+      children: [
+        SizedBox(
+          width: _Row.iconSlot,
+          child: icon == null
+              ? null
+              : Icon(icon, size: 20, color: Palette.textSecondary),
+        ),
+        const SizedBox(width: _Row.iconGap),
+        Expanded(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: AppText.headline.copyWith(fontSize: 15.5),
+              ),
+              if (subtitle != null) ...[
+                const SizedBox(height: 3),
+                Text(
+                  subtitle!,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.label.copyWith(color: Palette.textTertiary),
+                ),
+              ],
+            ],
+          ),
+        ),
+        if (trailing != null) ...[const SizedBox(width: 14), trailing!],
       ],
     ),
   );
@@ -539,37 +618,21 @@ class _ActionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 2),
+    padding: _Row.gap,
     child: FocusTile(
       focusNode: focusNode,
       onSelect: onSelect,
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: Palette.textSecondary),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: AppText.headline.copyWith(fontSize: 15.5)),
-                if (subtitle != null) ...[
-                  const SizedBox(height: 3),
-                  Text(
-                    subtitle!,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppText.label.copyWith(color: Palette.textTertiary),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          const Icon(
-            Icons.chevron_right_rounded,
-            size: 20,
-            color: Palette.textTertiary,
-          ),
-        ],
+      padding: _Row.padding,
+      revealMargin: _Row.reveal,
+      child: _RowBody(
+        icon: icon,
+        title: title,
+        subtitle: subtitle,
+        trailing: const Icon(
+          Icons.chevron_right_rounded,
+          size: 20,
+          color: Palette.textTertiary,
+        ),
       ),
     ),
   );
@@ -580,9 +643,11 @@ class _ToggleRow extends StatelessWidget {
     required this.title,
     required this.value,
     required this.onChanged,
+    this.icon,
     this.subtitle,
   });
 
+  final IconData? icon;
   final String title;
   final String? subtitle;
   final bool value;
@@ -590,29 +655,16 @@ class _ToggleRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 2),
+    padding: _Row.gap,
     child: FocusTile(
       onSelect: () => onChanged(!value),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: AppText.headline.copyWith(fontSize: 15.5)),
-                if (subtitle != null) ...[
-                  const SizedBox(height: 3),
-                  Text(
-                    subtitle!,
-                    style: AppText.label.copyWith(color: Palette.textTertiary),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(width: 16),
-          _Switch(value: value),
-        ],
+      padding: _Row.padding,
+      revealMargin: _Row.reveal,
+      child: _RowBody(
+        icon: icon,
+        title: title,
+        subtitle: subtitle,
+        trailing: _Switch(value: value),
       ),
     ),
   );
@@ -661,8 +713,10 @@ class _ChoiceRow<T> extends StatelessWidget {
     required this.value,
     required this.options,
     required this.onChanged,
+    this.icon,
   });
 
+  final IconData? icon;
   final String title;
   final T value;
   final Map<T, String> options;
@@ -672,59 +726,53 @@ class _ChoiceRow<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     final keys = options.keys.toList();
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
+      padding: _Row.gap,
       child: FocusTile(
         onSelect: () {
           final i = keys.indexOf(value);
           onChanged(keys[(i + 1) % keys.length]);
         },
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                title,
-                style: AppText.headline.copyWith(fontSize: 15.5),
-              ),
+        padding: _Row.padding,
+        revealMargin: _Row.reveal,
+        child: _RowBody(
+          icon: icon,
+          title: title,
+          trailing: Container(
+            padding: const EdgeInsets.all(3),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              color: Colors.white.withValues(alpha: 0.07),
             ),
-            Container(
-              padding: const EdgeInsets.all(3),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                color: Colors.white.withValues(alpha: 0.07),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  for (final k in keys)
-                    GestureDetector(
-                      onTap: () => onChanged(k),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 180),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(9),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (final k in keys)
+                  GestureDetector(
+                    onTap: () => onChanged(k),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 11,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(9),
+                        gradient: k == value ? Palette.neon : null,
+                      ),
+                      child: Text(
+                        options[k]!,
+                        style: AppText.label.copyWith(
+                          fontWeight: FontWeight.w600,
                           color: k == value
-                              ? Colors.white.withValues(alpha: 0.92)
-                              : null,
-                        ),
-                        child: Text(
-                          options[k]!,
-                          style: AppText.label.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: k == value
-                                ? Palette.ink
-                                : Palette.textSecondary,
-                          ),
+                              ? Colors.white
+                              : Palette.textSecondary,
                         ),
                       ),
                     ),
-                ],
-              ),
+                  ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
