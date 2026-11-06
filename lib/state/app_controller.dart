@@ -46,6 +46,9 @@ class AppController extends ChangeNotifier {
   XtreamAccountInfo? account;
   LiveSource? _client;
 
+  /// Fonte della lista in uso (Xtream o M3U).
+  LiveSource? get source => _client;
+
   /// Indirizzi diretti degli stream (liste M3U).
   Map<int, String> _directUrls = const {};
 

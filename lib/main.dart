@@ -22,6 +22,7 @@ import 'remote/remote_server.dart';
 import 'state/app_controller.dart';
 import 'state/reminder_controller.dart';
 import 'state/tuner_controller.dart';
+import 'state/vod_controller.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -66,6 +67,7 @@ Future<void> main() async {
   final app = AppController(settings: settings, perf: perf);
   final tuner = TunerController(app: app, engine: engine);
   final reminders = ReminderController(settings.prefs);
+  final vod = VodController(app: app, prefs: settings.prefs);
   final remote = RemoteServer(
     prefs: settings.prefs,
     app: app,
@@ -83,6 +85,7 @@ Future<void> main() async {
         ChangeNotifierProvider<AppController>.value(value: app),
         ChangeNotifierProvider<TunerController>.value(value: tuner),
         ChangeNotifierProvider<ReminderController>.value(value: reminders),
+        ChangeNotifierProvider<VodController>.value(value: vod),
         ChangeNotifierProvider<RemoteServer>.value(value: remote),
         ChangeNotifierProvider<GamePads>.value(value: remote.pads),
       ],

@@ -16,6 +16,8 @@ import '../../player/system_volume.dart';
 import '../../state/app_controller.dart';
 import '../../state/reminder_controller.dart';
 import '../../state/tuner_controller.dart';
+import '../../state/vod_controller.dart';
+import '../vod/vod_browser.dart';
 import '../keys.dart';
 import '../settings/settings_panel.dart';
 import '../widgets/focus_tile.dart';
@@ -32,7 +34,7 @@ import 'source_picker.dart';
 import 'volume_indicator.dart';
 import 'zap_banner.dart';
 
-enum _Panel { none, list, guide, settings, sources, games }
+enum _Panel { none, list, guide, settings, sources, games, vod }
 
 bool get _isDesktop =>
     !kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS);
@@ -119,6 +121,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     if (r == null || !mounted || identical(r, _reminderShown)) return;
     _reminderShown = r;
     if (_panel != _Panel.none || _menu != null) {
+      if (_panel == _Panel.vod) _tuner.resume();
       setState(() {
         _panel = _Panel.none;
         _menu = null;
@@ -209,6 +212,19 @@ class _PlayerScreenState extends State<PlayerScreen> {
     });
   }
 
+  VodKind _vodKind = VodKind.movies;
+
+  /// Film o serie: la TV si ferma finché si resta nel catalogo.
+  void _openVod(VodKind k) {
+    if (!context.read<VodController>().available) {
+      _showToast('Film e serie sono disponibili solo con le liste Xtream');
+      return;
+    }
+    _vodKind = k;
+    _tuner.suspend();
+    _open(_Panel.vod);
+  }
+
   void _open(_Panel p) {
     _tuner.hideBanner();
     // Nella sala giochi il canale resta sotto, ma senza audio.
@@ -223,7 +239,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   /// Menu del banner col telecomando: ←→ scelgono, OK apre, ↑/Indietro esce.
   KeyEventResult _onMenuKey(KeyEvent e, LogicalKeyboardKey k) {
-    final actions = bannerActions(_tuner);
+    final actions = bannerActions(
+      _tuner,
+      vod: context.read<VodController>().available,
+    );
     final i = (_menu ?? 0).clamp(0, actions.length - 1);
     if (k == LogicalKeyboardKey.arrowLeft ||
         k == LogicalKeyboardKey.arrowRight) {
@@ -255,6 +274,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
         ),
       );
     }
+    if (_panel == _Panel.vod) _tuner.resume();
     setState(() => _panel = _Panel.none);
     _rootFocus.requestFocus();
   }
@@ -399,6 +419,12 @@ class _PlayerScreenState extends State<PlayerScreen> {
       }
     } else if (k == LogicalKeyboardKey.keyL) {
       _open(_Panel.list);
+    } else if (k == LogicalKeyboardKey.keyV ||
+        k == LogicalKeyboardKey.colorF2Yellow) {
+      _openVod(VodKind.movies);
+    } else if (k == LogicalKeyboardKey.keyT ||
+        k == LogicalKeyboardKey.colorF3Blue) {
+      _openVod(VodKind.series);
     } else if (k == LogicalKeyboardKey.keyJ) {
       _open(_Panel.games);
     } else if (k == LogicalKeyboardKey.keyG || k == LogicalKeyboardKey.guide) {
@@ -481,6 +507,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
     BannerAction.sources => _open(_Panel.sources),
     BannerAction.plusOne => _plusOne(),
     BannerAction.games => _open(_Panel.games),
+    BannerAction.movies => _openVod(VodKind.movies),
+    BannerAction.series => _openVod(VodKind.series),
   };
 
   @override
@@ -649,6 +677,11 @@ class _PlayerScreenState extends State<PlayerScreen> {
                       _Panel.games => GamesHub(
                         key: const ValueKey(_Panel.games),
                         prefs: context.read<AppController>().settings.prefs,
+                        onClose: _close,
+                      ),
+                      _Panel.vod => VodBrowser(
+                        key: const ValueKey(_Panel.vod),
+                        initial: _vodKind,
                         onClose: _close,
                       ),
                       _Panel.settings => SettingsPanel(

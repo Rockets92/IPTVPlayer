@@ -60,6 +60,38 @@ class MediaKitEngine implements PlaybackEngine {
       _player.stream.height.listen(
         (h) => _set(_state.value.copyWith(height: h)),
       ),
+      _player.stream.position.listen((d) {
+        if (_vodMode) _vod.value = _vod.value.copyWith(position: d);
+      }),
+      _player.stream.duration.listen((d) {
+        if (_vodMode) _vod.value = _vod.value.copyWith(duration: d);
+      }),
+      _player.stream.playing.listen((p) {
+        if (_vodMode) _vod.value = _vod.value.copyWith(playing: p);
+      }),
+      _player.stream.tracks.listen((t) {
+        if (!_vodMode) return;
+        String label(String id, String? title, String? lang, int n) {
+          final parts = [?lang?.toUpperCase(), ?title];
+          return parts.isEmpty ? 'Traccia $n' : parts.join(' · ');
+        }
+
+        var na = 0, ns = 0;
+        _vod.value = _vod.value.copyWith(
+          audio: [
+            for (final a in t.audio)
+              if (a.id != 'auto' && a.id != 'no')
+                TrackOption(a.id, label(a.id, a.title, a.language, ++na)),
+          ],
+          subtitles: [
+            for (final a in t.subtitle)
+              if (a.id != 'auto' && a.id != 'no')
+                TrackOption(a.id, label(a.id, a.title, a.language, ++ns)),
+          ],
+        );
+        _syncTrackIds();
+      }),
+      _player.stream.track.listen((_) => _syncTrackIds()),
       _player.stream.error.listen((e) {
         // libmpv segnala come "errore" anche problemi non bloccanti (es.
         // dispositivo audio assente): conta solo se il canale non è partito.
@@ -67,6 +99,10 @@ class MediaKitEngine implements PlaybackEngine {
         _set(_state.value.copyWith(status: PlaybackStatus.failed, error: e));
       }),
       _player.stream.completed.listen((done) {
+        if (_vodMode) {
+          if (done) _vod.value = _vod.value.copyWith(ended: true);
+          return;
+        }
         // Uno stream live che "finisce" è un segnale interrotto.
         if (done && _state.value.status != PlaybackStatus.idle) {
           _set(
@@ -91,6 +127,12 @@ class MediaKitEngine implements PlaybackEngine {
 
   @override
   ValueListenable<PlaybackSnapshot> get state => _state;
+
+  bool _vodMode = false;
+  final _vod = ValueNotifier(const VodState());
+
+  @override
+  ValueListenable<VodState> get vod => _vod;
 
   void _set(PlaybackSnapshot s) => _state.value = s;
 
@@ -139,6 +181,7 @@ class MediaKitEngine implements PlaybackEngine {
 
   @override
   Future<void> open(String url) async {
+    _vodMode = false;
     await _ready;
     _set(
       const PlaybackSnapshot(
@@ -157,10 +200,66 @@ class MediaKitEngine implements PlaybackEngine {
     await _player.open(Media(url), play: true);
   }
 
+  @override
+  Future<void> openVod(String url, {Duration? start}) async {
+    await _ready;
+    _vodMode = true;
+    _vod.value = const VodState();
+    _set(
+      const PlaybackSnapshot(
+        status: PlaybackStatus.connecting,
+        buffering: true,
+      ),
+    );
+    await _player.open(Media(url, start: start), play: true);
+  }
+
+  /// Tracce in uso; con "auto" la scelta l'ha fatta mpv e la si chiede a lui.
+  Future<void> _syncTrackIds() async {
+    if (!_vodMode) return;
+    final t = _player.state.track;
+    Future<String> real(String id, String prop) async {
+      if (id != 'auto') return id;
+      final p = _player.platform;
+      if (p is! NativePlayer) return id;
+      try {
+        return await p.getProperty(prop);
+      } catch (_) {
+        return id;
+      }
+    }
+
+    final audio = await real(t.audio.id, 'aid');
+    final sub = await real(t.subtitle.id, 'sid');
+    if (!_vodMode) return;
+    _vod.value = _vod.value.copyWith(audioId: audio, subtitleId: sub);
+  }
+
+  @override
+  Future<void> seek(Duration position) => _player.seek(position);
+
+  @override
+  Future<void> playOrPause() => _player.playOrPause();
+
+  @override
+  Future<void> setAudioTrack(String id) async {
+    final t = _player.state.tracks.audio.where((a) => a.id == id).firstOrNull;
+    if (t != null) await _player.setAudioTrack(t);
+  }
+
+  @override
+  Future<void> setSubtitleTrack(String id) async {
+    final t = id == 'no'
+        ? SubtitleTrack.no()
+        : _player.state.tracks.subtitle.where((a) => a.id == id).firstOrNull;
+    if (t != null) await _player.setSubtitleTrack(t);
+  }
+
   String _ua = XtreamClient.userAgent;
 
   @override
   Future<void> stop() async {
+    _vodMode = false;
     _set(const PlaybackSnapshot());
     await _player.stop();
   }
@@ -200,5 +299,6 @@ class MediaKitEngine implements PlaybackEngine {
     }
     await _player.dispose();
     _state.dispose();
+    _vod.dispose();
   }
 }

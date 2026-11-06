@@ -523,7 +523,7 @@ class TunerController extends ChangeNotifier {
   }
 
   void _play() {
-    if (locked) return;
+    if (locked || _suspended) return;
     final c = current;
     _retryTimer?.cancel();
     if (c == null || _src(c).isEmpty) {
@@ -547,7 +547,33 @@ class TunerController extends ChangeNotifier {
     _notify();
   }
 
+  /// La TV è in pausa perché si guarda un film o una serie.
+  bool get suspended => _suspended;
+  bool _suspended = false;
+
+  /// Lascia il video a film e serie: niente failover né ritentativi.
+  void suspend() {
+    if (_suspended) return;
+    _suspended = true;
+    for (final t in [_zapTimer, _watchdog, _stall, _retryTimer]) {
+      t?.cancel();
+    }
+    _watchdog = _stall = _retryTimer = null;
+    hideBanner();
+    unawaited(engine.stop());
+  }
+
+  /// Torna alla TV: si risintonizza il canale di prima.
+  void resume() {
+    if (!_suspended) return;
+    _suspended = false;
+    _retries = 0;
+    _try = 0;
+    _play();
+  }
+
   void _onPlayback() {
+    if (_suspended) return;
     final s = engine.state.value;
     switch (s.status) {
       case PlaybackStatus.playing:

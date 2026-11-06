@@ -8,6 +8,7 @@ import '../../player/playback_engine.dart';
 import '../../state/app_controller.dart';
 import '../../state/reminder_controller.dart';
 import '../../state/tuner_controller.dart';
+import '../../state/vod_controller.dart';
 import '../format.dart';
 import '../widgets/channel_logo.dart';
 import '../widgets/epg_progress.dart';
@@ -108,12 +109,23 @@ class ZapBanner extends StatelessWidget {
   }
 }
 
-enum BannerAction { list, guide, settings, sources, plusOne, games }
+enum BannerAction {
+  list,
+  guide,
+  settings,
+  sources,
+  plusOne,
+  games,
+  movies,
+  series,
+}
 
 /// Azioni mostrate nel banner, nell'ordine in cui le si percorre con ←→.
-List<BannerAction> bannerActions(TunerController t) => [
+List<BannerAction> bannerActions(TunerController t, {bool vod = false}) => [
   BannerAction.list,
   BannerAction.guide,
+  if (vod) BannerAction.movies,
+  if (vod) BannerAction.series,
   if (t.canTogglePlusOne) BannerAction.plusOne,
   if (t.activeSources.length > 1) BannerAction.sources,
   BannerAction.games,
@@ -569,7 +581,10 @@ class _ActionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tuner = context.watch<TunerController>();
-    final actions = bannerActions(tuner);
+    final actions = bannerActions(
+      tuner,
+      vod: context.watch<VodController>().available,
+    );
     final onPlusOne = tuner.timeshift || tuner.current?.baseChannelId != null;
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -600,6 +615,18 @@ class _ActionRow extends StatelessWidget {
               tooltip: 'Fonte',
               focused: menuIndex == i,
               onTap: () => onAction(BannerAction.sources),
+            ),
+            BannerAction.movies => _RoundAction(
+              icon: Icons.movie_outlined,
+              tooltip: 'Film',
+              focused: menuIndex == i,
+              onTap: () => onAction(BannerAction.movies),
+            ),
+            BannerAction.series => _RoundAction(
+              icon: Icons.video_library_outlined,
+              tooltip: 'Serie TV',
+              focused: menuIndex == i,
+              onTap: () => onAction(BannerAction.series),
             ),
             BannerAction.games => _RoundAction(
               icon: Icons.sports_esports_rounded,

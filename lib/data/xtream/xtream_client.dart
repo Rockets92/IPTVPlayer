@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import '../epg/epg_models.dart';
 import '../json_utils.dart';
 import '../live_source.dart';
+import '../vod/vod_models.dart';
 import 'xtream_models.dart';
 
 /// Client per l'API "player_api.php" dei pannelli Xtream Codes.
@@ -144,6 +145,80 @@ class XtreamClient implements LiveSource {
     }
     return out;
   }
+
+  // --- Film e serie ----------------------------------------------------------
+
+  Future<List<XtreamCategory>> _categories(String action) async {
+    final body = await _get(_api({'action': action}));
+    final json = jsonDecode(body);
+    if (json is! List) return const [];
+    return [
+      for (final e in json)
+        if (e is Map) XtreamCategory.fromJson(e.cast<String, Object?>()),
+    ];
+  }
+
+  Future<List<XtreamCategory>> vodCategories() =>
+      _categories('get_vod_categories');
+
+  Future<List<XtreamCategory>> seriesCategories() =>
+      _categories('get_series_categories');
+
+  /// Tutti i film: elenco anche di decine di migliaia di titoli, decodificato
+  /// fuori dal thread UI.
+  Future<List<VodItem>> vodStreams() async {
+    final body = await _get(_api({'action': 'get_vod_streams'}));
+    return Isolate.run(() => _parseItems(body, series: false));
+  }
+
+  Future<List<VodItem>> series() async {
+    final body = await _get(_api({'action': 'get_series'}));
+    return Isolate.run(() => _parseItems(body, series: true));
+  }
+
+  static List<VodItem> _parseItems(String body, {required bool series}) {
+    final json = jsonDecode(body);
+    if (json is! List) return const [];
+    final out = <VodItem>[];
+    for (final e in json) {
+      if (e is! Map) continue;
+      final j = e.cast<String, Object?>();
+      final v = series ? VodItem.seriesFromJson(j) : VodItem.movieFromJson(j);
+      if (v != null) out.add(v);
+    }
+    return out;
+  }
+
+  Future<MovieInfo> movieInfo(int id) async {
+    final body = await _get(_api({'action': 'get_vod_info', 'vod_id': '$id'}));
+    try {
+      return MovieInfo.fromJson(jsonDecode(body));
+    } catch (_) {
+      return const MovieInfo();
+    }
+  }
+
+  Future<SeriesInfo> seriesInfo(int id) async {
+    final body = await _get(
+      _api({'action': 'get_series_info', 'series_id': '$id'}),
+    );
+    return Isolate.run(() {
+      try {
+        return SeriesInfo.fromJson(jsonDecode(body));
+      } catch (_) {
+        return const SeriesInfo(seasons: {});
+      }
+    });
+  }
+
+  String _path(String kind, int id, String ext) =>
+      '${credentials.serverUrl}/$kind/'
+      '${Uri.encodeComponent(credentials.username)}/'
+      '${Uri.encodeComponent(credentials.password)}/$id.$ext';
+
+  String movieUrl(int id, String ext) => _path('movie', id, ext);
+
+  String episodeUrl(int id, String ext) => _path('series', id, ext);
 
   /// EPG XMLTV completa del provider.
   @override
