@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:iptv_player/data/settings_store.dart';
 import 'package:iptv_player/data/vod/vod_models.dart';
 import 'package:iptv_player/data/xtream/xtream_client.dart';
 import 'package:iptv_player/data/xtream/xtream_models.dart';
@@ -188,5 +189,52 @@ void main() {
     final again = VodController.withClient(_client(), prefs: prefs);
     expect(again.progressOf('m:12')?.position, const Duration(minutes: 30));
     expect(again.progressOf('m:10')?.finished, isTrue);
+  });
+
+  test('categorie per adulti: XXX e i nomi elencati dopo', () {
+    const cats = [
+      XtreamCategory('1', 'IT | Azione'),
+      XtreamCategory('2', 'IT | Commedia'),
+      XtreamCategory('3', 'XXX'),
+      XtreamCategory('4', 'Nome Cognome'),
+      XtreamCategory('5', 'Altra Attrice'),
+      XtreamCategory('6', 'IT | Kids'),
+    ];
+    expect(VodController.detectAdult(cats, const []), {'3', '4', '5'});
+    // Senza XXX non si tocca niente.
+    expect(VodController.detectAdult(cats.take(2).toList(), const []), isEmpty);
+    // Categoria con titoli segnati dal provider.
+    expect(
+      VodController.detectAdult(
+        const [XtreamCategory('9', 'Varie')],
+        const [VodItem(id: 1, name: 'a', categoryId: '9', adult: true)],
+      ),
+      {'9'},
+    );
+  });
+
+  test('i film per adulti seguono l\'impostazione', () async {
+    SharedPreferences.setMockInitialValues({});
+    final vod = VodController.withClient(
+      _client(),
+      prefs: await SharedPreferences.getInstance(),
+    );
+    await vod.load(VodKind.movies);
+    final c = vod.catalog(VodKind.movies)..adultCategories = {'2'};
+    expect(c.adultCategories, {'2'});
+    List<int> ids(String cat, {String search = ''}) => [
+      for (final i in vod.query(VodKind.movies, category: cat, search: search))
+        i.id,
+    ];
+    vod.adultModeForTest = AdultMode.off;
+    expect(ids('*all'), [10, 12]);
+    expect(ids('2'), isEmpty);
+    expect(ids('*all', search: 'citta'), isEmpty);
+    vod.adultModeForTest = AdultMode.pin;
+    expect(ids('2'), isEmpty);
+    vod.adultModeForTest = AdultMode.on;
+    expect(ids('2'), [11]);
+    expect(ids('*all'), [10, 12]);
+    expect(ids('*all', search: 'citta'), [11]);
   });
 }

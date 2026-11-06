@@ -134,6 +134,7 @@ class _MovieDetailState extends State<MovieDetail> {
           title: m.title,
           poster: m.poster,
           extension: m.extension,
+          adult: _vod.isAdult(VodKind.movies, m),
         ),
       ),
     );
@@ -427,6 +428,7 @@ class _SeriesDetailState extends State<SeriesDetail> {
         episodeId: e.id,
         extension: e.extension,
         label: '${e.code} · ${e.title}',
+        adult: _vod.isAdult(VodKind.series, s),
       ),
       next: () {
         final n = _after(info, e);

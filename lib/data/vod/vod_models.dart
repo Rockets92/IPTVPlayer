@@ -16,6 +16,7 @@ class VodItem {
     this.extension = 'mp4',
     this.plot,
     this.genre,
+    this.adult = false,
   });
 
   /// `stream_id` per i film, `series_id` per le serie.
@@ -35,6 +36,9 @@ class VodItem {
   final String extension;
   final String? plot;
   final String? genre;
+
+  /// Segnalato dal provider come contenuto per adulti (`is_adult`).
+  final bool adult;
 
   /// Nome senza prefissi tipo "IT: " o "|IT| " usati dai pannelli.
   String get title => cleanTitle(name);
@@ -80,6 +84,7 @@ class VodItem {
       added: asInt(j['added']) ?? 0,
       year: _year(j, name),
       extension: asNonEmptyString(j['container_extension']) ?? 'mp4',
+      adult: asString(j['is_adult']) == '1',
     );
   }
 
@@ -97,6 +102,7 @@ class VodItem {
       year: _year(j, name),
       plot: asNonEmptyString(j['plot']),
       genre: asNonEmptyString(j['genre']),
+      adult: asString(j['is_adult']) == '1',
     );
   }
 }

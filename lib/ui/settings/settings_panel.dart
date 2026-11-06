@@ -8,6 +8,7 @@ import '../../core/theme.dart';
 import '../../data/settings_store.dart';
 import '../../state/app_controller.dart';
 import '../../state/tuner_controller.dart';
+import '../../state/vod_controller.dart';
 import '../format.dart';
 import '../widgets/focus_tile.dart';
 import '../widgets/glass.dart';
@@ -139,7 +140,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
   Future<String?> _newPin() async {
     final a = await _pin(
       'Scegli un PIN',
-      subtitle: '4 cifre per sbloccare i canali per adulti',
+      subtitle: '4 cifre per sbloccare i contenuti per adulti',
     );
     if (a == null || !mounted) return null;
     final b = await _pin('Conferma il PIN', subtitle: 'Ripeti le 4 cifre');
@@ -172,12 +173,14 @@ class _SettingsPanelState extends State<SettingsPanel> {
     await _s.setAdultMode(v, pin: pin);
     if (!mounted) return;
     final tuner = context.read<TunerController>();
+    final vod = context.read<VodController>();
     await _app.applyMapping();
     tuner.relockAdult();
+    vod.relockAdult();
     widget.onToast(switch (v) {
-      AdultMode.off => 'Canali per adulti nascosti',
-      AdultMode.on => 'Canali per adulti attivi, categoria XXX',
-      AdultMode.pin => 'Canali per adulti protetti da PIN',
+      AdultMode.off => 'Contenuti per adulti nascosti',
+      AdultMode.on => 'Contenuti per adulti attivi',
+      AdultMode.pin => 'Contenuti per adulti protetti da PIN',
     });
     if (mounted) setState(() {});
   }
@@ -189,6 +192,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
     await _s.setAdultMode(AdultMode.pin, pin: pin);
     if (!mounted) return;
     context.read<TunerController>().relockAdult();
+    context.read<VodController>().relockAdult();
     widget.onToast('PIN aggiornato');
   }
 
@@ -266,7 +270,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
                       },
                     ),
                     _ChoiceRow<AdultMode>(
-                      title: 'Abilita canali per adulti',
+                      title: 'Abilita contenuti per adulti',
                       value: s.adultMode,
                       options: const {
                         AdultMode.off: 'No',
@@ -279,7 +283,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
                       _ActionRow(
                         icon: Icons.lock_reset_rounded,
                         title: 'Cambia PIN',
-                        subtitle: 'Canali della categoria XXX dal 900',
+                        subtitle: 'Canali XXX dal 900, film e serie per adulti',
                         onSelect: _changePin,
                       ),
                     _ActionRow(

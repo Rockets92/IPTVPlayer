@@ -391,7 +391,10 @@ class _HomeHubState extends State<HomeHub> {
     final items = _vod.catalog(k).items;
     var best = <VodItem>[
       for (final i in items)
-        if (i.poster != null && i.poster!.startsWith('http')) i,
+        if (i.poster != null &&
+            i.poster!.startsWith('http') &&
+            !_vod.isAdult(k, i))
+          i,
     ];
     if (best.length > 40) {
       best.sort((a, b) => b.added.compareTo(a.added));

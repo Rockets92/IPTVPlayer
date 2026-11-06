@@ -8,6 +8,7 @@ import '../../data/vod/vod_models.dart';
 import '../../state/vod_controller.dart';
 import '../keys.dart';
 import '../widgets/focus_tile.dart';
+import '../widgets/pin_dialog.dart';
 import 'vod_detail.dart';
 import 'vod_widgets.dart';
 
@@ -16,8 +17,11 @@ enum _Zone { top, side, grid }
 
 /// Voce dell'elenco a sinistra.
 class _Cat {
-  const _Cat(this.id, this.name, this.count, {this.icon});
+  const _Cat(this.id, this.name, this.count, {this.icon, this.locked = false});
   final String id;
+
+  /// Categoria per adulti in attesa del PIN.
+  final bool locked;
   final String name;
   final int count;
   final IconData? icon;
@@ -133,12 +137,23 @@ class _VodBrowserState extends State<VodBrowser> {
       _Cat(
         VodCategories.all,
         _kind == VodKind.movies ? 'Tutti i film' : 'Tutte le serie',
-        c.items.length,
+        c.items.length -
+            [for (final id in c.adultCategories) counts[id] ?? 0]
+                .fold(0, (a, b) => a + b),
         icon: Icons.apps_rounded,
       ),
       for (final cat in c.categories)
-        if ((counts[cat.id] ?? 0) > 0)
-          _Cat(cat.id, VodItem.cleanTitle(cat.name), counts[cat.id]!),
+        if ((counts[cat.id] ?? 0) > 0 &&
+            (_vod.adultListed || !c.adultCategories.contains(cat.id)))
+          _Cat(
+            cat.id,
+            VodItem.cleanTitle(cat.name),
+            counts[cat.id]!,
+            locked: !_vod.adultOpen && c.adultCategories.contains(cat.id),
+            icon: !_vod.adultOpen && c.adultCategories.contains(cat.id)
+                ? Icons.lock_outline_rounded
+                : null,
+          ),
     ];
   }
 
@@ -150,6 +165,7 @@ class _VodBrowserState extends State<VodBrowser> {
       _search,
       _sort,
       c.items,
+      _vod.adultOpen,
       _category == VodCategories.continueWatching
           ? _vod.continueWatching(_kind).map((w) => w.key).join(',')
           : null,
@@ -252,6 +268,34 @@ class _VodBrowserState extends State<VodBrowser> {
     if (!mounted) return;
     _focus.requestFocus();
     setState(() {});
+  }
+
+  /// La categoria scelta è per adulti e serve il PIN.
+  bool get _lockedHere =>
+      _search.isEmpty &&
+      !_vod.adultOpen &&
+      _vod.isAdultCategory(_kind, _category);
+
+  bool _pinOpen = false;
+
+  Future<void> _askPin() async {
+    if (_pinOpen) return;
+    _pinOpen = true;
+    final pin = await showPinDialog(
+      context,
+      title: 'Contenuti per adulti',
+      subtitle: 'Inserisci il PIN per vedere questa categoria',
+      validate: _vod.unlockAdult,
+    );
+    _pinOpen = false;
+    if (!mounted) return;
+    _focus.requestFocus();
+    if (pin != null) {
+      setState(() {
+        _cache = null;
+        if (_items.isNotEmpty) _zone = _Zone.grid;
+      });
+    }
   }
 
   void _activateTop(int i) {
@@ -385,7 +429,11 @@ class _VodBrowserState extends State<VodBrowser> {
         } else if (down) {
           _setCategory(_sideIdx + 1);
         } else if (right || ok) {
-          if (_items.isNotEmpty) setState(() => _zone = _Zone.grid);
+          if (_lockedHere) {
+            _askPin();
+          } else if (_items.isNotEmpty) {
+            setState(() => _zone = _Zone.grid);
+          }
         } else if (back) {
           widget.onClose();
         }
@@ -585,6 +633,7 @@ class _VodBrowserState extends State<VodBrowser> {
                 onTap: () {
                   _setCategory(i);
                   setState(() => _zone = _Zone.side);
+                  if (c.locked) _askPin();
                 },
                 child: Container(
                   margin: const EdgeInsets.symmetric(vertical: 2),
@@ -660,6 +709,11 @@ class _VodBrowserState extends State<VodBrowser> {
       );
     } else if (catalog.error != null && catalog.items.isEmpty) {
       body = _message(catalog.error!);
+    } else if (_lockedHere) {
+      body = _message(
+        'Categoria per adulti protetta da PIN.\nPremi OK per sbloccarla.',
+        icon: Icons.lock_outline_rounded,
+      );
     } else if (items.isEmpty) {
       body = _message(
         _search.isNotEmpty
@@ -728,27 +782,32 @@ class _VodBrowserState extends State<VodBrowser> {
     );
   }
 
-  Widget _message(String text, {bool spinner = false}) => Center(
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (spinner) ...[
-          const SizedBox(
-            width: 28,
-            height: 28,
-            child: CircularProgressIndicator(
-              strokeWidth: 2.5,
-              color: Palette.accent,
+  Widget _message(String text, {bool spinner = false, IconData? icon}) =>
+      Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(icon, size: 40, color: Palette.textTertiary),
+              const SizedBox(height: 14),
+            ],
+            if (spinner) ...[
+              const SizedBox(
+                width: 28,
+                height: 28,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  color: Palette.accent,
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+            Text(
+              text,
+              textAlign: TextAlign.center,
+              style: AppText.body.copyWith(fontSize: 16),
             ),
-          ),
-          const SizedBox(height: 16),
-        ],
-        Text(
-          text,
-          textAlign: TextAlign.center,
-          style: AppText.body.copyWith(fontSize: 16),
+          ],
         ),
-      ],
-    ),
-  );
+      );
 }

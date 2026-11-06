@@ -4,6 +4,8 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../data/settings_store.dart';
+import '../domain/channel_matcher.dart';
 import '../data/vod/vod_models.dart';
 import '../data/xtream/xtream_client.dart';
 import '../data/xtream/xtream_models.dart';
@@ -43,7 +45,11 @@ class WatchEntry {
     this.episodeId,
     this.extension = 'mp4',
     this.label,
+    this.adult = false,
   });
+
+  /// Titolo per adulti: segue l'impostazione dei contenuti per adulti.
+  final bool adult;
 
   /// `m:<id>` per i film, `s:<seriesId>` per le serie (ultimo episodio).
   final String key;
@@ -77,6 +83,7 @@ class WatchEntry {
     'e': ?episodeId,
     'x': extension,
     'l': ?label,
+    if (adult) 'a': 1,
   };
 
   static WatchEntry? fromJson(String key, Object? j) {
@@ -93,6 +100,7 @@ class WatchEntry {
       episodeId: (j['e'] as num?)?.toInt(),
       extension: (j['x'] as String?) ?? 'mp4',
       label: j['l'] as String?,
+      adult: j['a'] == 1,
     );
   }
 }
@@ -130,8 +138,106 @@ class VodController extends ChangeNotifier {
   /// Film e serie esistono solo con le liste Xtream.
   bool get available => client != null;
 
+  // --- Contenuti per adulti -------------------------------------------------
+
+  AdultMode? _testMode;
+
+  /// Stessa impostazione dei canali per adulti.
+  AdultMode get adultMode =>
+      _testMode ?? app?.settings.adultMode ?? AdultMode.off;
+
+  @visibleForTesting
+  set adultModeForTest(AdultMode m) {
+    _testMode = m;
+    _adultUnlocked = false;
+    notifyListeners();
+  }
+
+  bool _adultUnlocked = false;
+
+  /// Categorie per adulti elencate (con "Sì" o "Sì con PIN").
+  bool get adultListed => adultMode != AdultMode.off;
+
+  /// Titoli per adulti visibili adesso (attivi, o PIN già inserito).
+  bool get adultOpen =>
+      adultMode == AdultMode.on ||
+      (adultMode == AdultMode.pin && _adultUnlocked);
+
+  /// PIN giusto: film e serie per adulti restano aperti fino al cambio
+  /// d'impostazione o al riavvio.
+  bool unlockAdult(String pin) {
+    final ok = app?.settings.checkAdultPin(pin) ?? false;
+    if (ok) {
+      _adultUnlocked = true;
+      notifyListeners();
+    }
+    return ok;
+  }
+
+  void relockAdult() {
+    _adultUnlocked = false;
+    notifyListeners();
+  }
+
+  bool isAdultCategory(VodKind kind, String? id) =>
+      id != null && catalog(kind).adultCategories.contains(id);
+
+  bool isAdult(VodKind kind, VodItem i) =>
+      i.adult || isAdultCategory(kind, i.categoryId);
+
+  static final _catPrefix = RegExp(
+    r'^\s*[\[|(]?\s*([A-Za-z]{2,3})\s*[\]|):\-]',
+  );
+
+  /// Categorie per adulti: quelle col nome esplicito ("XXX", "Adult"…) e,
+  /// dopo la prima, quelle che non somigliano alle categorie normali (i
+  /// pannelli mettono in fondo un elenco di nomi di attori).
+  static Set<String> detectAdult(
+    List<XtreamCategory> cats,
+    List<VodItem> items,
+  ) {
+    final out = <String>{};
+    var first = -1;
+    for (var i = 0; i < cats.length; i++) {
+      if (ChannelMatcher.isAdultCategory(cats[i].name)) {
+        out.add(cats[i].id);
+        if (first < 0) first = i;
+      }
+    }
+    if (first >= 0) {
+      String? prefix(String n) =>
+          _catPrefix.firstMatch(n)?.group(1)?.toUpperCase();
+      final legit = {for (final c in cats.take(first)) ?prefix(c.name)};
+      for (final c in cats.skip(first + 1)) {
+        final p = prefix(c.name);
+        if (p == null || !legit.contains(p)) out.add(c.id);
+      }
+    }
+    // Categorie in cui il provider segna come per adulti la maggior parte
+    // dei titoli.
+    final flagged = <String, int>{};
+    final total = <String, int>{};
+    for (final i in items) {
+      final id = i.categoryId;
+      if (id == null) continue;
+      total[id] = (total[id] ?? 0) + 1;
+      if (i.adult) flagged[id] = (flagged[id] ?? 0) + 1;
+    }
+    for (final e in flagged.entries) {
+      if (e.value * 2 > (total[e.key] ?? 0)) out.add(e.key);
+    }
+    return out;
+  }
+
   Object? _source;
+  AdultMode? _lastMode;
   void _onApp() {
+    final mode = adultMode;
+    if (mode != _lastMode) {
+      _lastMode = mode;
+      _adultUnlocked = false;
+      notifyListeners();
+    }
     if (!identical(app?.source, _source)) {
       _source = app?.source;
       _catalogs.clear();
@@ -160,6 +266,7 @@ class VodController extends ChangeNotifier {
       c
         ..categories = cats
         ..items = items
+        ..adultCategories = detectAdult(cats, items)
         ..loaded = true;
     } catch (e) {
       c.error = e is XtreamException
@@ -180,6 +287,13 @@ class VodController extends ChangeNotifier {
   }) {
     final c = catalog(kind);
     Iterable<VodItem> items = c.items;
+    final open = adultOpen;
+    if (category != VodCategories.all &&
+        category != VodCategories.continueWatching &&
+        !open &&
+        c.adultCategories.contains(category)) {
+      return const [];
+    }
     if (category == VodCategories.continueWatching) {
       final ids = {
         for (final w in continueWatching(kind))
@@ -193,6 +307,10 @@ class VodController extends ChangeNotifier {
     }
     if (category != VodCategories.all) {
       items = items.where((i) => i.categoryId == category);
+    } else if (!(open && search.trim().isNotEmpty)) {
+      // "Tutti" e le copertine restano puliti; con i contenuti aperti i
+      // titoli per adulti si trovano cercandoli o nelle loro categorie.
+      items = items.where((i) => !isAdult(kind, i));
     }
     final q = _fold(search.trim());
     if (q.isNotEmpty) {
@@ -325,9 +443,23 @@ class VodController extends ChangeNotifier {
   List<WatchEntry> continueWatching(VodKind kind) {
     final prefix = kind == VodKind.movies ? 'm:' : 's:';
     return _progress.values
-        .where((w) => w.key.startsWith(prefix) && !w.finished)
+        .where(
+          (w) =>
+              w.key.startsWith(prefix) &&
+              !w.finished &&
+              (adultOpen || !_adultEntry(kind, w)),
+        )
         .toList()
       ..sort((a, b) => b.at.compareTo(a.at));
+  }
+
+  bool _adultEntry(VodKind kind, WatchEntry w) {
+    if (w.adult) return true;
+    final id = kind == VodKind.movies
+        ? int.tryParse(w.key.substring(2))
+        : w.seriesId;
+    final i = catalog(kind).byId[id];
+    return i != null && isAdult(kind, i);
   }
 
   /// Annota la posizione (chiamato durante la visione e all'uscita).
@@ -361,6 +493,18 @@ class VodCatalog {
   bool loading = false;
   bool loaded = false;
   String? error;
+  Set<String> adultCategories = const {};
+  Map<int, VodItem>? _byId;
+  List<VodItem>? _byIdOf;
+
+  Map<int, VodItem> get byId {
+    if (_byId == null || !identical(_byIdOf, items)) {
+      _byId = {for (final i in items) i.id: i};
+      _byIdOf = items;
+    }
+    return _byId!;
+  }
+
   Map<String, int>? _counts;
   List<VodItem>? _countsOf;
 }

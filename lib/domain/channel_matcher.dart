@@ -26,7 +26,8 @@ class ChannelMatcher {
   static bool isAdultCategory(String? name) {
     if (name == null) return false;
     final n = NameNormalizer.fold(name).toLowerCase();
-    return RegExp(r'(?<![a-z0-9])(xxx|adult[a-z]*|18\+)').hasMatch(n);
+    return RegExp(r'(?<![a-z0-9])(xxx|adult[a-z]*|18\+|porn[a-z]*)')
+        .hasMatch(n);
   }
 
   List<Channel> build({
