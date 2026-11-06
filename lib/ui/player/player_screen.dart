@@ -33,6 +33,7 @@ import '../games/games_hub.dart';
 import '../widgets/confirm_dialog.dart';
 import 'reminder_popup.dart';
 import 'signal_overlay.dart';
+import '../../remote/remote_hooks.dart';
 import 'source_picker.dart';
 import 'volume_indicator.dart';
 import 'zap_banner.dart';
@@ -65,6 +66,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
   @override
   void initState() {
     super.initState();
+    RemoteHooks.resume = _resumeVod;
     WakelockPlus.enable().catchError((_) {});
     if (_isMobile) {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
@@ -180,6 +182,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   @override
   void dispose() {
+    if (RemoteHooks.resume == _resumeVod) RemoteHooks.resume = null;
     context.read<AppController>().removeListener(_onApp);
     _reminders.removeListener(_onReminder);
     _tuner.removeListener(_onTuner);

@@ -439,6 +439,32 @@ class VodController extends ChangeNotifier {
 
   Duration? episodePosition(int episodeId) => _episodePos[episodeId];
 
+  /// Film e serie iniziati insieme, dal più recente.
+  List<(VodKind, WatchEntry)> resumeAll({int limit = 8}) {
+    if (!available) return const [];
+    final all = [
+      for (final w in continueWatching(VodKind.movies)) (VodKind.movies, w),
+      for (final w in continueWatching(VodKind.series)) (VodKind.series, w),
+    ]..sort((a, b) => b.$2.at.compareTo(a.$2.at));
+    return all.take(limit).toList();
+  }
+
+  /// Il titolo da aprire per riprendere [w]: quello del catalogo, se già
+  /// caricato, altrimenti uno ricostruito dai dati salvati.
+  VodItem? itemFor(VodKind kind, WatchEntry w) {
+    final id = kind == VodKind.movies
+        ? int.tryParse(w.key.substring(2))
+        : w.seriesId;
+    if (id == null) return null;
+    return catalog(kind).items.where((i) => i.id == id).firstOrNull ??
+        VodItem(
+          id: id,
+          name: w.title,
+          poster: w.poster,
+          extension: w.extension,
+        );
+  }
+
   /// Titoli iniziati e non finiti, dal più recente.
   List<WatchEntry> continueWatching(VodKind kind) {
     final prefix = kind == VodKind.movies ? 'm:' : 's:';

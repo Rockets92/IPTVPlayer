@@ -6,6 +6,7 @@ import '../../core/performance.dart';
 import '../../core/theme.dart';
 import '../../data/vod/vod_models.dart';
 import '../../state/vod_controller.dart';
+import '../../remote/remote_hooks.dart';
 import '../keys.dart';
 import '../widgets/focus_tile.dart';
 import '../widgets/pin_dialog.dart';
@@ -83,11 +84,13 @@ class _VodBrowserState extends State<VodBrowser> {
     _top = _kind == VodKind.movies ? 1 : 2;
     _vod.load(_kind);
     _pickStartCategory();
+    RemoteHooks.search = _remoteSearch;
     WidgetsBinding.instance.addPostFrameCallback((_) => _focus.requestFocus());
   }
 
   @override
   void dispose() {
+    if (RemoteHooks.search == _remoteSearch) RemoteHooks.search = null;
     _focus.dispose();
     _grid.dispose();
     _side.dispose();
@@ -338,6 +341,19 @@ class _VodBrowserState extends State<VodBrowser> {
         _search += k.toLowerCase();
       }
       _gridIdx = 0;
+    });
+    _jumpTo();
+  }
+
+  /// Ricerca scritta sulla tastiera del telefono: mostra subito i risultati.
+  void _remoteSearch(String q) {
+    if (!mounted) return;
+    final text = q.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+    setState(() {
+      _search = text;
+      _keyboard = false;
+      _gridIdx = 0;
+      _zone = _items.isEmpty ? _Zone.side : _Zone.grid;
     });
     _jumpTo();
   }

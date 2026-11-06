@@ -13,7 +13,9 @@ import '../domain/channel.dart';
 import '../state/app_controller.dart';
 import '../state/reminder_controller.dart';
 import '../state/tuner_controller.dart';
+import '../state/vod_controller.dart';
 import 'game_pads.dart';
+import 'remote_hooks.dart';
 import 'remote_keys.dart';
 
 /// Piccolo server web sulla rete di casa: lo smartphone, inquadrando un QR,
@@ -27,6 +29,7 @@ class RemoteServer extends ChangeNotifier {
     required this.app,
     required this.tuner,
     required this.reminders,
+    this.vod,
     GamePads? pads,
   }) : pads = pads ?? GamePads();
 
@@ -37,6 +40,9 @@ class RemoteServer extends ChangeNotifier {
   final AppController app;
   final TunerController tuner;
   final ReminderController reminders;
+
+  /// Film e serie (liste Xtream): "Continua a guardare" sul telefono.
+  final VodController? vod;
 
   static const firstPort = 8787;
   static const _kToken = 'remote.token';
@@ -264,6 +270,33 @@ class RemoteServer extends ChangeNotifier {
           dispatchRemoteKey(k);
         }
         return _json(res, _state());
+      case ('GET', '/api/vod'):
+        return _json(res, _vodState());
+      case ('POST', '/api/vod/resume'):
+        final body = await _body(r);
+        final key = '${body['key'] ?? ''}';
+        final hit = vod
+            ?.resumeAll(limit: 50)
+            .where((e) => e.$2.key == key)
+            .firstOrNull;
+        final item = hit == null ? null : vod!.itemFor(hit.$1, hit.$2);
+        final open = RemoteHooks.resume;
+        if (hit == null || item == null || open == null) {
+          return _json(res, {
+            ..._vodState(),
+            'error': 'Titolo non disponibile',
+          });
+        }
+        open(hit.$1, item);
+        return _json(res, _vodState());
+      case ('POST', '/api/search'):
+        final body = await _body(r);
+        final search = RemoteHooks.search;
+        if (search == null) {
+          return _json(res, {'ok': false});
+        }
+        search('${body['q'] ?? ''}');
+        return _json(res, {'ok': true});
       case ('POST', '/api/tune'):
         final body = await _body(r);
         final c = _byId('${body['id']}');
@@ -337,6 +370,8 @@ class RemoteServer extends ChangeNotifier {
       'locked': tuner.locked,
       'timeshift': tuner.timeshift,
       'browsing': tuner.browsing,
+      'vod': vod?.available ?? false,
+      'searching': RemoteHooks.search != null,
       if (c != null)
         'channel': {
           'id': c.id,
@@ -352,6 +387,23 @@ class RemoteServer extends ChangeNotifier {
       if (tuner.current != null) 'current': tuner.current!.id,
     };
   }
+
+  Map<String, Object?> _vodState() => {
+    'available': vod?.available ?? false,
+    'resume': [
+      for (final (kind, w)
+          in vod?.resumeAll() ?? const <(VodKind, WatchEntry)>[])
+        {
+          'key': w.key,
+          'kind': kind == VodKind.movies ? 'movie' : 'series',
+          't': w.title,
+          'poster': w.poster,
+          'label': w.label,
+          'f': w.fraction,
+          'left': (w.duration - w.position).inMinutes,
+        },
+    ],
+  };
 
   Map<String, Object?> _reminders() => {
     'reminders': [
@@ -481,8 +533,8 @@ class RemoteServer extends ChangeNotifier {
     'scope': '/',
     'display': 'standalone',
     'orientation': 'portrait',
-    'background_color': '#05070c',
-    'theme_color': '#05070c',
+    'background_color': '#05040e',
+    'theme_color': '#05040e',
     'icons': [
       {'src': '/icon-192.png', 'sizes': '192x192', 'type': 'image/png'},
       {'src': '/icon-512.png', 'sizes': '512x512', 'type': 'image/png'},
@@ -540,7 +592,7 @@ class RemoteServer extends ChangeNotifier {
   static String _page(String title, String text) =>
       '<!doctype html><meta charset="utf-8">'
       '<meta name="viewport" content="width=device-width,initial-scale=1">'
-      '<title>$title</title><body style="font-family:system-ui;background:#05070c;'
+      '<title>$title</title><body style="font-family:system-ui;background:#05040e;'
       'color:#eef2fa;padding:32px;line-height:1.5"><h2>$title</h2><p>$text</p>';
 
   @override

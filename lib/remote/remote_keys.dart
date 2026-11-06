@@ -24,6 +24,17 @@ const remoteKeys = <String, LogicalKeyboardKey>{
   'source': LogicalKeyboardKey.keyS,
   'prev': LogicalKeyboardKey.keyP,
   'fullscreen': LogicalKeyboardKey.keyF,
+  // Sezioni: schermata "Cosa guardiamo?", Film, Serie, Giochi.
+  'home': LogicalKeyboardKey.keyH,
+  'movies': LogicalKeyboardKey.keyV,
+  'series': LogicalKeyboardKey.keyT,
+  'games': LogicalKeyboardKey.keyJ,
+  // Riproduzione di film ed episodi.
+  'playpause': LogicalKeyboardKey.mediaPlayPause,
+  'rew': LogicalKeyboardKey.mediaRewind,
+  'ffwd': LogicalKeyboardKey.mediaFastForward,
+  'stop': LogicalKeyboardKey.mediaStop,
+  'audio': LogicalKeyboardKey.keyA,
   'red': LogicalKeyboardKey.colorF0Red,
   'green': LogicalKeyboardKey.colorF1Green,
   'yellow': LogicalKeyboardKey.colorF2Yellow,

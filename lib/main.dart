@@ -73,6 +73,7 @@ Future<void> main() async {
     app: app,
     tuner: tuner,
     reminders: reminders,
+    vod: vod,
   );
   app.start();
   unawaited(remote.start());

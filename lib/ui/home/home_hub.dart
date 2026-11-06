@@ -87,34 +87,12 @@ class _HomeHubState extends State<HomeHub> {
   }
 
   /// Titoli iniziati, film e serie insieme, dal più recente.
-  List<(VodKind, WatchEntry)> get _resume {
-    if (!_vod.available) return const [];
-    final all = [
-      for (final w in _vod.continueWatching(VodKind.movies))
-        (VodKind.movies, w),
-      for (final w in _vod.continueWatching(VodKind.series))
-        (VodKind.series, w),
-    ]..sort((a, b) => b.$2.at.compareTo(a.$2.at));
-    return all.take(8).toList();
-  }
+  List<(VodKind, WatchEntry)> get _resume => _vod.resumeAll();
 
   void _open((VodKind, WatchEntry) r) {
     final (kind, w) = r;
-    final id = kind == VodKind.movies
-        ? int.tryParse(w.key.substring(2))
-        : w.seriesId;
-    if (id == null) return;
-    final known = _vod.catalog(kind).items.where((i) => i.id == id).firstOrNull;
-    widget.onResume(
-      kind,
-      known ??
-          VodItem(
-            id: id,
-            name: w.title,
-            poster: w.poster,
-            extension: w.extension,
-          ),
-    );
+    final item = _vod.itemFor(kind, w);
+    if (item != null) widget.onResume(kind, item);
   }
 
   KeyEventResult _onKey(FocusNode node, KeyEvent e) {

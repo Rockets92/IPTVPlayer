@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="theme-color" content="#05070c">
+<meta name="theme-color" content="#05040e">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -14,11 +14,13 @@
 <title>Telecomando · B&amp;B IPTV Player</title>
 <style>
 :root{
-  --bg:#05070c;--ink:#0a0f1a;
+  --bg:#05040e;--ink:#0b0920;--deep:#16103a;
   --glass:rgba(255,255,255,.07);--glass2:rgba(255,255,255,.12);
   --stroke:rgba(255,255,255,.13);--hi:rgba(255,255,255,.22);
   --t1:#f2f5fb;--t2:rgba(226,233,246,.74);--t3:rgba(213,222,238,.5);
-  --accent:#8ac6ff;--accent2:#3d7bff;--warm:#ffc27a;
+  --accent:#52b8ff;--accent2:#2e6bff;--violet:#8a3dff;--magenta:#e53df5;--sunset:#ff8a3d;--warm:#ffc94a;
+  --neon:linear-gradient(120deg,#52b8ff 0%,#8a3dff 40%,#e53df5 75%,#ff8a3d 100%);
+  --neon-soft:linear-gradient(120deg,rgba(82,184,255,.28),rgba(138,61,255,.26) 40%,rgba(229,61,245,.22) 75%,rgba(255,138,61,.18));
   --red:#ff5a5f;--green:#3ccf7a;--yellow:#ffd23f;--blue:#4c8dff;
   --safe-t:env(safe-area-inset-top);--safe-b:env(safe-area-inset-bottom);
 }
@@ -31,12 +33,13 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--t1);
 html{background:var(--bg)}
 body{background:transparent}
 body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:
-  radial-gradient(120% 60% at 20% -10%,rgba(61,123,255,.28),transparent 60%),
-  radial-gradient(90% 50% at 110% 30%,rgba(138,198,255,.14),transparent 60%),
+  radial-gradient(120% 55% at 10% -10%,rgba(46,107,255,.32),transparent 60%),
+  radial-gradient(90% 50% at 110% 20%,rgba(138,61,255,.26),transparent 62%),
+  radial-gradient(90% 45% at 50% 115%,rgba(229,61,245,.16),transparent 65%),
   var(--bg)}
 /* La barra di stato e la zona sotto le schede coprono la lista che scorre. */
 body::after{content:"";position:fixed;left:0;right:0;top:0;height:var(--safe-t);z-index:8;pointer-events:none;
-  background:rgba(5,7,12,.92)}
+  background:rgba(5,4,14,.92)}
 button{font:inherit;color:inherit;border:0;background:none;padding:0;cursor:pointer;
   touch-action:manipulation;user-select:none;-webkit-user-select:none}
 .app{max-width:460px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;
@@ -52,18 +55,18 @@ button{font:inherit;color:inherit;border:0;background:none;padding:0;cursor:poin
 .now{padding:16px 18px;display:flex;gap:14px;align-items:center}
 .num{min-width:58px;height:58px;border-radius:16px;display:grid;place-items:center;
   font-size:22px;font-weight:600;letter-spacing:-.5px;
-  background:linear-gradient(160deg,rgba(255,255,255,.16),rgba(255,255,255,.05));border:1px solid var(--stroke)}
+  background:var(--neon-soft);border:1px solid rgba(229,61,245,.35);box-shadow:0 0 18px rgba(138,61,255,.25)}
 .now .info{flex:1;min-width:0}
 .now .name{font-size:17px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .now .ptitle{font-size:14px;color:var(--t2);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bar{height:3px;border-radius:2px;background:rgba(255,255,255,.12);margin-top:9px;overflow:hidden}
-.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--violet),var(--magenta));border-radius:2px;box-shadow:0 0 8px rgba(229,61,245,.6)}
 .meta{display:flex;justify-content:space-between;font-size:11.5px;color:var(--t3);margin-top:6px;gap:8px}
 .meta span:last-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);flex:none;align-self:flex-start;margin-top:4px}
 .dot.off{background:var(--red);box-shadow:0 0 10px var(--red)}
 .pill{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.6px;padding:2px 6px;border-radius:6px;
-  border:1px solid rgba(255,194,122,.5);color:var(--warm);margin-left:6px;vertical-align:2px}
+  border:1px solid rgba(255,201,74,.5);color:var(--warm);margin-left:6px;vertical-align:2px}
 
 /* Pagine */
 .page{display:none;flex-direction:column;gap:14px;margin-top:14px}
@@ -74,7 +77,7 @@ button{font:inherit;color:inherit;border:0;background:none;padding:0;cursor:poin
   background:linear-gradient(170deg,rgba(255,255,255,.13),rgba(255,255,255,.045));
   border:1px solid var(--stroke);box-shadow:inset 0 1px 0 var(--hi),0 4px 14px rgba(0,0,0,.3);
   font-size:15px;font-weight:600;transition:transform .08s,background .12s}
-.key:active,.key.down{transform:scale(.95);background:linear-gradient(170deg,rgba(255,255,255,.24),rgba(255,255,255,.1))}
+.key:active,.key.down{transform:scale(.95);background:var(--neon-soft);border-color:rgba(229,61,245,.45);box-shadow:0 0 18px rgba(138,61,255,.35)}
 .key small{display:block;font-size:10.5px;font-weight:600;color:var(--t3);letter-spacing:.4px;margin-top:2px}
 .key svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .row{display:grid;gap:10px}
@@ -84,25 +87,26 @@ button{font:inherit;color:inherit;border:0;background:none;padding:0;cursor:poin
 
 /* D-pad */
 .pad{position:relative;width:min(78vw,300px);aspect-ratio:1;margin:4px auto 0;border-radius:50%;
-  background:radial-gradient(circle at 50% 35%,rgba(255,255,255,.14),rgba(255,255,255,.04) 70%);
-  border:1px solid var(--stroke);box-shadow:inset 0 1px 0 var(--hi),0 16px 40px rgba(0,0,0,.45)}
+  background:radial-gradient(circle at 50% 35%,rgba(138,61,255,.18),rgba(255,255,255,.04) 70%);
+  border:1px solid rgba(138,61,255,.32);box-shadow:inset 0 1px 0 var(--hi),0 16px 40px rgba(0,0,0,.45)}
 .pad button{position:absolute;display:grid;place-items:center;color:var(--t2)}
 .pad .u{top:0;left:30%;width:40%;height:30%}
 .pad .d{bottom:0;left:30%;width:40%;height:30%}
 .pad .l{left:0;top:30%;width:30%;height:40%}
 .pad .r{right:0;top:30%;width:30%;height:40%}
-.pad .u:active,.pad .d:active,.pad .l:active,.pad .r:active,.pad .down{color:var(--t1)}
+.pad .u:active,.pad .d:active,.pad .l:active,.pad .r:active,.pad .down{color:#fff;filter:drop-shadow(0 0 8px var(--magenta))}
 .pad svg{width:30px;height:30px;stroke:currentColor;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
-.pad .ok{left:31%;top:31%;width:38%;height:38%;border-radius:50%;color:var(--t1);font-size:19px;font-weight:700;letter-spacing:.5px;
-  background:linear-gradient(170deg,rgba(255,255,255,.26),rgba(255,255,255,.08));
-  border:1px solid rgba(255,255,255,.2);box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 8px 22px rgba(0,0,0,.45);transition:transform .08s}
+.pad .ok{left:31%;top:31%;width:38%;height:38%;border-radius:50%;color:#fff;font-size:19px;font-weight:700;letter-spacing:.5px;
+  background:linear-gradient(170deg,rgba(255,255,255,.2),rgba(255,255,255,.04)) padding-box,var(--neon) border-box;
+  border:2px solid transparent;box-shadow:inset 0 1px 0 rgba(255,255,255,.3),0 0 22px rgba(138,61,255,.45),0 0 40px rgba(229,61,245,.18);transition:transform .08s}
+.pad .ok::before{content:"";position:absolute;inset:2px;border-radius:50%;background:radial-gradient(circle at 50% 30%,rgba(82,184,255,.35),rgba(22,16,58,.9) 70%);z-index:-1}
 .pad .ok:active,.pad .ok.down{transform:scale(.94)}
 
 /* Rocker CH e VOL */
 .rock{display:grid;grid-template-columns:1fr 1.15fr 1fr;gap:14px;align-items:stretch}
 .rocker{display:flex;flex-direction:column;border-radius:28px;overflow:hidden;padding:0}
 .rocker button{flex:1;min-height:64px;display:grid;place-items:center;font-size:24px;font-weight:500;color:var(--t1)}
-.rocker button:active,.rocker button.down{background:rgba(255,255,255,.12)}
+.rocker button:active,.rocker button.down{background:var(--neon-soft)}
 .rocker .mid{flex:none;font-size:11px;font-weight:700;letter-spacing:1px;color:var(--t3);padding:2px 0;text-align:center}
 .center{display:flex;flex-direction:column;gap:10px}
 .center .key{flex:1}
@@ -122,12 +126,12 @@ button{font:inherit;color:inherit;border:0;background:none;padding:0;cursor:poin
 .chips::-webkit-scrollbar{display:none}
 .chip{flex:none;padding:8px 14px;border-radius:999px;font-size:13.5px;font-weight:600;color:var(--t2);
   background:var(--glass);border:1px solid var(--stroke)}
-.chip.on{background:rgba(255,255,255,.9);color:var(--ink);border-color:transparent}
+.chip.on{background:var(--neon);color:#fff;border-color:transparent;box-shadow:0 0 14px rgba(138,61,255,.4)}
 .list{display:flex;flex-direction:column;border-radius:20px;overflow:hidden}
 .ch{display:flex;gap:12px;align-items:center;padding:11px 14px;text-align:left;border-top:1px solid rgba(255,255,255,.06)}
 .ch:first-child{border-top:0}
 .ch:active{background:rgba(255,255,255,.08)}
-.ch.on{background:linear-gradient(90deg,rgba(138,198,255,.18),rgba(138,198,255,.04))}
+.ch.on{background:linear-gradient(90deg,rgba(138,61,255,.28),rgba(229,61,245,.06));box-shadow:inset 3px 0 0 var(--magenta)}
 .ch .n{width:44px;font-variant-numeric:tabular-nums;font-weight:600;color:var(--t2);font-size:15px}
 .ch .t{flex:1;min-width:0;text-align:left}
 .ch .n{text-align:left}
@@ -148,17 +152,17 @@ button{font:inherit;color:inherit;border:0;background:none;padding:0;cursor:poin
 .prog .b b{display:block;font-size:15px;font-weight:600}
 .prog .b p{margin:4px 0 0;font-size:13px;color:var(--t3);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .prog.open .b p{-webkit-line-clamp:unset}
-.prog.live{background:linear-gradient(90deg,rgba(138,198,255,.16),rgba(138,198,255,.02))}
+.prog.live{background:linear-gradient(90deg,rgba(138,61,255,.24),rgba(229,61,245,.04));box-shadow:inset 3px 0 0 var(--magenta)}
 .prog.past{opacity:.5}
 .prog .bell{flex:none;width:36px;height:36px;border-radius:12px;display:grid;place-items:center;color:var(--t3);background:var(--glass)}
 .prog .bell.on{color:var(--ink);background:var(--warm)}
 .prog .bell svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.tag{font-size:10px;font-weight:700;letter-spacing:.6px;color:var(--accent);margin-left:6px}
+.tag{font-size:10px;font-weight:700;letter-spacing:.6px;color:var(--magenta);margin-left:6px}
 
 /* Guida: palinsesto / promemoria */
 .seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:16px}
 .seg button{padding:9px 0;border-radius:12px;font-size:14px;font-weight:600;color:var(--t3)}
-.seg button.on{background:rgba(255,255,255,.14);color:var(--t1)}
+.seg button.on{background:var(--neon-soft);color:#fff;box-shadow:inset 0 0 0 1px rgba(229,61,245,.35)}
 .seg .cnt{display:inline-block;min-width:18px;padding:0 5px;margin-left:4px;border-radius:9px;font-size:11px;line-height:18px;
   background:var(--warm);color:var(--ink)}
 .gview{display:flex;flex-direction:column;gap:12px}
@@ -180,7 +184,7 @@ button{font:inherit;color:inherit;border:0;background:none;padding:0;cursor:poin
 .gacts{display:flex;gap:8px}
 .gacts button{flex:1;padding:10px 0;border-radius:14px;font-size:13.5px;font-weight:600;color:var(--t2);
   background:var(--glass);border:1px solid var(--stroke)}
-.gacts button.pri{color:var(--ink);background:rgba(255,255,255,.9);border-color:transparent}
+.gacts button.pri{color:#fff;background:var(--neon);border-color:transparent}
 .rem{padding:14px;border-top:1px solid rgba(255,255,255,.06)}
 .rem:first-child{border-top:0}
 .rem .rtop{display:flex;align-items:center;gap:8px}
@@ -191,18 +195,18 @@ button{font:inherit;color:inherit;border:0;background:none;padding:0;cursor:poin
 .rem .sub{display:block;font-size:12.5px;color:var(--t3);margin-top:2px}
 .opts{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
 .opts button{padding:7px 11px;border-radius:999px;font-size:12.5px;font-weight:600;color:var(--t2);background:var(--glass);border:1px solid var(--stroke)}
-.opts button.on{background:rgba(255,255,255,.9);color:var(--ink);border-color:transparent}
+.opts button.on{background:var(--neon);color:#fff;border-color:transparent}
 .opts.days button{min-width:40px;padding:6px 0}
-.opts.days button.on{background:var(--warm)}
+.opts.days button.on{background:var(--warm);color:var(--ink)}
 
 /* Barra in basso */
 .tabs{position:fixed;left:0;right:0;bottom:0;padding:18px 16px calc(var(--safe-b) + 8px);z-index:5;
   display:flex;justify-content:center;pointer-events:none;
-  background:linear-gradient(180deg,rgba(5,7,12,0),rgba(5,7,12,.88) 45%,rgba(5,7,12,.96))}
-.tabs nav{pointer-events:auto;display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:5px;border-radius:22px;width:100%;max-width:428px}
+  background:linear-gradient(180deg,rgba(5,4,14,0),rgba(5,4,14,.88) 45%,rgba(5,4,14,.96))}
+.tabs nav{pointer-events:auto;display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:5px;border-radius:22px;width:100%;max-width:428px}
 .tabs button{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 0;border-radius:17px;
   font-size:11.5px;font-weight:600;color:var(--t3)}
-.tabs button.on{background:rgba(255,255,255,.14);color:var(--t1)}
+.tabs button.on{background:var(--neon-soft);color:#fff;box-shadow:inset 0 0 0 1px rgba(229,61,245,.35),0 0 16px rgba(138,61,255,.3)}
 .tabs svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 
 /* Avvisi */
@@ -239,12 +243,63 @@ body.fit .app{height:100dvh;min-height:0}
 .extra .key{min-height:48px}
 .dots{flex:none;display:flex;align-items:center;justify-content:center;gap:10px;padding:2px 0 0}
 .dots button{font-size:12px;font-weight:600;color:var(--t3);padding:6px 10px;border-radius:999px;transition:background .2s,color .2s}
-.dots button.on{color:var(--t1);background:rgba(255,255,255,.12)}
+.dots button.on{color:#fff;background:var(--neon-soft)}
 .dots i{width:4px;height:4px;border-radius:50%;background:var(--t3)}
+
+/* Marchio */
+.brand{display:flex;align-items:center;gap:10px;padding:0 4px 10px}
+.brand img{width:30px;height:30px;border-radius:9px;box-shadow:0 0 16px rgba(138,61,255,.55)}
+.brand b{font-size:16px;font-weight:800;letter-spacing:.2px;background:var(--neon);-webkit-background-clip:text;background-clip:text;color:transparent}
+.brand span{font-size:12px;color:var(--t3);font-weight:600;margin-left:auto}
+body.fit .brand{padding-bottom:8px}
+
+/* Esplora: sezioni, ricerca, riproduzione, continua a guardare */
+.h2{font-size:13px;font-weight:700;letter-spacing:.5px;color:var(--t2);text-transform:uppercase;margin:6px 4px -4px}
+.sections{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.sec{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-end;gap:2px;
+  min-height:96px;padding:14px;border-radius:22px;text-align:left;border:1px solid var(--stroke);
+  box-shadow:inset 0 1px 0 var(--hi),0 10px 26px rgba(0,0,0,.35);transition:transform .08s}
+.sec:active{transform:scale(.97)}
+.sec b{font-size:17px;font-weight:700;position:relative}
+.sec span{font-size:12px;color:rgba(255,255,255,.75);position:relative}
+.sec svg{position:absolute;right:12px;top:12px;width:30px;height:30px;stroke:#fff;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;opacity:.9}
+.sec.home{grid-column:1/-1;min-height:84px;background:var(--neon);border-color:transparent;box-shadow:0 0 26px rgba(138,61,255,.45),0 10px 26px rgba(0,0,0,.35)}
+.sec.mov{background:linear-gradient(150deg,rgba(82,184,255,.45),rgba(46,107,255,.18))}
+.sec.ser{background:linear-gradient(150deg,rgba(138,61,255,.5),rgba(229,61,245,.18))}
+.sec.gam{background:linear-gradient(150deg,rgba(255,138,61,.5),rgba(255,201,74,.16))}
+.sec.liv{background:linear-gradient(150deg,rgba(229,61,245,.45),rgba(138,61,255,.16))}
+.vsearch{display:flex;gap:8px}
+.vsearch .search{flex:1}
+.vsearch .go{flex:none;width:52px;border-radius:16px;display:grid;place-items:center;background:var(--neon);box-shadow:0 0 14px rgba(138,61,255,.4)}
+.vsearch .go svg{width:20px;height:20px;stroke:#fff;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.media{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.media .key{min-height:56px}
+.media .key.pp{color:#fff;background:linear-gradient(170deg,#2c1f63,#120d2e) padding-box,var(--neon) border-box;border:1.5px solid transparent;box-shadow:0 0 16px rgba(138,61,255,.35)}
+.media .key.pp small{color:rgba(255,255,255,.75)}
+.media2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.media2 .key{min-height:46px;font-size:13.5px;display:flex;gap:8px;justify-content:center}
+.media2 .key svg{width:19px;height:19px}
+.resume{display:flex;gap:12px;overflow-x:auto;padding:2px 2px 6px;scrollbar-width:none;scroll-snap-type:x proximity}
+.resume::-webkit-scrollbar{display:none}
+.rc{flex:none;width:128px;text-align:left;scroll-snap-align:start}
+.rc .pic{position:relative;width:128px;aspect-ratio:2/3;border-radius:16px;overflow:hidden;background:var(--neon-soft);
+  border:1px solid var(--stroke);box-shadow:0 8px 20px rgba(0,0,0,.4);display:grid;place-items:center}
+.rc .pic img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.rc .pic em{font-style:normal;font-size:30px;font-weight:800;color:rgba(255,255,255,.6)}
+.rc .pic i{position:absolute;left:0;right:0;bottom:0;height:4px;background:rgba(255,255,255,.18)}
+.rc .pic i u{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--violet),var(--magenta));box-shadow:0 0 8px var(--magenta)}
+.rc .pic .play{position:absolute;inset:auto auto 10px 10px;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;
+  background:rgba(5,4,14,.65);border:1px solid rgba(255,255,255,.3)}
+.rc .pic .play svg{width:14px;height:14px;fill:#fff;stroke:none;margin-left:2px}
+.rc:active .pic{transform:scale(.97)}
+.rc b{display:block;font-size:13.5px;font-weight:600;margin-top:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rc span{display:block;font-size:11.5px;color:var(--t3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.note{padding:14px 16px;font-size:13.5px;color:var(--t2);line-height:1.45}
 </style>
 </head>
 <body class="fit">
 <div class="app">
+  <div class="brand"><img src="/icon-192.png" alt=""><b>B&amp;B IPTV Player</b><span>Telecomando</span></div>
   <div class="glass now" id="now">
     <div class="num" id="num">–</div>
     <div class="info">
@@ -268,7 +323,7 @@ body.fit .app{height:100dvh;min-height:0}
     <div class="pager" id="pager">
       <div class="sheet" id="sheet1">
         <div class="row r4 top">
-          <div><button class="key" data-k="info"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.01"/></svg></button><div class="lbl">Info</div></div>
+          <div><button class="key" data-k="home"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg></button><div class="lbl">Home</div></div>
           <div><button class="key" data-k="guide"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 9h18M8 4v16"/></svg></button><div class="lbl">Guida</div></div>
           <div><button class="key" data-k="list"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg></button><div class="lbl">Elenco</div></div>
           <div><button class="key" data-k="menu"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></button><div class="lbl">Menu</div></div>
@@ -306,8 +361,8 @@ body.fit .app{height:100dvh;min-height:0}
         <div class="row r4 colors">
           <div><button class="key" data-k="red" aria-label="Rosso"><i style="background:var(--red)"></i></button><div class="lbl">+1</div></div>
           <div><button class="key" data-k="green" aria-label="Verde"><i style="background:var(--green)"></i></button><div class="lbl">Fonte</div></div>
-          <div><button class="key" data-k="yellow" aria-label="Giallo"><i style="background:var(--yellow)"></i></button><div class="lbl">&nbsp;</div></div>
-          <div><button class="key" data-k="blue" aria-label="Blu"><i style="background:var(--blue)"></i></button><div class="lbl">&nbsp;</div></div>
+          <div><button class="key" data-k="yellow" aria-label="Giallo"><i style="background:var(--yellow)"></i></button><div class="lbl">Film</div></div>
+          <div><button class="key" data-k="blue" aria-label="Blu"><i style="background:var(--blue)"></i></button><div class="lbl">Serie</div></div>
         </div>
         <div class="nums">
           <button class="key" data-k="1">1</button><button class="key" data-k="2">2</button><button class="key" data-k="3">3</button>
@@ -318,8 +373,8 @@ body.fit .app{height:100dvh;min-height:0}
           <button class="key" data-k="ok">OK</button>
         </div>
         <div class="row r3 extra">
+          <button class="key" data-k="info"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.01"/></svg><small>Info</small></button>
           <button class="key" data-k="source">Fonte</button>
-          <button class="key" data-k="red">+1</button>
           <button class="key" data-k="fullscreen"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
         </div>
       </div>
@@ -328,6 +383,46 @@ body.fit .app{height:100dvh;min-height:0}
       <button class="on" data-sheet="0">Comandi</button>
       <i></i>
       <button data-sheet="1">Numeri e colori</button>
+    </div>
+  </section>
+
+
+  <!-- Esplora: Cosa guardiamo, Film, Serie, Giochi -->
+  <section class="page" id="p-explore">
+    <div class="sections">
+      <button class="sec home" data-k="home"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg><b>Cosa guardiamo?</b><span>TV in diretta, film, serie e giochi</span></button>
+      <button class="sec mov" data-k="movies" data-vod><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 5v14M17 5v14M3 9.5h4M3 14.5h4M17 9.5h4M17 14.5h4"/></svg><b>Film</b><span>Catalogo on demand</span></button>
+      <button class="sec ser" data-k="series" data-vod><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M8 21h8M10 3l2 3 2-3"/></svg><b>Serie TV</b><span>Stagioni ed episodi</span></button>
+      <button class="sec gam" data-k="games"><svg viewBox="0 0 24 24"><path d="M6 9h12a4 4 0 014 4v1a3 3 0 01-5.4 1.8L15 14H9l-1.6 1.8A3 3 0 012 14v-1a4 4 0 014-4z"/><path d="M7.5 11.5v3M6 13h3M16 12h.01M18 14h.01"/></svg><b>Giochi</b><span>Sfida in famiglia</span></button>
+      <button class="sec liv" data-k="guide"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 9h18M8 4v16"/></svg><b>Guida TV</b><span>Cosa c’è in onda</span></button>
+    </div>
+
+    <div class="glass note" id="noVod" hidden>Film e serie sono disponibili quando nel player è caricata una lista Xtream.</div>
+
+    <div id="vodBox">
+      <div class="h2" id="resumeH" hidden>Continua a guardare</div>
+      <div class="resume" id="resume"></div>
+    </div>
+
+    <div class="h2">Cerca</div>
+    <form class="vsearch" id="vform" autocomplete="off">
+      <label class="glass search">
+        <svg viewBox="0 0 24 24" width="18" height="18" style="stroke:var(--t3);fill:none;stroke-width:2;stroke-linecap:round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input id="vq" type="search" placeholder="Titolo di un film o di una serie" enterkeyhint="search">
+      </label>
+      <button class="go" type="submit" aria-label="Cerca"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+    </form>
+
+    <div class="h2">Riproduzione</div>
+    <div class="media">
+      <button class="key" data-k="rew" data-rep aria-label="Indietro 10 secondi"><svg viewBox="0 0 24 24"><path d="M11 7L5 12l6 5zM19 7l-6 5 6 5z"/></svg><small>−10 s</small></button>
+      <button class="key pp" data-k="playpause" aria-label="Play o pausa"><svg viewBox="0 0 24 24"><path d="M6 5l7 7-7 7zM15 5v14M19 5v14"/></svg><small>Play</small></button>
+      <button class="key" data-k="ffwd" data-rep aria-label="Avanti 10 secondi"><svg viewBox="0 0 24 24"><path d="M13 7l6 5-6 5zM5 7l6 5-6 5z"/></svg><small>+10 s</small></button>
+      <button class="key" data-k="stop" aria-label="Stop"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg><small>Stop</small></button>
+    </div>
+    <div class="media2">
+      <button class="key" data-k="audio"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M7 13h4M13 13h4M7 16h7"/></svg>Audio e sottotitoli</button>
+      <button class="key" data-k="back"><svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 010 12h-3"/></svg>Indietro</button>
     </div>
   </section>
 
@@ -372,6 +467,7 @@ body.fit .app{height:100dvh;min-height:0}
 <div class="tabs">
   <nav class="glass">
     <button class="on" data-tab="remote"><svg viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="5"/><circle cx="12" cy="8" r="2"/><path d="M10 14h.01M14 14h.01M10 17h.01M14 17h.01"/></svg>Telecomando</button>
+    <button data-tab="explore"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 9.5v5l4.5-2.5z"/></svg>Esplora</button>
     <button data-tab="channels"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg>Canali</button>
     <button data-tab="guide"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 9h18M8 4v16"/></svg>Guida</button>
   </nav>
@@ -496,8 +592,63 @@ const show = (name) => {
   window.scrollTo({top: 0});
   if (name === 'channels') loadChannels();
   if (name === 'guide') loadGuidePage();
+  if (name === 'explore') loadVod();
 };
 document.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => show(b.dataset.tab)));
+
+
+// --- Esplora: film, serie, continua a guardare ------------------------------------
+let vodReady = null;
+const loadVod = async () => {
+  try {
+    const r = await api('/api/vod');
+    vodReady = !!r.available;
+    $('noVod').hidden = vodReady;
+    document.querySelectorAll('[data-vod]').forEach((b) => b.style.opacity = vodReady ? '' : '.45');
+    const list = r.resume || [];
+    $('resumeH').hidden = !list.length;
+    $('resume').innerHTML = list.map((w) => `
+      <button class="rc" data-key="${esc(w.key)}">
+        <div class="pic">
+          <em>${esc((w.t || '?').trim().charAt(0).toUpperCase())}</em>
+          ${w.poster ? `<img src="${esc(w.poster)}" alt="" loading="lazy" onerror="this.remove()">` : ''}
+          <div class="play"><svg viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z"/></svg></div>
+          <i><u style="width:${Math.round((w.f || 0) * 100)}%"></u></i>
+        </div>
+        <b>${esc(w.t)}</b>
+        <span>${esc(w.label || (w.kind === 'series' ? 'Serie' : 'Film'))}${w.left > 0 ? ' · ' + w.left + ' min' : ''}</span>
+      </button>`).join('');
+    setOnline(true);
+  } catch (_) { setOnline(false); }
+};
+
+$('resume').addEventListener('click', async (e) => {
+  const b = e.target.closest('.rc');
+  if (!b) return;
+  if (navigator.vibrate) navigator.vibrate(12);
+  try {
+    const r = await api('/api/vod/resume', {key: b.dataset.key});
+    toast(r.error || 'Apro sul player…');
+  } catch (_) { setOnline(false); }
+});
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+$('vform').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const q = $('vq').value.trim();
+  if (!q) return;
+  $('vq').blur();
+  if (vodReady === false) { toast('Film e serie non disponibili'); return; }
+  try {
+    let r = await api('/api/search', {q});
+    if (!r.ok) {
+      // Il catalogo non è aperto: si apre Film e si riprova.
+      await api('/api/key', {key: 'movies'});
+      for (let i = 0; i < 8 && !r.ok; i++) { await sleep(300); r = await api('/api/search', {q}); }
+    }
+    toast(r.ok ? 'Cerco “' + q + '” sul player' : 'Apri Film o Serie sul player');
+  } catch (_) { setOnline(false); }
+});
 
 // --- Canali -------------------------------------------------------------------
 const loadChannels = async () => {
