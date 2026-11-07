@@ -227,8 +227,6 @@ class _PlayerScreenState extends State<PlayerScreen> {
       return;
     }
     _vodKind = k;
-    _leavePanel(_Panel.vod);
-    _tuner.suspend();
     _open(_Panel.vod);
   }
 
@@ -259,15 +257,39 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   /// Scelta dalla schermata TV / Film / Serie / Giochi.
   void _onHome(HomeChoice c) => switch (c) {
-    HomeChoice.live => _close(),
+    HomeChoice.live => _closeAll(),
     HomeChoice.movies => _openVod(VodKind.movies),
     HomeChoice.series => _openVod(VodKind.series),
     HomeChoice.games => _open(_Panel.games),
   };
 
+  /// Pannelli da cui si è arrivati: Indietro torna al precedente.
+  final _history = <_Panel>[];
+
+  /// Voce del menu del banner da cui si è aperto il pannello: Indietro
+  /// riporta lì invece che a schermo libero.
+  int? _menuReturn;
+
   void _open(_Panel p) {
+    if (_panel == _Panel.none) {
+      _history.clear();
+      _menuReturn = null;
+    } else if (_panel != p) {
+      final i = _history.indexOf(p);
+      if (i >= 0) {
+        _history.removeRange(i, _history.length);
+      } else {
+        _history.add(_panel);
+      }
+    }
+    _show(p);
+  }
+
+  void _show(_Panel p) {
     _tuner.hideBanner();
     _leavePanel(p);
+    // Film e serie: la TV si ferma finché si resta nel catalogo.
+    if (p == _Panel.vod && _panel != _Panel.vod) _tuner.suspend();
     // Nella sala giochi il canale resta sotto, ma senza audio.
     if (p == _Panel.games) {
       unawaited(context.read<PlaybackEngine>().setMuted(true));
@@ -292,6 +314,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     } else if (isSelectKey(k)) {
       setState(() => _menu = null);
       _onBannerAction(actions[i]);
+      if (_panel != _Panel.none) _menuReturn = i;
     } else if (k == LogicalKeyboardKey.arrowUp || isBackKey(k)) {
       setState(() => _menu = null);
       _tuner.holdBanner();
@@ -304,10 +327,32 @@ class _PlayerScreenState extends State<PlayerScreen> {
     return KeyEventResult.handled;
   }
 
-  void _close() {
+  /// Chiusura chiesta da un pannello: con Indietro si torna al livello
+  /// precedente, altrimenti (canale scelto, tocco sul video…) si chiude tutto.
+  void _close() => backKeyActive ? _goBack() : _closeAll();
+
+  void _closeAll() {
+    _history.clear();
+    _menuReturn = null;
     _leavePanel(_Panel.none);
     setState(() => _panel = _Panel.none);
     _rootFocus.requestFocus();
+  }
+
+  /// Un livello indietro: pannello precedente, poi menu del banner da cui
+  /// si era partiti, infine la TV a schermo libero.
+  void _goBack() {
+    if (_history.isNotEmpty) {
+      _show(_history.removeLast());
+      return;
+    }
+    final menu = _menuReturn;
+    _closeAll();
+    if (menu != null && _tuner.current != null) {
+      _tuner.showInfo();
+      _tuner.holdBanner();
+      setState(() => _menu = menu);
+    }
   }
 
   Future<void> _toggleFullscreen() async {
@@ -318,7 +363,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   /// Indietro: chiude ciò che è aperto, poi (su mobile) doppio tocco per uscire.
   void _back() {
-    if (_panel != _Panel.none) return _close();
+    if (_panel != _Panel.none) return _goBack();
     if (_tuner.digits.isNotEmpty) return _tuner.clearDigits();
     if (_tuner.bannerVisible) return _tuner.hideBanner();
     if (_isDesktop) {
@@ -574,7 +619,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTap: () {
-                      if (_panel != _Panel.none) return _close();
+                      if (_panel != _Panel.none) return _closeAll();
                       tuner.toggleBanner();
                     },
                     onDoubleTap: _isDesktop

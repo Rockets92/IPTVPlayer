@@ -1,6 +1,8 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
+import '../ui/widgets/focus_tile.dart';
+
 /// Tasti del telecomando sullo smartphone → tasti dell'app.
 ///
 /// Si passa per il focus come un tasto vero, così ogni schermata (elenco,
@@ -56,6 +58,11 @@ const remoteKeys = <String, LogicalKeyboardKey>{
 bool dispatchRemoteKey(String name) {
   final key = remoteKeys[name];
   if (key == null) return false;
+  if (isBackKey(key)) return withRemoteBack(() => _dispatch(key));
+  return _dispatch(key);
+}
+
+bool _dispatch(LogicalKeyboardKey key) {
   final event = KeyDownEvent(
     physicalKey: const PhysicalKeyboardKey(0),
     logicalKey: key,

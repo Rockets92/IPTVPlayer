@@ -410,7 +410,7 @@ class _GamesHubState extends State<GamesHub>
                 Blink(
                   child: Text(
                     'OK: GIOCA    GIALLO/S: SUONI '
-                    '${_sfx.enabled ? 'SÌ' : 'NO'}    INDIETRO: TORNA ALLA TV',
+                    '${_sfx.enabled ? 'SÌ' : 'NO'}    INDIETRO: ESCI DALLA SALA',
                     style: Retro.text(compact ? 12 : 15, color: Retro.yellow),
                   ),
                 ),

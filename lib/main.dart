@@ -23,9 +23,11 @@ import 'state/app_controller.dart';
 import 'state/reminder_controller.dart';
 import 'state/tuner_controller.dart';
 import 'state/vod_controller.dart';
+import 'ui/widgets/focus_tile.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  installBackKeyGuard();
   MediaKit.ensureInitialized();
   Intl.defaultLocale = 'it_IT';
   await initializeDateFormatting('it_IT');

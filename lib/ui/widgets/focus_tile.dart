@@ -22,6 +22,53 @@ bool isBackKey(LogicalKeyboardKey k) =>
     k == LogicalKeyboardKey.backspace ||
     k == LogicalKeyboardKey.gameButtonB;
 
+/// Indietro premuto in questo momento (tastiera, telecomando o telefono):
+/// serve a distinguere "torna indietro di un livello" da "chiudi".
+bool get backKeyActive =>
+    _remoteBack || HardwareKeyboard.instance.logicalKeysPressed.any(isBackKey);
+
+bool _remoteBack = false;
+
+/// Il telecomando sul telefono simula Indietro mentre esegue [run].
+T withRemoteBack<T>(T Function() run) {
+  _remoteBack = true;
+  try {
+    return run();
+  } finally {
+    _remoteBack = false;
+  }
+}
+
+bool _backDownHandled = false;
+
+/// Su Android il sistema esegue "Indietro" al RILASCIO del tasto se nessuno
+/// lo gestisce: così ogni Indietro già usato dall'app (chiudere il banner,
+/// tornare al livello precedente) ne generava un secondo, che mostrava "premi
+/// di nuovo per uscire" o chiudeva tutto. Il rilascio di un Indietro già
+/// gestito ora viene consumato.
+void installBackKeyGuard() {
+  final fm = FocusManager.instance;
+  fm.addEarlyKeyEventHandler((e) {
+    if (!isBackKey(e.logicalKey)) return KeyEventResult.ignored;
+    if (e is KeyDownEvent) {
+      _backDownHandled = true;
+      return KeyEventResult.ignored;
+    }
+    if (e is KeyUpEvent && _backDownHandled) {
+      _backDownHandled = false;
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  });
+  fm.addLateKeyEventHandler((e) {
+    // Nessuno ha usato questo Indietro: il sistema lo gestisce come sempre.
+    if (e is KeyDownEvent && isBackKey(e.logicalKey)) {
+      _backDownHandled = false;
+    }
+    return KeyEventResult.ignored;
+  });
+}
+
 /// Fa scorrere la lista che contiene [context] perché l'elemento resti ad
 /// almeno [margin] dai bordi visibili.
 void revealWithMargin(BuildContext context, double margin) {
