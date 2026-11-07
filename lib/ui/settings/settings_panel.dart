@@ -287,7 +287,8 @@ class _SettingsPanelState extends State<SettingsPanel> {
                       _ActionRow(
                         icon: Icons.lock_reset_rounded,
                         title: 'Cambia PIN',
-                        subtitle: 'Canali XXX dal 900, film e serie per adulti',
+                        subtitle:
+                            'Canali XXX dal 9000, film e serie per adulti',
                         onSelect: _changePin,
                       ),
                     _ActionRow(

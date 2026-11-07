@@ -20,7 +20,7 @@ class ChannelMatcher {
   static const minTagChannels = 3;
 
   static const adultGroup = 'XXX';
-  static const adultStartNumber = 900;
+  static const adultStartNumber = 9000;
 
   /// Categoria del provider per adulti: "XXX", "XXX | Italia", "Adult"...
   static bool isAdultCategory(String? name) {
@@ -38,7 +38,7 @@ class ChannelMatcher {
     bool includeAdult = false,
   }) {
     // Canali per adulti: fuori da tutto il resto; se attivi formano una
-    // categoria a parte dal 900.
+    // categoria a parte dal 9000.
     final adultStreams = [
       for (final s in streams)
         if (isAdultCategory(categoryNames[s.categoryId])) s,
@@ -50,7 +50,12 @@ class ChannelMatcher {
           if (!ids.contains(s.streamId)) s,
       ];
     }
-    final visible = mapping.channels.where((m) => !m.hidden).toList();
+    final visible = mapping.channels
+        .where((m) => !m.hidden && m.sameAs == null)
+        .toList();
+    final copies = mapping.channels
+        .where((m) => !m.hidden && m.sameAs != null)
+        .toList();
     final byId = <int, XtreamLiveStream>{
       for (final s in streams) s.streamId: s,
     };
@@ -471,6 +476,34 @@ class ChannelMatcher {
         );
       }
     }
+
+    // Stesso canale a un secondo numero.
+    if (copies.isNotEmpty) {
+      final byNumber = {for (final c in channels) c.number: c};
+      final taken = byNumber.keys.toSet();
+      for (final m in copies) {
+        final c = byNumber[m.sameAs];
+        if (c == null || taken.contains(m.number)) continue;
+        taken.add(m.number);
+        channels.add(
+          Channel(
+            id: 'm${m.number}',
+            number: m.number,
+            name: m.name,
+            group: m.group,
+            sources: c.sources,
+            logoUrl: m.logo ?? c.logoUrl,
+            epgIds: c.epgIds,
+            nameKeys: c.nameKeys,
+            plusOne: c.plusOne,
+            plusOneChannelId: c.plusOneChannelId,
+            baseChannelId: c.baseChannelId,
+            adult: c.adult,
+          ),
+        );
+      }
+    }
+    channels.sort((a, b) => a.number.compareTo(b.number));
     return channels;
   }
 

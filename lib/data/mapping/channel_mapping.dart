@@ -34,6 +34,7 @@ class MappedChannel {
     this.aliases = const [],
     this.streamIds = const [],
     this.logoMatch = const [],
+    this.sameAs,
     this.hidden = false,
   });
 
@@ -58,6 +59,10 @@ class MappedChannel {
   /// un altro ma col logo giusto ("Sky Cinema Collection" che è in realtà
   /// Sky Collection). Hanno priorità sui nomi.
   final List<String> logoMatch;
+
+  /// Copia di un altro canale della lista (il suo numero): stesso canale,
+  /// stesse fonti, a un secondo numero (es. Sky TG24 al 100 e al 500).
+  final int? sameAs;
 
   final bool hidden;
 
@@ -95,6 +100,7 @@ class MappedChannel {
         for (final t in strings(j['logoMatch']))
           if (logoKey(t).isNotEmpty) logoKey(t),
       ],
+      sameAs: asInt(j['sameAs']),
       hidden: asBool(j['hidden']),
     );
   }
@@ -162,7 +168,7 @@ class ChannelMapping {
     required this.channels,
     this.epgSources = const [],
     this.showUnmapped = false,
-    this.unmappedStartNumber = 1000,
+    this.unmappedStartNumber = 10000,
     this.preferredSources = defaultPreferredSources,
     this.dynamicGroups = defaultDynamicGroups,
     this.origin = 'integrata',
@@ -179,10 +185,10 @@ class ChannelMapping {
     DynamicGroup(name: 'Disney', startNumber: 760, keywords: ['disney']),
     DynamicGroup(
       name: 'Eventi',
-      startNumber: 800,
+      startNumber: 2000,
       keywords: ['dazn', 'eventi', 'event'],
     ),
-    DynamicGroup(name: 'Vetrina', startNumber: 870, keywords: ['vetrina']),
+    DynamicGroup(name: 'Vetrina', startNumber: 3000, keywords: ['vetrina']),
   ];
 
   final String id;
@@ -255,7 +261,7 @@ class ChannelMapping {
           : const [],
       showUnmapped: unmapped is Map && asBool(unmapped['show'] ?? false),
       unmappedStartNumber: unmapped is Map
-          ? asInt(unmapped['startNumber']) ?? 1000
+          ? asInt(unmapped['startNumber']) ?? 10000
           : 1000,
       preferredSources: preferred is List
           ? preferred.map(asString).where((e) => e.isNotEmpty).toList()

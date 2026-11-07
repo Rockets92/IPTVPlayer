@@ -234,9 +234,9 @@ void main() {
       ],
     );
     // Numeri nell'ordine della lista del provider, senza salti alla 870.
-    expect(list.map((c) => c.number), [101, 1000, 1001, 1002, 1003, 1004]);
+    expect(list.map((c) => c.number), [101, 10000, 10001, 10002, 10003, 10004]);
     final v = list.firstWhere((c) => c.inGroup('Vetrina'));
-    expect(v.number, 1001);
+    expect(v.number, 10001);
     expect(v.sources.map((s) => s.streamId), [8, 3]);
     final linked = [
       for (final id in v.linked) list.firstWhere((c) => c.id == id),
@@ -280,7 +280,7 @@ void main() {
     expect(vt.every((c) => c.number >= 1000 && c.group != 'Vetrina'), isTrue);
     expect(vt.length, 2);
     final ev = list.where((c) => c.group == 'Eventi').toList();
-    expect(ev.map((c) => c.number), [800, 801, 802, 803, 804]);
+    expect(ev.map((c) => c.number), [2000, 2001, 2002, 2003, 2004]);
     expect(ev.map((c) => c.name), [
       'DAZN 2',
       'DAZN 10',
@@ -600,10 +600,36 @@ void main() {
         ),
       ],
     );
-    final collection = list.singleWhere((c) => c.number == 117);
+    final collection = list.singleWhere((c) => c.number == 114);
     final cinema = list.singleWhere((c) => c.number == 303);
     expect(collection.sources.map((s) => s.streamId), [2]);
     expect(cinema.sources.map((s) => s.streamId).toSet(), {1, 3});
+  });
+
+  test('stesso canale a più numeri con le stesse fonti', () {
+    final json = jsonDecode(
+      File('assets/channels/sky_italia.json').readAsStringSync(),
+    );
+    final m = ChannelMapping.fromJson((json as Map).cast());
+    final list = const ChannelMatcher().build(
+      mapping: m,
+      showUnmapped: false,
+      streams: const [
+        XtreamLiveStream(streamId: 1, name: 'Sky TG24 FHD ( hermes )'),
+        XtreamLiveStream(streamId: 2, name: 'Sky Sport 24 HD'),
+        XtreamLiveStream(streamId: 3, name: 'Sky Calcio 252 ( hermes )'),
+        XtreamLiveStream(streamId: 4, name: 'Sky Caccia e Pesca HD'),
+        XtreamLiveStream(streamId: 5, name: 'Sky Pesca e Caccia HD'),
+      ],
+    );
+    final numbers = list.map((c) => c.number).toList();
+    expect(numbers, [100, 200, 235, 236, 239, 252, 500, 503]);
+    expect(numbers, [...numbers]..sort());
+    final tg = list.where((c) => c.name == 'Sky TG24').toList();
+    expect(tg.map((c) => c.sources.single.streamId), [1, 1]);
+    expect(tg.map((c) => c.id).toSet().length, 2);
+    expect(list.singleWhere((c) => c.number == 235).sources.single.streamId, 4);
+    expect(list.singleWhere((c) => c.number == 236).sources.single.streamId, 5);
   });
 
   group('XtreamCredentials', () {
@@ -661,7 +687,7 @@ void main() {
       );
     });
 
-    test('attivi: categoria XXX dal 900, una volta per canale', () {
+    test('attivi: categoria XXX dal 9000, una volta per canale', () {
       final list = const ChannelMatcher().build(
         mapping: mapping,
         streams: streams,
@@ -670,7 +696,7 @@ void main() {
       );
       final xxx = list.where((c) => c.group == 'XXX').toList();
       expect(xxx.every((c) => c.adult), isTrue);
-      expect(xxx.first.number, 900);
+      expect(xxx.first.number, 9000);
       expect(xxx.map((c) => c.name), containsAll(['Hot Club', 'Eventi XXX 1']));
       expect(
         xxx
