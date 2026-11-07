@@ -539,6 +539,38 @@ void main() {
     );
   });
 
+  test('Sky Voices al 118 con le fonti del provider', () {
+    final json = jsonDecode(
+      File('assets/channels/sky_italia.json').readAsStringSync(),
+    );
+    final m = ChannelMapping.fromJson((json as Map).cast());
+    final list = const ChannelMatcher().build(
+      mapping: m,
+      showUnmapped: false,
+      streams: const [
+        XtreamLiveStream(
+          streamId: 1,
+          name: 'Sky Voices FHD ( sat-stella )',
+          categoryId: '1',
+        ),
+        XtreamLiveStream(
+          streamId: 2,
+          name: 'Sky Voices HEVC ( hermes )',
+          categoryId: '1',
+        ),
+        XtreamLiveStream(
+          streamId: 3,
+          name: 'IT: SKY VOICES HD',
+          categoryId: '1',
+        ),
+      ],
+    );
+    final voices = list.singleWhere((c) => c.number == 118);
+    expect(voices.name, 'Sky Voices');
+    expect(voices.sources.map((s) => s.streamId).toSet(), {1, 2, 3});
+    expect(voices.epgIds.first, 'Sky.Voices.it');
+  });
+
   group('XtreamCredentials', () {
     test('normalizza il server', () {
       expect(

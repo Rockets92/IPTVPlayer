@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "sky-italia",
   "name": "Ordine Sky Italia",
-  "revision": "2026-11-01",
+  "revision": "2026-11-07",
   "description": "Numerazione ispirata alla guida Sky Italia, usata per i test. Modificabile o sostituibile con un file remoto.",
   "logoBaseUrl": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/italy/",
   "epgSources": [
@@ -170,6 +170,12 @@
       "group": "Intrattenimento",
       "logo": "sky-collection-it.png",
       "epgId": "Sky.Collection.it"
+    },
+    {
+      "number": 118,
+      "name": "Sky Voices",
+      "group": "Intrattenimento",
+      "epgId": "Sky.Voices.it"
     },
     {
       "number": 119,
