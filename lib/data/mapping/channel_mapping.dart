@@ -33,6 +33,7 @@ class MappedChannel {
     this.epgIds = const [],
     this.aliases = const [],
     this.streamIds = const [],
+    this.logoMatch = const [],
     this.hidden = false,
   });
 
@@ -51,6 +52,12 @@ class MappedChannel {
 
   /// Stream Xtream da usare esplicitamente (ha priorità sui nomi).
   final List<int> streamIds;
+
+  /// Testi cercati nell'indirizzo del logo dello stream (minuscolo, solo
+  /// lettere e cifre): per i provider che trasmettono un canale col nome di
+  /// un altro ma col logo giusto ("Sky Cinema Collection" che è in realtà
+  /// Sky Collection). Hanno priorità sui nomi.
+  final List<String> logoMatch;
 
   final bool hidden;
 
@@ -84,10 +91,18 @@ class MappedChannel {
       streamIds: ids is List
           ? ids.map(asInt).whereType<int>().toList()
           : [?asInt(ids)],
+      logoMatch: [
+        for (final t in strings(j['logoMatch']))
+          if (logoKey(t).isNotEmpty) logoKey(t),
+      ],
       hidden: asBool(j['hidden']),
     );
   }
 }
+
+/// Indirizzo di un logo ridotto a lettere e cifre minuscole, per confronti
+/// che non dipendono da trattini, underscore o maiuscole.
+String logoKey(String s) => s.toLowerCase().replaceAll(RegExp('[^a-z0-9]'), '');
 
 /// Gruppo di canali creato in automatico dalla lista del provider, per i
 /// canali che cambiano spesso (eventi, partite): tutti gli stream che

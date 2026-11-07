@@ -80,6 +80,25 @@ class ChannelMatcher {
         if (byId.containsKey(id)) assigned.putIfAbsent(id, () => i);
       }
     }
+    // 1b) Logo: stessi nomi ma logo di un altro canale.
+    final byLogo = <(String, int)>[
+      for (var i = 0; i < visible.length; i++)
+        for (final t in visible[i].logoMatch) (t, i),
+    ];
+    if (byLogo.isNotEmpty) {
+      for (final s in streams) {
+        final icon = s.icon;
+        if (icon == null || assigned.containsKey(s.streamId)) continue;
+        // Solo il nome del file: il dominio o le cartelle non contano.
+        final file = logoKey(icon.split('?').first.split('/').last);
+        for (final (t, i) in byLogo) {
+          if (file.contains(t)) {
+            assigned[s.streamId] = i;
+            break;
+          }
+        }
+      }
+    }
     // 2) Nome identico (dopo la normalizzazione), anche togliendo l'etichetta
     //    di fonte finale tra parentesi: "Sky Uno FHD ( sat-stella )".
     for (final s in streams) {

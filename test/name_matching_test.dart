@@ -571,6 +571,41 @@ void main() {
     expect(voices.epgIds.first, 'Sky.Voices.it');
   });
 
+  test('Sky Collection riconosciuta dal logo anche col nome sbagliato', () {
+    final json = jsonDecode(
+      File('assets/channels/sky_italia.json').readAsStringSync(),
+    );
+    final m = ChannelMapping.fromJson((json as Map).cast());
+    final list = const ChannelMatcher().build(
+      mapping: m,
+      showUnmapped: false,
+      streams: const [
+        XtreamLiveStream(
+          streamId: 1,
+          name: 'Sky Cinema Collection FHD ( hermes )',
+          categoryId: '1',
+          icon: 'http://logo.example/img/Sky_Cinema_Collection.png',
+        ),
+        XtreamLiveStream(
+          streamId: 2,
+          name: 'Sky Cinema Collection FHD ( hermes )',
+          categoryId: '1',
+          icon: 'http://logo.example/img/SKY-COLLECTION.png?v=2',
+        ),
+        XtreamLiveStream(
+          streamId: 3,
+          name: 'Sky Cinema Collection SD ( hermes )',
+          categoryId: '1',
+          icon: 'http://logo.example/sky-collection/12.png',
+        ),
+      ],
+    );
+    final collection = list.singleWhere((c) => c.number == 117);
+    final cinema = list.singleWhere((c) => c.number == 303);
+    expect(collection.sources.map((s) => s.streamId), [2]);
+    expect(cinema.sources.map((s) => s.streamId).toSet(), {1, 3});
+  });
+
   group('XtreamCredentials', () {
     test('normalizza il server', () {
       expect(

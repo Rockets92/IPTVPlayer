@@ -169,7 +169,8 @@
       "name": "Sky Collection",
       "group": "Intrattenimento",
       "logo": "sky-collection-it.png",
-      "epgId": "Sky.Collection.it"
+      "epgId": "Sky.Collection.it",
+      "logoMatch": ["skycollection"]
     },
     {
       "number": 118,
