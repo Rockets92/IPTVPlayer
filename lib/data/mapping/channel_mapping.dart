@@ -78,7 +78,9 @@ class MappedChannel {
     final rawLogo = asNonEmptyString(j['logo']);
     String? logo;
     if (rawLogo != null) {
-      logo = rawLogo.contains('://') || logoBase == null
+      logo = rawLogo.contains('://') ||
+              rawLogo.startsWith(kAssetLogoScheme) ||
+              logoBase == null
           ? rawLogo
           : '$logoBase$rawLogo';
     }
@@ -105,6 +107,16 @@ class MappedChannel {
     );
   }
 }
+
+/// Prefisso dei loghi inclusi nell'app (`asset:sky-voices.png` →
+/// `assets/channels/logos/sky-voices.png`), per i canali senza logo online.
+const kAssetLogoScheme = 'asset:';
+
+/// Percorso nel bundle di un logo `asset:`, oppure null se è un URL.
+String? assetLogoPath(String? url) =>
+    url != null && url.startsWith(kAssetLogoScheme)
+    ? 'assets/channels/logos/${url.substring(kAssetLogoScheme.length)}'
+    : null;
 
 /// Indirizzo di un logo ridotto a lettere e cifre minuscole, per confronti
 /// che non dipendono da trattini, underscore o maiuscole.

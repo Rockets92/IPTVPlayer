@@ -37,6 +37,7 @@ flutter:
 
   assets:
     - assets/channels/
+    - assets/channels/logos/
     - assets/remote/
     - assets/brand/
 

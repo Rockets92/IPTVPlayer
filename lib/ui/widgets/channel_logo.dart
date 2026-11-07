@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/performance.dart';
 import '../../core/theme.dart';
+import '../../data/mapping/channel_mapping.dart';
 import '../../domain/channel.dart';
 
 /// Logo canale su tessera scura. Se il logo manca o non si carica,
@@ -34,8 +35,17 @@ class ChannelLogo extends StatelessWidget {
     final dpr = MediaQuery.devicePixelRatioOf(context);
     final decodeW = (width * dpr).clamp(48, perf.logoDecodeWidth).round();
 
+    final asset = assetLogoPath(url);
     final Widget img = url == null
         ? mono
+        : asset != null
+        ? Image.asset(
+            asset,
+            cacheWidth: decodeW,
+            fit: BoxFit.contain,
+            filterQuality: FilterQuality.medium,
+            errorBuilder: (_, _, _) => mono,
+          )
         : CachedNetworkImage(
             imageUrl: url,
             memCacheWidth: decodeW,

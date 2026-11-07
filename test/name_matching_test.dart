@@ -569,6 +569,12 @@ void main() {
     expect(voices.name, 'Sky Voices');
     expect(voices.sources.map((s) => s.streamId).toSet(), {1, 2, 3});
     expect(voices.epgIds.first, 'Sky.Voices.it');
+    expect(voices.logoUrl, 'asset:sky-voices.png');
+    expect(
+      assetLogoPath(voices.logoUrl),
+      'assets/channels/logos/sky-voices.png',
+    );
+    expect(File(assetLogoPath(voices.logoUrl)!).existsSync(), isTrue);
   });
 
   test('Sky Collection riconosciuta dal logo anche col nome sbagliato', () {

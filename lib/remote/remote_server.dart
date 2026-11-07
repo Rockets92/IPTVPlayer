@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/epg/epg_models.dart';
+import '../data/mapping/channel_mapping.dart';
 import '../data/xtream/xtream_models.dart';
 import '../domain/channel.dart';
 import '../state/app_controller.dart';
@@ -191,6 +192,14 @@ class RemoteServer extends ChangeNotifier {
         return _asset(
           res,
           'assets/brand/logo.png',
+          ContentType('image', 'png'),
+        );
+      case final p when p.startsWith('/chlogo/'):
+        final name = p.substring('/chlogo/'.length);
+        if (!RegExp(r'^[a-z0-9._-]+\.png$').hasMatch(name)) break;
+        return _asset(
+          res,
+          'assets/channels/logos/$name',
           ContentType('image', 'png'),
         );
       case '/sw.js':
@@ -384,7 +393,7 @@ class RemoteServer extends ChangeNotifier {
           'n': c.number,
           'name': c.name,
           'g': c.group,
-          'logo': c.logoUrl,
+          'logo': _logo(c.logoUrl),
           'plus1': c.hasPlusOne,
           'sources': c.sources.length,
         },
@@ -447,7 +456,7 @@ class RemoteServer extends ChangeNotifier {
             'n': c.number,
             'name': c.name,
             'g': c.group,
-            'logo': c.logoUrl,
+            'logo': _logo(c.logoUrl),
             'now': app.epg.nowOn(c.id, now)?.title,
             if (c.adult) 'x': true,
           },
@@ -563,6 +572,12 @@ class RemoteServer extends ChangeNotifier {
     } catch (_) {
       return const {};
     }
+  }
+
+  /// I loghi inclusi nell'app vengono serviti dal telecomando stesso.
+  static String? _logo(String? url) {
+    final asset = assetLogoPath(url);
+    return asset == null ? url : '/chlogo/${asset.split('/').last}';
   }
 
   Future<void> _html(HttpResponse res, String asset) async {
