@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#05040e">
+<link rel="icon" href="/icon-192.png">
+<title>Configura B&amp;B IPTV Player</title>
+<style>
+:root{--bg:#05040e;--ink:#0b0920;--stroke:rgba(255,255,255,.13);--hi:rgba(255,255,255,.22);
+  --t1:#f2f5fb;--t2:rgba(226,233,246,.74);--t3:rgba(213,222,238,.5);--accent:#52b8ff;--accent2:#2e6bff;--violet:#8a3dff;--magenta:#e53df5;--neon:linear-gradient(120deg,#52b8ff,#8a3dff 40%,#e53df5 75%,#ff8a3d);--danger:#ff8a8a;--green:#3ccf7a}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--t1);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Inter","Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+body{background:radial-gradient(120% 60% at 20% -10%,rgba(46,107,255,.32),transparent 60%),
+  radial-gradient(90% 50% at 110% 40%,rgba(138,61,255,.24),transparent 62%),
+  radial-gradient(90% 45% at 50% 115%,rgba(229,61,245,.14),transparent 65%),var(--bg);background-attachment:fixed}
+.wrap{max-width:460px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 28px) 18px calc(env(safe-area-inset-bottom) + 28px)}
+img.brand{height:84px;width:auto;display:block;margin:0 0 10px -10px}
+h1{font-size:28px;letter-spacing:-.6px;margin:0 0 6px;font-weight:650}
+.sub{color:var(--t2);margin:0 0 22px;line-height:1.45;font-size:15px}
+.card{background:linear-gradient(160deg,rgba(255,255,255,.11),rgba(255,255,255,.04));border:1px solid var(--stroke);border-radius:26px;
+  box-shadow:inset 0 1px 0 var(--hi),0 14px 40px rgba(0,0,0,.4);padding:20px;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:16px;background:rgba(255,255,255,.07);margin-bottom:18px}
+.seg button{border:0;border-radius:12px;padding:10px 0;font:inherit;font-weight:600;font-size:14.5px;color:var(--t2);background:none}
+.seg button.on{background:var(--neon);color:#fff}
+label{display:block;font-size:12.5px;font-weight:600;color:var(--t3);letter-spacing:.3px;margin:14px 0 7px}
+input{width:100%;height:50px;border-radius:15px;border:1px solid var(--stroke);background:rgba(255,255,255,.07);color:var(--t1);
+  font:inherit;font-size:16px;padding:0 15px;outline:0}
+input:focus{border-color:rgba(229,61,245,.6);background:rgba(255,255,255,.1)}
+input::placeholder{color:var(--t3)}
+.hint{font-size:12.5px;color:var(--t3);margin-top:8px;line-height:1.45}
+.go{margin-top:22px;width:100%;height:54px;border:0;border-radius:17px;font:inherit;font-size:16.5px;font-weight:650;color:var(--ink);
+  background:var(--neon);color:#fff;box-shadow:0 10px 26px rgba(138,61,255,.45),inset 0 1px 0 rgba(255,255,255,.4)}
+.go:disabled{opacity:.6}
+.msg{margin-top:16px;padding:12px 14px;border-radius:14px;font-size:14px;line-height:1.45;display:none}
+.msg.err{display:block;background:rgba(255,90,95,.12);color:var(--danger);border:1px solid rgba(255,90,95,.3)}
+.done{text-align:center;padding:28px 10px 10px;display:none}
+.done .ok{width:72px;height:72px;margin:0 auto 18px;border-radius:50%;display:grid;place-items:center;
+  background:var(--neon);box-shadow:0 10px 30px rgba(229,61,245,.5)}
+.done h2{margin:0 0 8px;font-size:24px}
+.done p{color:var(--t2);margin:0;line-height:1.5}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <img class="brand" src="/logo.png" alt="B&amp;B IPTV Player">
+  <h1>Configura B&amp;B IPTV Player</h1>
+  <p class="sub">Scrivi qui i dati della tua lista: arrivano direttamente al player sulla TV o sul PC.</p>
+
+  <div class="card" id="form">
+    <div class="seg">
+      <button class="on" data-kind="xtream">Xtream Codes</button>
+      <button data-kind="m3u">Lista M3U</button>
+    </div>
+
+    <div id="f-xtream">
+      <label for="server">Server</label>
+      <input id="server" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="http://dominio.tv:8080">
+      <label for="user">Nome utente</label>
+      <input id="user" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="username">
+      <label for="pass">Password</label>
+      <input id="pass" type="password" autocomplete="current-password">
+      <div class="hint">Puoi incollare nel campo Server anche il link completo con utente e password: gli altri campi si compilano da soli.</div>
+      <label for="xepg">Fonte EPG aggiuntiva (facoltativa)</label>
+      <input id="xepg" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="https://…/guida.xml.gz">
+      <div class="hint">Una guida XMLTV in più, per i canali che quella del provider non copre. Potrai aggiungerne altre dalle impostazioni.</div>
+    </div>
+
+    <div id="f-m3u" hidden>
+      <label for="playlist">Indirizzo della playlist</label>
+      <input id="playlist" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="https://…/lista.m3u">
+      <label for="epg">Guida TV (facoltativa)</label>
+      <input id="epg" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="https://…/guida.xml.gz">
+      <div class="hint">Se la playlist indica già la sua guida (url-tvg) puoi lasciare vuoto questo campo.</div>
+    </div>
+
+    <button class="go" id="go">Invia al player</button>
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <div class="card done" id="done">
+    <div class="ok"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#0a0f1a" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+    <h2>Fatto!</h2>
+    <p>Il player si è collegato alla lista e sta caricando i canali. Ora puoi guardarlo sulla TV.</p>
+  </div>
+</div>
+<script>
+const T = '{{TOKEN}}';
+const $ = (id) => document.getElementById(id);
+let kind = 'xtream';
+document.querySelectorAll('[data-kind]').forEach((b) => b.addEventListener('click', () => {
+  kind = b.dataset.kind;
+  document.querySelectorAll('[data-kind]').forEach((x) => x.classList.toggle('on', x === b));
+  $('f-xtream').hidden = kind !== 'xtream';
+  $('f-m3u').hidden = kind !== 'm3u';
+  $('msg').className = 'msg';
+}));
+
+// Link completo incollato nel campo Server: si compilano gli altri campi.
+$('server').addEventListener('input', () => {
+  const v = $('server').value.trim();
+  if (!/username=/.test(v) || !/password=/.test(v)) return;
+  try {
+    const u = new URL(v.includes('://') ? v : 'http://' + v);
+    $('user').value = u.searchParams.get('username') || '';
+    $('pass').value = u.searchParams.get('password') || '';
+    $('server').value = u.origin;
+  } catch (_) {}
+});
+
+$('go').addEventListener('click', async () => {
+  const body = kind === 'm3u'
+    ? {kind, playlist: $('playlist').value.trim(), epg: $('epg').value.trim()}
+    : {kind, server: $('server').value.trim(), user: $('user').value.trim(), pass: $('pass').value, extraEpg: $('xepg').value.trim()};
+  $('go').disabled = true;
+  $('go').textContent = 'Connessione in corso…';
+  $('msg').className = 'msg';
+  try {
+    const r = await fetch('/api/setup?t=' + encodeURIComponent(T), {
+      method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body),
+    });
+    const j = await r.json();
+    if (j.ok) {
+      $('form').hidden = true;
+      $('done').style.display = 'block';
+      return;
+    }
+    $('msg').textContent = j.error || 'Errore sconosciuto';
+    $('msg').className = 'msg err';
+  } catch (_) {
+    $('msg').textContent = 'Il player non risponde. Controlla che telefono e player siano sulla stessa rete Wi-Fi.';
+    $('msg').className = 'msg err';
+  } finally {
+    $('go').disabled = false;
+    $('go').textContent = 'Invia al player';
+  }
+});
+</script>
+</body>
+</html>
