@@ -590,7 +590,7 @@ void main() {
           streamId: 2,
           name: 'Sky Cinema Collection FHD ( hermes )',
           categoryId: '1',
-          icon: 'http://logo.example/img/SKY-COLLECTION.png?v=2',
+          icon: 'https://upload.wikimedia.org/wikipedia/commons/7/7b/Sky_Collection_%282025%29.png',
         ),
         XtreamLiveStream(
           streamId: 3,
