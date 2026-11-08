@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/glass_look.dart';
+import '../widgets/refraction.dart';
 import '../../core/brand.dart';
 import '../../core/performance.dart';
 import '../../core/theme.dart';
@@ -413,6 +414,13 @@ class _SettingsPanelState extends State<SettingsPanel> {
                         setState(() {});
                       },
                     ),
+                    if (s.glassLook == GlassLook.crystal)
+                      _InfoRow(
+                        'Rifrazione del vetro',
+                        GlassShader.available
+                            ? 'Attiva'
+                            : 'Non disponibile su questo dispositivo',
+                      ),
                     _InfoRow(
                       'Profilo attivo',
                       '${perf.isLight ? 'Leggero' : 'Completo'} · ${perf.reason}',

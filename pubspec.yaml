@@ -35,6 +35,9 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
+  shaders:
+    - shaders/glass.frag
+
   assets:
     - assets/channels/
     - assets/channels/logos/

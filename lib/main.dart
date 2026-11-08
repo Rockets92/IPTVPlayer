@@ -24,6 +24,7 @@ import 'state/reminder_controller.dart';
 import 'state/tuner_controller.dart';
 import 'state/vod_controller.dart';
 import 'ui/widgets/focus_tile.dart';
+import 'ui/widgets/refraction.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,6 +34,7 @@ Future<void> main() async {
   await initializeDateFormatting('it_IT');
 
   final settings = await SettingsStore.open();
+  await GlassShader.load();
   final perf = await PerformanceProfile.resolve(settings.performanceMode);
 
   // Cache immagini dimensionata sul dispositivo (loghi).

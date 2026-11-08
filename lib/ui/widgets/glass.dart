@@ -4,6 +4,8 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'refraction.dart';
+
 import '../../core/glass_look.dart';
 import '../../core/performance.dart';
 import '../../core/theme.dart';
@@ -89,7 +91,9 @@ class Glass extends StatelessWidget {
     // stile al volo il contenuto (liste, focus, scorrimento) non si ricrea.
     final body = ClipRRect(
       borderRadius: BorderRadius.circular(radius),
-      clipBehavior: blur ? Clip.antiAlias : Clip.none,
+      clipBehavior: blur || (crystal && GlassShader.available)
+          ? Clip.antiAlias
+          : Clip.none,
       child: BackdropFilter(
         enabled: blur,
         filter: ui.ImageFilter.compose(
@@ -100,19 +104,31 @@ class Glass extends StatelessWidget {
             tileMode: TileMode.mirror,
           ),
         ),
-        child: CustomPaint(
-          painter: crystal
-              ? _CrystalBodyPainter(radius: radius, strong: strong)
-              : _GlassBodyPainter(
-                  radius: radius,
-                  tint: tint,
-                  strong: strong,
-                  rich: perf.useBackdropBlur,
-                ),
-          foregroundPainter: crystal
-              ? _CrystalEdgePainter(radius: radius)
-              : GlassEdgePainter(radius: radius, bevel: true),
-          child: Padding(padding: padding, child: child),
+        child: RefractiveBackdrop(
+          enabled: crystal,
+          radius: radius,
+          density: strong ? 1 : 0.3,
+          child: CustomPaint(
+            painter: crystal
+                ? _CrystalBodyPainter(
+                    radius: radius,
+                    strong: strong,
+                    refracted: GlassShader.available,
+                  )
+                : _GlassBodyPainter(
+                    radius: radius,
+                    tint: tint,
+                    strong: strong,
+                    rich: perf.useBackdropBlur,
+                  ),
+            foregroundPainter: crystal
+                ? _CrystalEdgePainter(
+                    radius: radius,
+                    refracted: GlassShader.available,
+                  )
+                : GlassEdgePainter(radius: radius, bevel: true),
+            child: Padding(padding: padding, child: child),
+          ),
         ),
       ),
     );
@@ -145,15 +161,24 @@ class Glass extends StatelessWidget {
 /// 4. il riflesso: una lunetta lucida lungo il bordo superiore e un punto
 ///    speculare netto in alto a sinistra, con un piccolo riflesso gemello.
 class _CrystalBodyPainter extends CustomPainter {
-  _CrystalBodyPainter({required this.radius, required this.strong});
+  _CrystalBodyPainter({
+    required this.radius,
+    required this.strong,
+    required this.refracted,
+  });
 
   final double radius;
   final bool strong;
+
+  /// Con lo shader di rifrazione luce e riflessi sono già nel vetro: qui si
+  /// dipinge solo il disegno di riserva per i motori senza Impeller.
+  final bool refracted;
 
   static const _ink = Color(0xFF05040E);
 
   @override
   void paint(Canvas canvas, Size size) {
+    if (refracted) return;
     final rect = Offset.zero & size;
     final rrect = RRect.fromRectAndRadius(rect, Radius.circular(radius));
     canvas.save();
@@ -286,16 +311,19 @@ class _CrystalBodyPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_CrystalBodyPainter old) =>
-      old.radius != radius || old.strong != strong;
+      old.radius != radius ||
+      old.strong != strong ||
+      old.refracted != refracted;
 }
 
 /// Bordo crystal: un filo di luce netto con una frangia prismatica (azzurro
 /// in alto a sinistra, magenta in basso a destra), come la luce scomposta
 /// dallo spessore dell'acqua.
 class _CrystalEdgePainter extends CustomPainter {
-  const _CrystalEdgePainter({required this.radius});
+  const _CrystalEdgePainter({required this.radius, required this.refracted});
 
   final double radius;
+  final bool refracted;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -304,6 +332,21 @@ class _CrystalEdgePainter extends CustomPainter {
       rect.deflate(d),
       Radius.circular(math.max(0, radius - d)),
     );
+
+    if (refracted) {
+      // Solo un'ombra di contatto sottilissima: il resto lo fa la rifrazione.
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          rect.inflate(0.6),
+          Radius.circular(radius + 0.6),
+        ),
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 0.8
+          ..color = Colors.black.withValues(alpha: 0.22),
+      );
+      return;
+    }
 
     // Filo esterno chiaro.
     canvas.drawRRect(
@@ -355,7 +398,8 @@ class _CrystalEdgePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_CrystalEdgePainter old) => old.radius != radius;
+  bool shouldRepaint(_CrystalEdgePainter old) =>
+      old.radius != radius || old.refracted != refracted;
 }
 
 /// Riempimento della lastra: velatura, lucentezza, riflesso, luce sui bordi.
