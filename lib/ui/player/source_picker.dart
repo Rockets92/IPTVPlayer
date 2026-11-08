@@ -314,7 +314,7 @@ class _SourceRow extends StatelessWidget {
                                   size: 18,
                                   color: Palette.accent,
                                 )
-                              : const SizedBox(
+                              : SizedBox(
                                   width: 14,
                                   height: 14,
                                   child: CircularProgressIndicator(

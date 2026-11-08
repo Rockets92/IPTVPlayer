@@ -30,7 +30,7 @@ class SignalOverlay extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (dead)
-                  const Icon(
+                  Icon(
                     Icons.signal_cellular_connected_no_internet_0_bar_rounded,
                     color: Palette.textSecondary,
                     size: 26,

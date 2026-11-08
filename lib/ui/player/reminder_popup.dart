@@ -148,7 +148,7 @@ class ReminderPopup extends StatelessWidget {
             const SizedBox(height: 8),
             Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.live_tv_rounded,
                   size: 16,
                   color: Palette.textTertiary,
@@ -168,7 +168,7 @@ class ReminderPopup extends StatelessWidget {
               const SizedBox(height: 4),
               Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.repeat_rounded,
                     size: 16,
                     color: Palette.textTertiary,

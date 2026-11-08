@@ -58,7 +58,7 @@ class GuideReminders extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
+              Icon(
                 Icons.notifications_none_rounded,
                 size: 40,
                 color: Palette.textTertiary,

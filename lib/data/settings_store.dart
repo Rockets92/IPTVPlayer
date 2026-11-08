@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../core/glass_look.dart';
 import '../core/performance.dart';
 import 'xtream/xtream_models.dart';
 
@@ -44,6 +45,7 @@ class SettingsStore {
   static const _kAdult = 'channels.adultMode';
   static const _kUiScale = 'ui.scale';
   static const _kAdultPin = 'channels.adultPin';
+  static const _kGlass = 'ui.glassLook';
 
   XtreamCredentials? get credentials {
     final raw = _prefs.getString(_kCreds);
@@ -145,6 +147,12 @@ class SettingsStore {
     orElse: () => UiScale.auto,
   );
   Future<void> setUiScale(UiScale v) => _prefs.setString(_kUiScale, v.name);
+
+  GlassLook get glassLook => GlassLook.values.firstWhere(
+    (m) => m.name == _prefs.getString(_kGlass),
+    orElse: () => GlassLook.classic,
+  );
+  Future<void> setGlassLook(GlassLook v) => _prefs.setString(_kGlass, v.name);
 
   /// Predefinito: canali per adulti nascosti.
   AdultMode get adultMode => AdultMode.values.firstWhere(

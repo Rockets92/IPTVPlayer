@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'core/brand.dart';
+import 'core/glass_look.dart';
 import 'core/performance.dart';
 import 'core/theme.dart';
 import 'data/settings_store.dart';
@@ -21,11 +22,27 @@ class IptvApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final look = context.select<AppController, GlassLook>(
+      (a) => a.settings.glassLook,
+    );
     return MaterialApp(
       title: Brand.name,
       debugShowCheckedModeBanner: false,
-      theme: buildTheme(),
-      builder: (context, child) => _Scaled(child: child!),
+      theme: buildTheme(look: look),
+      // Cambio di stile istantaneo, senza dissolvenza tra i due temi.
+      themeAnimationDuration: Duration.zero,
+      // Struttura identica nei due stili: cambiare stile non deve ricreare
+      // lo schermo (si perderebbero pannelli aperti e posizione).
+      builder: (context, child) => _Scaled(
+        child: DefaultTextStyle.merge(
+          style: TextStyle(
+            shadows: look == GlassLook.crystal
+                ? GlassLookTheme.textShadows
+                : null,
+          ),
+          child: child!,
+        ),
+      ),
       home: const _Root(),
     );
   }

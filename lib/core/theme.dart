@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'glass_look.dart';
+
 /// Palette e tipografia. Tutti i valori estetici vivono qui.
 abstract final class Palette {
   // Fondi: nero con una punta di indaco, come lo sfondo del logo.
@@ -8,8 +10,15 @@ abstract final class Palette {
   static const Color deep = Color(0xFF16103A);
 
   static const Color textPrimary = Color(0xF5FFFFFF);
-  static const Color textSecondary = Color(0xC7E6ECF7);
-  static const Color textTertiary = Color(0x94D5DEEE);
+
+  /// Nel vetro crystal i testi secondari diventano quasi pieni: dietro la
+  /// lastra c'è il video nitido e un grigio semitrasparente si perderebbe.
+  static bool crystalText = false;
+
+  static Color get textSecondary =>
+      crystalText ? const Color(0xF5EEF2FA) : const Color(0xC7E6ECF7);
+  static Color get textTertiary =>
+      crystalText ? const Color(0xE6E2E8F2) : const Color(0x94D5DEEE);
 
   /// Colori del logo B&B: blu elettrico, viola, magenta neon e tramonto.
   static const Color accent = Color(0xFF52B8FF);
@@ -83,7 +92,7 @@ abstract final class AppText {
     color: Palette.textPrimary,
   );
 
-  static const TextStyle body = TextStyle(
+  static TextStyle get body => TextStyle(
     fontFamily: 'Inter',
     fontWeight: FontWeight.w400,
     fontSize: 14.5,
@@ -91,7 +100,7 @@ abstract final class AppText {
     color: Palette.textSecondary,
   );
 
-  static const TextStyle label = TextStyle(
+  static TextStyle get label => TextStyle(
     fontFamily: 'Inter',
     fontWeight: FontWeight.w500,
     fontSize: 13,
@@ -101,7 +110,7 @@ abstract final class AppText {
   );
 
   /// Etichette maiuscole spaziate ("ORA", "DOPO").
-  static const TextStyle overline = TextStyle(
+  static TextStyle get overline => TextStyle(
     fontFamily: 'Inter',
     fontWeight: FontWeight.w700,
     fontSize: 11,
@@ -120,7 +129,7 @@ abstract final class AppText {
     fontFeatures: _tab,
   );
 
-  static const TextStyle mono = TextStyle(
+  static TextStyle get mono => TextStyle(
     fontFamily: 'Inter',
     fontWeight: FontWeight.w500,
     fontSize: 13,
@@ -129,7 +138,8 @@ abstract final class AppText {
   );
 }
 
-ThemeData buildTheme() {
+ThemeData buildTheme({GlassLook look = GlassLook.classic}) {
+  Palette.crystalText = look == GlassLook.crystal;
   final base = ThemeData(
     brightness: Brightness.dark,
     useMaterial3: true,
@@ -146,7 +156,34 @@ ThemeData buildTheme() {
     focusColor: Colors.transparent,
     hoverColor: Colors.transparent,
   );
+  final crystal = look == GlassLook.crystal;
+  TextStyle? shade(TextStyle? t) =>
+      crystal ? t?.copyWith(shadows: GlassLookTheme.textShadows) : t;
+  final tt = base.textTheme;
   return base.copyWith(
+    extensions: [GlassLookTheme(look)],
+    // Nel vetro crystal ogni testo riceve l'alone scuro: le Material e i
+    // DefaultTextStyle lo ereditano, e gli stili AppText (inherit: true) lo
+    // mantengono perché non definiscono ombre proprie.
+    textTheme: crystal
+        ? tt.copyWith(
+            displayLarge: shade(tt.displayLarge),
+            displayMedium: shade(tt.displayMedium),
+            displaySmall: shade(tt.displaySmall),
+            headlineLarge: shade(tt.headlineLarge),
+            headlineMedium: shade(tt.headlineMedium),
+            headlineSmall: shade(tt.headlineSmall),
+            titleLarge: shade(tt.titleLarge),
+            titleMedium: shade(tt.titleMedium),
+            titleSmall: shade(tt.titleSmall),
+            bodyLarge: shade(tt.bodyLarge),
+            bodyMedium: shade(tt.bodyMedium),
+            bodySmall: shade(tt.bodySmall),
+            labelLarge: shade(tt.labelLarge),
+            labelMedium: shade(tt.labelMedium),
+            labelSmall: shade(tt.labelSmall),
+          )
+        : tt,
     textSelectionTheme: const TextSelectionThemeData(
       cursorColor: Palette.accent,
       selectionColor: Color(0x558A3DFF),

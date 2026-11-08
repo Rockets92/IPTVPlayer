@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/glass_look.dart';
 import '../../core/brand.dart';
 import '../../core/performance.dart';
 import '../../core/theme.dart';
@@ -397,6 +398,21 @@ class _SettingsPanelState extends State<SettingsPanel> {
                         setState(() {});
                       },
                     ),
+                    _ChoiceRow<GlassLook>(
+                      icon: Icons.water_drop_outlined,
+                      title: 'Stile vetro',
+                      value: s.glassLook,
+                      options: const {
+                        GlassLook.classic: 'Classico',
+                        GlassLook.crystal: 'Crystal',
+                      },
+                      onChanged: (v) async {
+                        await s.setGlassLook(v);
+                        app.settingsChanged();
+                        rebuildAllWidgets();
+                        setState(() {});
+                      },
+                    ),
                     _InfoRow(
                       'Profilo attivo',
                       '${perf.isLight ? 'Leggero' : 'Completo'} · ${perf.reason}',
@@ -629,7 +645,7 @@ class _ActionRow extends StatelessWidget {
         icon: icon,
         title: title,
         subtitle: subtitle,
-        trailing: const Icon(
+        trailing: Icon(
           Icons.chevron_right_rounded,
           size: 20,
           color: Palette.textTertiary,

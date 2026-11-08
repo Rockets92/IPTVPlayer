@@ -98,7 +98,7 @@ class _RemoteSetup extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(
+                Icon(
                   Icons.wifi_off_rounded,
                   size: 40,
                   color: Palette.textTertiary,

@@ -687,7 +687,7 @@ class _PhoneSetup extends StatelessWidget {
             SizedBox(
               width: qrSize + 12,
               height: qrSize + 12,
-              child: const Icon(
+              child: Icon(
                 Icons.wifi_off_rounded,
                 color: Palette.textTertiary,
                 size: 36,

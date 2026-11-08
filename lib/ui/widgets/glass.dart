@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/glass_look.dart';
 import '../../core/performance.dart';
 import '../../core/theme.dart';
 
@@ -75,52 +76,286 @@ class Glass extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final perf = context.read<PerformanceProfile>();
-    final shape = BorderRadius.circular(radius);
-    final blur = perf.useBackdropBlur;
+    final crystal = GlassLookTheme.of(context) == GlassLook.crystal;
+    // Il crystal non sfoca: niente BackdropFilter, leggero anche in light.
+    final blur = perf.useBackdropBlur && !crystal;
 
     // Velatura: nel profilo completo è sottile, il colore arriva dallo sfondo.
-    final Color tint = blur
+    final Color tint = perf.useBackdropBlur
         ? (strong ? const Color(0x940C0824) : const Color(0x570C0824))
         : (strong ? Palette.frostedSolidStrong : Palette.frostedSolid);
 
-    Widget body = CustomPaint(
-      painter: _GlassBodyPainter(
-        radius: radius,
-        tint: tint,
-        strong: strong,
-        rich: blur,
-      ),
-      foregroundPainter: GlassEdgePainter(radius: radius, bevel: true),
-      child: Padding(padding: padding, child: child),
-    );
-
-    if (blur) {
-      body = ClipRRect(
-        borderRadius: shape,
-        child: BackdropFilter(
-          filter: ui.ImageFilter.compose(
-            outer: _vibrancy,
-            inner: ui.ImageFilter.blur(
-              sigmaX: perf.blurSigma,
-              sigmaY: perf.blurSigma,
-              tileMode: TileMode.mirror,
-            ),
+    // La struttura dei widget è la stessa in tutti gli stili: cambiando
+    // stile al volo il contenuto (liste, focus, scorrimento) non si ricrea.
+    final body = ClipRRect(
+      borderRadius: BorderRadius.circular(radius),
+      clipBehavior: blur ? Clip.antiAlias : Clip.none,
+      child: BackdropFilter(
+        enabled: blur,
+        filter: ui.ImageFilter.compose(
+          outer: _vibrancy,
+          inner: ui.ImageFilter.blur(
+            sigmaX: perf.blurSigma,
+            sigmaY: perf.blurSigma,
+            tileMode: TileMode.mirror,
           ),
-          child: body,
         ),
-      );
-    }
+        child: CustomPaint(
+          painter: crystal
+              ? _CrystalBodyPainter(radius: radius, strong: strong)
+              : _GlassBodyPainter(
+                  radius: radius,
+                  tint: tint,
+                  strong: strong,
+                  rich: perf.useBackdropBlur,
+                ),
+          foregroundPainter: crystal
+              ? _CrystalEdgePainter(radius: radius)
+              : GlassEdgePainter(radius: radius, bevel: true),
+          child: Padding(padding: padding, child: child),
+        ),
+      ),
+    );
 
     if (!shadow) return body;
     return CustomPaint(
-      painter: _OuterShadowPainter(
-        radius: radius,
-        blur: perf.isLight ? 16 : 40,
-        opacity: perf.isLight ? 0.35 : 0.36,
-      ),
+      painter: crystal
+          ? _OuterShadowPainter(
+              radius: radius,
+              blur: perf.isLight ? 14 : 30,
+              opacity: 0.20,
+            )
+          : _OuterShadowPainter(
+              radius: radius,
+              blur: perf.isLight ? 16 : 40,
+              opacity: perf.isLight ? 0.35 : 0.36,
+            ),
       child: body,
     );
   }
+}
+
+/// Goccia d'acqua: la lastra non vela lo sfondo, si riconosce dalla luce.
+///
+/// 1. una velatura quasi nulla, appena più densa in basso dove sta il testo;
+/// 2. il menisco: lungo i bordi interni la goccia si scurisce, come l'acqua
+///    che piega la luce verso l'interno (riflessione totale);
+/// 3. la caustica: sul lato opposto alla luce (in basso a destra) la luce
+///    rifratta si concentra in una mezzaluna chiara;
+/// 4. il riflesso: una lunetta lucida lungo il bordo superiore e un punto
+///    speculare netto in alto a sinistra, con un piccolo riflesso gemello.
+class _CrystalBodyPainter extends CustomPainter {
+  _CrystalBodyPainter({required this.radius, required this.strong});
+
+  final double radius;
+  final bool strong;
+
+  static const _ink = Color(0xFF05040E);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final rrect = RRect.fromRectAndRadius(rect, Radius.circular(radius));
+    canvas.save();
+    canvas.clipRRect(rrect);
+
+    // 1. Velatura: quasi trasparente.
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            _ink.withValues(alpha: strong ? 0.10 : 0.03),
+            _ink.withValues(alpha: strong ? 0.22 : 0.10),
+          ],
+        ).createShader(rect),
+    );
+
+    // 2. Menisco scuro lungo il bordo interno.
+    final rim = math.min(14.0, size.shortestSide * 0.12);
+    canvas.drawRRect(
+      rrect,
+      Paint()
+        ..maskFilter = MaskFilter.blur(BlurStyle.inner, rim)
+        ..shader = LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            _ink.withValues(alpha: 0.38),
+            _ink.withValues(alpha: 0.20),
+            _ink.withValues(alpha: 0.46),
+          ],
+        ).createShader(rect),
+    );
+
+    // 3. Caustica: mezzaluna di luce rifratta in basso a destra.
+    final cRect = Rect.fromLTRB(
+      size.width * 0.18,
+      size.height * 0.55,
+      size.width * 1.02,
+      size.height * 1.05,
+    );
+    final caustic = Path()
+      ..fillType = PathFillType.evenOdd
+      ..addRRect(rrect.deflate(1.5))
+      ..addRRect(
+        RRect.fromRectAndRadius(
+          rect.deflate(1.5).translate(-9, -8).deflate(2),
+          Radius.circular(math.max(0, radius - 2)),
+        ),
+      );
+    canvas.drawPath(
+      caustic,
+      Paint()
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.5)
+        ..shader = RadialGradient(
+          center: const Alignment(0.75, 0.9),
+          radius: 0.9,
+          colors: [
+            Colors.white.withValues(alpha: 0.70),
+            const Color(0xFFBFE6FF).withValues(alpha: 0.26),
+            Colors.white.withValues(alpha: 0),
+          ],
+          stops: const [0, 0.45, 1],
+        ).createShader(cRect),
+    );
+
+    // 4a. Lunetta lucida lungo il bordo superiore (superficie curva).
+    final lune = Path()
+      ..fillType = PathFillType.evenOdd
+      ..addRRect(rrect.deflate(1.2))
+      ..addRRect(
+        RRect.fromRectAndRadius(
+          rect.deflate(1.2).translate(0, math.min(9.0, size.height * 0.06)),
+          Radius.circular(math.max(0, radius - 1)),
+        ),
+      );
+    final top = Rect.fromLTWH(0, 0, size.width, math.min(40.0, size.height));
+    canvas.drawPath(
+      lune,
+      Paint()
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.5)
+        ..shader = LinearGradient(
+          colors: [
+            Colors.white.withValues(alpha: 0.10),
+            Colors.white.withValues(alpha: 0.42),
+            Colors.white.withValues(alpha: 0.14),
+            Colors.white.withValues(alpha: 0.02),
+          ],
+          stops: const [0, 0.22, 0.6, 1],
+        ).createShader(top),
+    );
+
+    // 4b. Punto speculare netto in alto a sinistra e riflesso gemello.
+    final sw = math.min(size.width * 0.22, 150.0);
+    final sh = math.min(size.height * 0.07, 12.0);
+    if (sw > 12 && sh > 3) {
+      final spec = Rect.fromLTWH(
+        math.max(radius * 0.8, 10),
+        math.max(4, sh * 0.8),
+        sw,
+        sh,
+      );
+      canvas.drawOval(
+        spec,
+        Paint()
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, sh * 0.35)
+          ..shader = LinearGradient(
+            colors: [
+              Colors.white.withValues(alpha: 0.75),
+              Colors.white.withValues(alpha: 0.10),
+            ],
+          ).createShader(spec),
+      );
+      final twin = Rect.fromCenter(
+        center: spec.topRight + Offset(sh * 1.6, sh * 0.7),
+        width: sh * 0.9,
+        height: sh * 0.9,
+      );
+      canvas.drawOval(
+        twin,
+        Paint()
+          ..color = Colors.white.withValues(alpha: 0.6)
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, sh * 0.2),
+      );
+    }
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(_CrystalBodyPainter old) =>
+      old.radius != radius || old.strong != strong;
+}
+
+/// Bordo crystal: un filo di luce netto con una frangia prismatica (azzurro
+/// in alto a sinistra, magenta in basso a destra), come la luce scomposta
+/// dallo spessore dell'acqua.
+class _CrystalEdgePainter extends CustomPainter {
+  const _CrystalEdgePainter({required this.radius});
+
+  final double radius;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    RRect r(double d) => RRect.fromRectAndRadius(
+      rect.deflate(d),
+      Radius.circular(math.max(0, radius - d)),
+    );
+
+    // Filo esterno chiaro.
+    canvas.drawRRect(
+      r(0.6),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.2
+        ..shader = LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          stops: const [0, 0.35, 0.7, 1],
+          colors: [
+            Colors.white.withValues(alpha: 0.90),
+            Colors.white.withValues(alpha: 0.28),
+            Colors.white.withValues(alpha: 0.22),
+            Colors.white.withValues(alpha: 0.70),
+          ],
+        ).createShader(rect),
+    );
+
+    // Frangia prismatica appena all'interno.
+    canvas.drawRRect(
+      r(2.2),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.4
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 0.8)
+        ..shader = const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          stops: [0, 0.3, 0.7, 1],
+          colors: [
+            Color(0x8C7FD8FF),
+            Color(0x00FFFFFF),
+            Color(0x00FFFFFF),
+            Color(0x80F27DFF),
+          ],
+        ).createShader(rect),
+    );
+
+    // Filo scuro sottilissimo all'esterno: stacca la goccia su fondi chiari.
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(rect.inflate(0.6), Radius.circular(radius + 0.6)),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 0.8
+        ..color = Colors.black.withValues(alpha: 0.28),
+    );
+  }
+
+  @override
+  bool shouldRepaint(_CrystalEdgePainter old) => old.radius != radius;
 }
 
 /// Riempimento della lastra: velatura, lucentezza, riflesso, luce sui bordi.

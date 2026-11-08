@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../../core/glass_look.dart';
 import '../../core/performance.dart';
 import '../../core/theme.dart';
 import '../../data/epg/epg_models.dart';
@@ -591,6 +592,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
   Widget build(BuildContext context) {
     final engine = context.read<PlaybackEngine>();
     final perf = context.read<PerformanceProfile>();
+    final crystal = GlassLookTheme.of(context) == GlassLook.crystal;
     final tuner = context.watch<TunerController>();
     final size = MediaQuery.sizeOf(context);
     final margin = size.width < 760 ? 12.0 : 32.0;
@@ -644,17 +646,28 @@ class _PlayerScreenState extends State<PlayerScreen> {
                         : 0,
                     child: DecoratedBox(
                       decoration: BoxDecoration(
+                        // Col vetro crystal la velatura è dimezzata: il
+                        // video resta vivo e i testi hanno già il loro alone.
                         gradient: _panel == _Panel.none
-                            ? const LinearGradient(
+                            ? LinearGradient(
                                 begin: Alignment.topCenter,
                                 end: Alignment.bottomCenter,
-                                stops: [0.45, 1],
-                                colors: [Colors.transparent, Color(0x99000000)],
+                                stops: const [0.45, 1],
+                                colors: [
+                                  Colors.transparent,
+                                  Colors.black.withValues(
+                                    alpha: crystal ? 0.30 : 0.60,
+                                  ),
+                                ],
                               )
                             : LinearGradient(
                                 colors: [
-                                  Colors.black.withValues(alpha: 0.55),
-                                  Colors.black.withValues(alpha: 0.25),
+                                  Colors.black.withValues(
+                                    alpha: crystal ? 0.28 : 0.55,
+                                  ),
+                                  Colors.black.withValues(
+                                    alpha: crystal ? 0.10 : 0.25,
+                                  ),
                                 ],
                               ),
                       ),
