@@ -503,6 +503,11 @@ class _BrandBlock extends StatelessWidget {
         Image.asset(
           Brand.logo,
           width: compact ? 300 : 460,
+          cacheWidth: Brand.decodeSize(
+            compact ? 300 : 460,
+            MediaQuery.devicePixelRatioOf(context),
+            Brand.logoWidth,
+          ),
           semanticLabel: Brand.name,
           filterQuality: FilterQuality.medium,
         ),
@@ -584,6 +589,11 @@ class BrandMark extends StatelessWidget {
       Brand.icon,
       width: size,
       height: size,
+      cacheWidth: Brand.decodeSize(
+        size,
+        MediaQuery.devicePixelRatioOf(context),
+        Brand.iconSize,
+      ),
       semanticLabel: Brand.name,
       filterQuality: FilterQuality.medium,
     );

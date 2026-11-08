@@ -12,6 +12,7 @@ import 'package:window_manager/window_manager.dart';
 
 import 'app.dart';
 import 'core/brand.dart';
+import 'core/heavy_work.dart';
 import 'core/performance.dart';
 import 'core/theme.dart';
 import 'data/settings_store.dart';
@@ -34,6 +35,9 @@ Future<void> main() async {
 
   final settings = await SettingsStore.open();
   final perf = await PerformanceProfile.resolve(settings.performanceMode);
+
+  // Profilo light: elenchi e cache grandi si caricano uno alla volta.
+  HeavyWork.serialize = perf.isLight;
 
   // Cache immagini dimensionata sul dispositivo (loghi).
   PaintingBinding.instance.imageCache

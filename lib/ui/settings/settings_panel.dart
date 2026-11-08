@@ -456,6 +456,11 @@ class _SettingsPanelState extends State<SettingsPanel> {
                           Image.asset(
                             Brand.logo,
                             width: 150,
+                            cacheWidth: Brand.decodeSize(
+                              150,
+                              MediaQuery.devicePixelRatioOf(context),
+                              Brand.logoWidth,
+                            ),
                             semanticLabel: Brand.name,
                             filterQuality: FilterQuality.medium,
                           ),

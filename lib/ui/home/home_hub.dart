@@ -245,6 +245,11 @@ class _HomeHubState extends State<HomeHub> {
         Image.asset(
           Brand.logo,
           height: compact ? 62 : 96,
+          cacheHeight: Brand.decodeSize(
+            compact ? 62 : 96,
+            MediaQuery.devicePixelRatioOf(context),
+            Brand.logoHeight,
+          ),
           semanticLabel: Brand.name,
           filterQuality: FilterQuality.medium,
         ),

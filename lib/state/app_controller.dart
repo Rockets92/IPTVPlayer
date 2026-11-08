@@ -6,6 +6,7 @@ import 'dart:isolate';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../core/heavy_work.dart';
 import '../core/performance.dart';
 import '../data/epg/epg_models.dart';
 import '../data/epg/epg_repository.dart';
@@ -66,7 +67,29 @@ class AppController extends ChangeNotifier {
 
   bool _disposed = false;
 
+  // Categorie e canali per categoria si ricalcolano solo quando cambia la
+  // lista: elenco canali e guida li chiedono a ogni tasto e a ogni riga.
+  List<String>? _groups;
+  final _channelsIn = <String, List<Channel>>{};
+  List<Channel>? _cacheOf;
+  ChannelMapping? _cacheMapping;
+
+  void _checkCaches() {
+    if (identical(_cacheOf, channels) && identical(_cacheMapping, mapping)) {
+      return;
+    }
+    _cacheOf = channels;
+    _cacheMapping = mapping;
+    _groups = null;
+    _channelsIn.clear();
+  }
+
   List<String> get groups {
+    _checkCaches();
+    return _groups ??= List.unmodifiable(_computeGroups());
+  }
+
+  List<String> _computeGroups() {
     final seen = <String>{};
     final out = [
       for (final c in channels)
@@ -95,6 +118,11 @@ class AppController extends ChangeNotifier {
   /// Canali di una categoria. Nelle categorie "vista" (Vetrina) ogni canale
   /// è seguito dai suoi canali collegati, per raggiungerli subito.
   List<Channel> channelsIn(String group) {
+    _checkCaches();
+    return _channelsIn[group] ??= List.unmodifiable(_computeChannelsIn(group));
+  }
+
+  List<Channel> _computeChannelsIn(String group) {
     final direct = channels.where((c) => c.group == group).toList();
     if (direct.isNotEmpty) return direct;
     final byId = {for (final c in channels) c.id: c};
@@ -402,9 +430,11 @@ class AppController extends ChangeNotifier {
           ],
       ];
       final epg = _m3uEpg;
-      await Isolate.run(
-        () => File(path)
-            .writeAsStringSync(jsonEncode({'c': cats, 's': rows, 'g': epg})),
+      await HeavyWork.run(
+        () => Isolate.run(
+          () => File(path)
+              .writeAsStringSync(jsonEncode({'c': cats, 's': rows, 'g': epg})),
+        ),
       );
     } catch (_) {}
   }
@@ -415,23 +445,25 @@ class AppController extends ChangeNotifier {
       final f = await _streamCacheFile();
       if (!await f.exists()) return null;
       final path = f.path;
-      final (streams, cats, epg) = await Isolate.run(() {
-        final j = jsonDecode(File(path).readAsStringSync()) as Map;
-        final cats = (j['c'] as Map).cast<String, String>();
-        final streams = [
-          for (final r in j['s'] as List)
-            XtreamLiveStream(
-              streamId: r[0] as int,
-              name: r[1] as String,
-              icon: r[2] as String?,
-              epgChannelId: r[3] as String?,
-              categoryId: r[4] as String?,
-              number: r[5] as int?,
-              url: r.length > 6 ? r[6] as String? : null,
-            ),
-        ];
-        return (streams, cats, j['g'] as String?);
-      });
+      final (streams, cats, epg) = await HeavyWork.run(
+        () => Isolate.run(() {
+          final j = jsonDecode(File(path).readAsStringSync()) as Map;
+          final cats = (j['c'] as Map).cast<String, String>();
+          final streams = [
+            for (final r in j['s'] as List)
+              XtreamLiveStream(
+                streamId: r[0] as int,
+                name: r[1] as String,
+                icon: r[2] as String?,
+                epgChannelId: r[3] as String?,
+                categoryId: r[4] as String?,
+                number: r[5] as int?,
+                url: r.length > 6 ? r[6] as String? : null,
+              ),
+          ];
+          return (streams, cats, j['g'] as String?);
+        }),
+      );
       _m3uEpg ??= epg;
       return (streams, cats);
     } catch (_) {

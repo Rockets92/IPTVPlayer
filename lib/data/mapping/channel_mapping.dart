@@ -78,7 +78,8 @@ class MappedChannel {
     final rawLogo = asNonEmptyString(j['logo']);
     String? logo;
     if (rawLogo != null) {
-      logo = rawLogo.contains('://') ||
+      logo =
+          rawLogo.contains('://') ||
               rawLogo.startsWith(kAssetLogoScheme) ||
               logoBase == null
           ? rawLogo

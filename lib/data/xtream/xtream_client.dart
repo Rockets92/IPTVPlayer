@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:isolate';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
+import '../../core/heavy_work.dart';
 import '../epg/epg_models.dart';
 import '../json_utils.dart';
 import '../live_source.dart';
@@ -43,7 +45,12 @@ class XtreamClient implements LiveSource {
         },
       );
 
-  Future<String> _get(Uri uri) async {
+  Future<String> _get(Uri uri) async =>
+      utf8.decode(await _getBytes(uri), allowMalformed: true);
+
+  /// Risposta grezza: gli elenchi grandi si decodificano direttamente dai
+  /// byte, senza passare da una stringa con l'intero documento.
+  Future<Uint8List> _getBytes(Uri uri) async {
     http.Response? res;
     // Errori temporanei: nuovi tentativi con attesa crescente, cambiando
     // User-Agent se il server continua a rifiutare.
@@ -85,7 +92,7 @@ class XtreamClient implements LiveSource {
         'Il server ha risposto con errore ${r.statusCode}.',
       );
     }
-    return utf8.decode(r.bodyBytes, allowMalformed: true);
+    return r.bodyBytes;
   }
 
   /// Verifica le credenziali e restituisce lo stato dell'abbonamento.
@@ -126,24 +133,22 @@ class XtreamClient implements LiveSource {
   }
 
   /// Elenco dei canali live. Il JSON può superare diversi MB: la
-  /// decodifica avviene fuori dal thread UI.
+  /// decodifica avviene fuori dal thread UI, un elemento alla volta.
   @override
-  Future<List<XtreamLiveStream>> liveStreams() async {
-    final body = await _get(_api({'action': 'get_live_streams'}));
+  Future<List<XtreamLiveStream>> liveStreams() => HeavyWork.run(() async {
+    final body = await _getBytes(_api({'action': 'get_live_streams'}));
     return Isolate.run(() => _parseStreams(body));
-  }
+  });
 
-  static List<XtreamLiveStream> _parseStreams(String body) {
-    final json = jsonDecode(body);
-    if (json is! List) return const [];
+  static List<XtreamLiveStream> _parseStreams(Uint8List body) {
     final out = <XtreamLiveStream>[];
-    for (final e in json) {
+    final isList = forEachJsonArrayElement(body, (e) {
       if (e is Map) {
         final s = XtreamLiveStream.tryFromJson(e.cast<String, Object?>());
         if (s != null) out.add(s);
       }
-    }
-    return out;
+    });
+    return isList ? out : const [];
   }
 
   // --- Film e serie ----------------------------------------------------------
@@ -166,27 +171,25 @@ class XtreamClient implements LiveSource {
 
   /// Tutti i film: elenco anche di decine di migliaia di titoli, decodificato
   /// fuori dal thread UI.
-  Future<List<VodItem>> vodStreams() async {
-    final body = await _get(_api({'action': 'get_vod_streams'}));
+  Future<List<VodItem>> vodStreams() => HeavyWork.run(() async {
+    final body = await _getBytes(_api({'action': 'get_vod_streams'}));
     return Isolate.run(() => _parseItems(body, series: false));
-  }
+  });
 
-  Future<List<VodItem>> series() async {
-    final body = await _get(_api({'action': 'get_series'}));
+  Future<List<VodItem>> series() => HeavyWork.run(() async {
+    final body = await _getBytes(_api({'action': 'get_series'}));
     return Isolate.run(() => _parseItems(body, series: true));
-  }
+  });
 
-  static List<VodItem> _parseItems(String body, {required bool series}) {
-    final json = jsonDecode(body);
-    if (json is! List) return const [];
+  static List<VodItem> _parseItems(Uint8List body, {required bool series}) {
     final out = <VodItem>[];
-    for (final e in json) {
-      if (e is! Map) continue;
+    final isList = forEachJsonArrayElement(body, (e) {
+      if (e is! Map) return;
       final j = e.cast<String, Object?>();
       final v = series ? VodItem.seriesFromJson(j) : VodItem.movieFromJson(j);
       if (v != null) out.add(v);
-    }
-    return out;
+    });
+    return isList ? out : const [];
   }
 
   Future<MovieInfo> movieInfo(int id) async {
