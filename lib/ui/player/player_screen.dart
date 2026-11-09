@@ -61,6 +61,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
   bool _cursorVisible = true;
   Timer? _cursorTimer;
   late final TunerController _tuner = context.read<TunerController>();
+  late final AppController _app = context.read<AppController>();
   String? _lastEpgStatus;
 
   @override
@@ -80,7 +81,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
       // Promemoria già scattato prima che il player fosse pronto.
       _onReminder();
     });
-    context.read<AppController>().addListener(_onApp);
+    _app.addListener(_onApp);
     _reminders.addListener(_onReminder);
     _tuner.addListener(_onTuner);
   }
@@ -183,7 +184,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
   @override
   void dispose() {
     if (RemoteHooks.resume == _resumeVod) RemoteHooks.resume = null;
-    context.read<AppController>().removeListener(_onApp);
+    _app.removeListener(_onApp);
     _reminders.removeListener(_onReminder);
     _tuner.removeListener(_onTuner);
     WakelockPlus.disable().catchError((_) {});

@@ -123,6 +123,11 @@ class _Splash extends StatelessWidget {
               Image.asset(
                 Brand.logo,
                 width: 380,
+                cacheWidth: Brand.decodeSize(
+                  380,
+                  MediaQuery.devicePixelRatioOf(context),
+                  Brand.logoWidth,
+                ),
                 semanticLabel: Brand.name,
                 filterQuality: FilterQuality.medium,
               ),

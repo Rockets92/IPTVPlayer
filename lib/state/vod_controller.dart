@@ -316,7 +316,7 @@ class VodController extends ChangeNotifier {
     if (q.isNotEmpty) {
       final words = q.split(' ');
       items = items.where((i) {
-        final t = _fold(i.title);
+        final t = _foldedTitle(i);
         return words.every(t.contains);
       });
     }
@@ -325,7 +325,7 @@ class VodController extends ChangeNotifier {
       case VodSort.recent:
         out.sort((a, b) => b.added.compareTo(a.added));
       case VodSort.name:
-        out.sort((a, b) => _fold(a.title).compareTo(_fold(b.title)));
+        out.sort((a, b) => _foldedTitle(a).compareTo(_foldedTitle(b)));
       case VodSort.rating:
         out.sort((a, b) => (b.rating ?? 0).compareTo(a.rating ?? 0));
       case VodSort.year:
@@ -348,6 +348,13 @@ class VodController extends ChangeNotifier {
       .._countsOf = c.items;
     return m;
   }
+
+  /// Titolo normalizzato per ricerca e ordine A-Z, calcolato una volta per
+  /// titolo: con decine di migliaia di film rifarlo a ogni lettera digitata
+  /// (o a ogni confronto dell'ordinamento) blocca l'interfaccia per secondi.
+  static final _folded = Expando<String>('vodTitle');
+
+  static String _foldedTitle(VodItem i) => _folded[i] ??= _fold(i.title);
 
   static String _fold(String s) {
     const from = 'àáâäèéêëìíîïòóôöùúûüç';

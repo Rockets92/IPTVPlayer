@@ -4,6 +4,7 @@ import 'dart:isolate';
 
 import 'package:http/http.dart' as http;
 
+import '../../core/heavy_work.dart';
 import '../epg/epg_models.dart';
 import '../live_source.dart';
 import '../xtream/xtream_client.dart';
@@ -126,7 +127,7 @@ class M3uClient implements LiveSource {
             DateTime.now().difference(at) < const Duration(minutes: 2))) {
       return _playlist!;
     }
-    final f = _download();
+    final f = HeavyWork.run(_download);
     _playlist = f;
     _loadedAt = null;
     f.then(

@@ -4,6 +4,7 @@ import 'dart:isolate';
 
 import 'package:path_provider/path_provider.dart';
 
+import '../../core/heavy_work.dart';
 import '../../core/performance.dart';
 import '../../domain/channel.dart';
 import 'epg_models.dart';
@@ -36,7 +37,9 @@ class EpgRepository {
       final f = await _file();
       if (!await f.exists()) return null;
       final path = f.path;
-      return await Isolate.run(() => _readCache(path, signature));
+      return await HeavyWork.run(
+        () => Isolate.run(() => _readCache(path, signature)),
+      );
     } catch (_) {
       return null;
     }
@@ -67,17 +70,19 @@ class EpgRepository {
       final path = f.path;
       final data = s.raw;
       final at = s.fetchedAt!.millisecondsSinceEpoch;
-      await Isolate.run(() {
-        final json = jsonEncode({
-          'sig': signature,
-          'fetchedAt': at,
-          'data': {
-            for (final e in data.entries)
-              e.key: [for (final p in e.value) p.toCompact()],
-          },
-        });
-        File(path).writeAsStringSync(json, flush: true);
-      });
+      await HeavyWork.run(
+        () => Isolate.run(() {
+          final json = jsonEncode({
+            'sig': signature,
+            'fetchedAt': at,
+            'data': {
+              for (final e in data.entries)
+                e.key: [for (final p in e.value) p.toCompact()],
+            },
+          });
+          File(path).writeAsStringSync(json, flush: true);
+        }),
+      );
     } catch (_) {}
   }
 
