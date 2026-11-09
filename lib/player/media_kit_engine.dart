@@ -292,8 +292,14 @@ class MediaKitEngine implements PlaybackEngine {
     resumeUponEnteringForegroundMode: true,
   );
 
+  Future<void>? _disposing;
+
+  /// Si può chiamare più volte (uscita dall'app e chiusura dell'attività):
+  /// il player viene rilasciato una sola volta.
   @override
-  Future<void> dispose() async {
+  Future<void> dispose() => _disposing ??= _dispose();
+
+  Future<void> _dispose() async {
     for (final s in _subs) {
       await s.cancel();
     }
