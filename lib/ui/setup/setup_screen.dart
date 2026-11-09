@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/brand.dart';
+import '../../core/form_factor.dart';
 import '../../core/performance.dart';
 import '../../core/theme.dart';
 import '../../data/xtream/xtream_models.dart';
@@ -14,6 +15,7 @@ import '../../remote/remote_server.dart';
 import '../../state/app_controller.dart';
 import '../format.dart';
 import '../widgets/ambient_background.dart';
+import '../widgets/focus_tile.dart';
 import '../widgets/glass.dart';
 import '../widgets/glass_field.dart';
 import '../widgets/qr_card.dart';
@@ -181,6 +183,9 @@ class _SetupScreenState extends State<SetupScreen> {
     }
   }
 
+  /// Sul telefono il QR non serve: touch e tastiera ce li ha già.
+  bool get _showQr => !context.read<FormFactor>().hidesQr;
+
   @override
   Widget build(BuildContext context) {
     final perf = context.read<PerformanceProfile>();
@@ -208,7 +213,7 @@ class _SetupScreenState extends State<SetupScreen> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 card,
-                                if (_success == null) ...[
+                                if (_success == null && _showQr) ...[
                                   const SizedBox(height: 16),
                                   const _PhoneSetup(),
                                 ],
@@ -225,7 +230,7 @@ class _SetupScreenState extends State<SetupScreen> {
                           const _BrandBlock(compact: true),
                           const SizedBox(height: 32),
                           card,
-                          if (_success == null) ...[
+                          if (_success == null && _showQr) ...[
                             const SizedBox(height: 16),
                             const _PhoneSetup(),
                           ],
@@ -260,7 +265,7 @@ class _SetupScreenState extends State<SetupScreen> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             const _BrandBlock(features: false),
-                            if (_success == null) ...[
+                            if (_success == null && _showQr) ...[
                               const SizedBox(height: 28),
                               const _PhoneSetup(qrSize: 150),
                             ],
@@ -311,11 +316,15 @@ class _SetupScreenState extends State<SetupScreen> {
             style: AppText.display.copyWith(fontSize: 26),
           ),
           const SizedBox(height: 8),
-          Text(
-            'Inserisci i dati forniti dal tuo provider, oppure inquadra il '
-            'codice QR e compilali comodamente dallo smartphone.',
-            style: AppText.body,
-          ),
+          Text(switch (context.read<FormFactor>()) {
+            FormFactor.tv =>
+              'Inserisci i dati forniti dal tuo provider, oppure inquadra il '
+                  'codice QR e compilali comodamente dallo smartphone.',
+            FormFactor.phone => 'Inserisci i dati forniti dal tuo provider.',
+            _ =>
+              'Inserisci i dati forniti dal tuo provider. Se preferisci, '
+                  'puoi compilarli anche dallo smartphone.',
+          }, style: AppText.body),
           const SizedBox(height: 22),
           _KindSwitch(
             autofocus: !_desktop,
@@ -678,12 +687,24 @@ class _KindSwitch extends StatelessWidget {
 }
 
 /// QR per compilare i dati dallo smartphone.
-class _PhoneSetup extends StatelessWidget {
+///
+/// Su TV è aperto e in primo piano; su tablet e PC parte chiuso, come una
+/// riga discreta da aprire solo se serve.
+class _PhoneSetup extends StatefulWidget {
   const _PhoneSetup({this.qrSize = 112});
   final double qrSize;
 
   @override
+  State<_PhoneSetup> createState() => _PhoneSetupState();
+}
+
+class _PhoneSetupState extends State<_PhoneSetup> {
+  late bool _open = context.read<FormFactor>().qrProminent;
+
+  @override
   Widget build(BuildContext context) {
+    if (!_open) return _collapsed();
+    final qrSize = widget.qrSize;
     final remote = context.watch<RemoteServer>();
     final url = remote.setupUrl;
     return Glass(
@@ -740,6 +761,44 @@ class _PhoneSetup extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _collapsed() {
+    return Glass(
+      radius: 22,
+      padding: const EdgeInsets.all(4),
+      child: FocusTile(
+        radius: 18,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        onSelect: () => setState(() => _open = true),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.qr_code_2_rounded,
+              color: Palette.textSecondary,
+              size: 22,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Preferisci compilare dallo smartphone?',
+                style: AppText.label.copyWith(color: Palette.textSecondary),
+              ),
+            ),
+            Text(
+              'Mostra QR',
+              style: AppText.label.copyWith(color: Palette.textTertiary),
+            ),
+            const SizedBox(width: 4),
+            const Icon(
+              Icons.expand_more_rounded,
+              color: Palette.textTertiary,
+              size: 20,
+            ),
+          ],
+        ),
       ),
     );
   }
