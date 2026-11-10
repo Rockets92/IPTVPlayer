@@ -239,7 +239,7 @@ class _PinDialogState extends State<PinDialog> {
                       childAspectRatio: 1.6,
                       children: [
                         for (var i = 0; i < _keys.length; i++)
-                          _PadKey(
+                          PadKey(
                             label: _keys[i],
                             focused: i == _sel,
                             onTap: () {
@@ -270,8 +270,11 @@ class _PinDialogState extends State<PinDialog> {
   }
 }
 
-class _PadKey extends StatelessWidget {
-  const _PadKey({
+/// Tasto del tastierino a schermo (PIN, numero canale): cifra o simbolo
+/// (⌫ cancella, ✕ annulla, ✓ conferma). Acceso quando ha il focus.
+class PadKey extends StatelessWidget {
+  const PadKey({
+    super.key,
     required this.label,
     required this.focused,
     required this.onTap,
@@ -286,6 +289,7 @@ class _PadKey extends StatelessWidget {
     final icon = switch (label) {
       '⌫' => Icons.backspace_outlined,
       '✕' => Icons.close_rounded,
+      '✓' => Icons.check_rounded,
       _ => null,
     };
     return MouseRegion(

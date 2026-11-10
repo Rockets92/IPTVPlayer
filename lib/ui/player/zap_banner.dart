@@ -108,12 +108,13 @@ class ZapBanner extends StatelessWidget {
   }
 }
 
-enum BannerAction { list, guide, home, settings, sources, plusOne }
+enum BannerAction { list, guide, keypad, home, settings, sources, plusOne }
 
 /// Azioni mostrate nel banner, nell'ordine in cui le si percorre con ←→.
 List<BannerAction> bannerActions(TunerController t) => [
   BannerAction.list,
   BannerAction.guide,
+  BannerAction.keypad,
   BannerAction.home,
   if (t.canTogglePlusOne) BannerAction.plusOne,
   if (t.activeSources.length > 1) BannerAction.sources,
@@ -588,6 +589,12 @@ class _ActionRow extends StatelessWidget {
               tooltip: 'Guida TV',
               focused: menuIndex == i,
               onTap: () => onAction(BannerAction.guide),
+            ),
+            BannerAction.keypad => _RoundAction(
+              icon: Icons.dialpad_rounded,
+              tooltip: 'Tastierino',
+              focused: menuIndex == i,
+              onTap: () => onAction(BannerAction.keypad),
             ),
             BannerAction.plusOne => _RoundAction(
               label: onPlusOne ? 'LIVE' : '+1',
