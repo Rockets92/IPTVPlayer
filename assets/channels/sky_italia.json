@@ -296,6 +296,12 @@
       "epgId": "Blaze.it"
     },
     {
+      "number": 128,
+      "name": "Rai Storia",
+      "group": "Documentari",
+      "sameAs": 805
+    },
+    {
       "number": 129,
       "name": "Comedy Central",
       "group": "Intrattenimento",
