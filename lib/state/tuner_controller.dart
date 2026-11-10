@@ -318,14 +318,17 @@ class TunerController extends ChangeNotifier {
     _digitTimer?.cancel();
     final n = int.tryParse(digits);
     digits = '';
-    if (n != null) {
-      final i = indexForNumber(n);
-      if (i != null) {
-        _tune(i, showBanner: true);
-        return;
-      }
-    }
+    if (n != null && tuneNumber(n)) return;
     _notify();
+  }
+
+  /// Sintonizza il canale [n] (o il primo successivo, come [indexForNumber]).
+  /// Restituisce false se non c'è nessun canale da quel numero in su.
+  bool tuneNumber(int n) {
+    final i = indexForNumber(n);
+    if (i == null) return false;
+    _tune(i, showBanner: true);
+    return true;
   }
 
   /// Anteprima di un altro canale senza cambiare il video (←→).

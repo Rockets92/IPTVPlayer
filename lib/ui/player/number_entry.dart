@@ -7,14 +7,21 @@ import '../widgets/channel_logo.dart';
 import '../widgets/glass.dart';
 
 /// Inserimento diretto del numero canale, in alto a destra.
+///
+/// Senza [digits] mostra le cifre digitate col telecomando; il tastierino a
+/// schermo passa invece le sue.
 class NumberEntry extends StatelessWidget {
-  const NumberEntry({super.key});
+  const NumberEntry({super.key, this.digits});
+
+  final String? digits;
 
   @override
   Widget build(BuildContext context) {
     final tuner = context.watch<TunerController>();
-    final digits = tuner.digits;
-    final target = tuner.digitsTarget;
+    final digits = this.digits ?? tuner.digits;
+    final n = int.tryParse(digits);
+    final i = n == null ? null : tuner.indexForNumber(n);
+    final target = i == null ? null : tuner.channels[i];
     final exact = target != null && '${target.number}' == digits;
     return Glass(
       radius: 26,
@@ -51,7 +58,7 @@ class NumberEntry extends StatelessWidget {
                   ? Align(
                       alignment: Alignment.centerRight,
                       child: Text(
-                        'Nessun canale',
+                        digits.isEmpty ? 'Digita il numero' : 'Nessun canale',
                         style: AppText.label.copyWith(
                           color: Palette.textTertiary,
                         ),
@@ -68,19 +75,21 @@ class NumberEntry extends StatelessWidget {
                           padding: 4,
                         ),
                         const SizedBox(width: 10),
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 220),
-                          child: Text(
-                            exact
-                                ? target.name
-                                : '${target.number} · ${target.name}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppText.headline.copyWith(
-                              fontSize: 15,
-                              color: exact
-                                  ? Palette.textPrimary
-                                  : Palette.textSecondary,
+                        Flexible(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 220),
+                            child: Text(
+                              exact
+                                  ? target.name
+                                  : '${target.number} · ${target.name}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppText.headline.copyWith(
+                                fontSize: 15,
+                                color: exact
+                                    ? Palette.textPrimary
+                                    : Palette.textSecondary,
+                              ),
                             ),
                           ),
                         ),

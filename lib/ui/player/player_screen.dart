@@ -26,6 +26,7 @@ import '../settings/settings_panel.dart';
 import '../widgets/focus_tile.dart';
 import '../widgets/glass.dart';
 import '../widgets/pin_dialog.dart';
+import 'channel_keypad.dart';
 import 'channel_list_overlay.dart';
 import 'guide_overlay.dart';
 import 'number_entry.dart';
@@ -38,7 +39,7 @@ import 'source_picker.dart';
 import 'volume_indicator.dart';
 import 'zap_banner.dart';
 
-enum _Panel { none, list, guide, settings, sources, games, vod, home }
+enum _Panel { none, list, guide, settings, sources, games, vod, home, keypad }
 
 bool get _isDesktop =>
     !kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS);
@@ -195,6 +196,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     }
     _toastTimer?.cancel();
     _cursorTimer?.cancel();
+    _okHold?.cancel();
     _rootFocus.dispose();
     super.dispose();
   }
@@ -414,11 +416,54 @@ class _PlayerScreenState extends State<PlayerScreen> {
     }
   }
 
+  /// OK tenuto premuto: allo scadere si apre il tastierino a schermo.
+  Timer? _okHold;
+
+  /// OK a schermo libero: l'azione parte al rilascio, così tenendolo
+  /// premuto per [keypadHoldDuration] si apre invece il tastierino.
+  /// I tasti del telefono (senza rilascio) agiscono subito come prima.
+  KeyEventResult? _onOkHold(KeyEvent e, LogicalKeyboardKey k) {
+    if (!isSelectKey(k)) return null;
+    if (e is KeyUpEvent) {
+      if (_okHold == null) return null;
+      final short = _okHold!.isActive;
+      _okHold!.cancel();
+      _okHold = null;
+      if (short) _onSelect();
+      return KeyEventResult.handled;
+    }
+    if (e is KeyRepeatEvent) {
+      return _okHold != null ? KeyEventResult.handled : null;
+    }
+    // Telefono, o numero già in digitazione: OK agisce subito.
+    if (e.physicalKey == const PhysicalKeyboardKey(0) ||
+        _tuner.digits.isNotEmpty) {
+      return null;
+    }
+    _okHold?.cancel();
+    _okHold = Timer(keypadHoldDuration, () {
+      // Il rilascio può non arrivare (un avviso ha preso il focus):
+      // si apre solo se OK è ancora giù e non c'è altro aperto.
+      if (!mounted ||
+          _panel != _Panel.none ||
+          _reminders.due != null ||
+          !HardwareKeyboard.instance.logicalKeysPressed.contains(k)) {
+        _okHold = null;
+        return;
+      }
+      _open(_Panel.keypad);
+    });
+    return KeyEventResult.handled;
+  }
+
   KeyEventResult _onKey(FocusNode node, KeyEvent e) {
+    final k = e.logicalKey;
+    if (e is KeyUpEvent && _panel == _Panel.none) {
+      return _onOkHold(e, k) ?? KeyEventResult.ignored;
+    }
     if (e is! KeyDownEvent && e is! KeyRepeatEvent) {
       return KeyEventResult.ignored;
     }
-    final k = e.logicalKey;
     // Avviso di promemoria: OK va al canale, Indietro annulla.
     if (_reminders.due != null) {
       if (e is KeyRepeatEvent) return KeyEventResult.handled;
@@ -438,6 +483,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
       final r = _onMenuKey(e, k);
       if (r == KeyEventResult.handled) return r;
     }
+    if (_onOkHold(e, k) case final r?) return r;
     final repeat = e is KeyRepeatEvent;
     // Informazioni aperte (OK): ↓ entra nel menu (canali, guida, impostazioni…).
     if (k == LogicalKeyboardKey.arrowDown &&
@@ -481,29 +527,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     } else if (digitForKey(k) case final d?) {
       _tuner.inputDigit(d);
     } else if (isSelectKey(k)) {
-      if (_tuner.digits.isNotEmpty) {
-        _tuner.commitDigits();
-      } else if (_tuner.browsing &&
-          _tuner.bannerVisible &&
-          _tuner.infoProgramme != null) {
-        // Programma futuro di un canale in anteprima: OK lo prenota
-        // (o annulla) senza cambiare canale.
-        _toggleReminder(_tuner.infoProgramme!);
-      } else if (_tuner.browsing && _tuner.bannerVisible) {
-        _tuner.confirmBrowse();
-      } else if (_tuner.signalMessage == 'Canale non disponibile') {
-        _tuner.retry();
-      } else if (_tuner.infoMode &&
-          _tuner.bannerVisible &&
-          _tuner.infoProgramme != null) {
-        // Programma futuro nel banner: OK lo prenota (o annulla).
-        _toggleReminder(_tuner.infoProgramme!);
-      } else if (_tuner.infoMode && _tuner.bannerVisible) {
-        // Secondo OK: elenco completo dei canali.
-        _open(_Panel.list);
-      } else {
-        _tuner.showInfo();
-      }
+      _onSelect();
     } else if (k == LogicalKeyboardKey.keyL) {
       _open(_Panel.list);
     } else if (k == LogicalKeyboardKey.keyV ||
@@ -570,6 +594,33 @@ class _PlayerScreenState extends State<PlayerScreen> {
     return KeyEventResult.handled;
   }
 
+  /// OK a schermo libero (o col banner aperto).
+  void _onSelect() {
+    if (_tuner.digits.isNotEmpty) {
+      _tuner.commitDigits();
+    } else if (_tuner.browsing &&
+        _tuner.bannerVisible &&
+        _tuner.infoProgramme != null) {
+      // Programma futuro di un canale in anteprima: OK lo prenota
+      // (o annulla) senza cambiare canale.
+      _toggleReminder(_tuner.infoProgramme!);
+    } else if (_tuner.browsing && _tuner.bannerVisible) {
+      _tuner.confirmBrowse();
+    } else if (_tuner.signalMessage == 'Canale non disponibile') {
+      _tuner.retry();
+    } else if (_tuner.infoMode &&
+        _tuner.bannerVisible &&
+        _tuner.infoProgramme != null) {
+      // Programma futuro nel banner: OK lo prenota (o annulla).
+      _toggleReminder(_tuner.infoProgramme!);
+    } else if (_tuner.infoMode && _tuner.bannerVisible) {
+      // Secondo OK: elenco completo dei canali.
+      _open(_Panel.list);
+    } else {
+      _tuner.showInfo();
+    }
+  }
+
   void _onHover() {
     if (!_isDesktop) return;
     if (!_cursorVisible) setState(() => _cursorVisible = true);
@@ -596,6 +647,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     BannerAction.sources => _open(_Panel.sources),
     BannerAction.plusOne => _plusOne(),
     BannerAction.home => _open(_Panel.home),
+    BannerAction.keypad => _open(_Panel.keypad),
   };
 
   @override
@@ -655,7 +707,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
                         : 0,
                     child: DecoratedBox(
                       decoration: BoxDecoration(
-                        gradient: _panel == _Panel.none
+                        // Il tastierino lascia vedere il video.
+                        gradient:
+                            _panel == _Panel.none || _panel == _Panel.keypad
                             ? const LinearGradient(
                                 begin: Alignment.topCenter,
                                 end: Alignment.bottomCenter,
@@ -777,6 +831,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
                         initial: _vodKind,
                         onClose: _close,
                         onGames: () => _open(_Panel.games),
+                      ),
+                      _Panel.keypad => ChannelKeypad(
+                        key: const ValueKey(_Panel.keypad),
+                        onClose: _close,
                       ),
                       _Panel.settings => SettingsPanel(
                         key: const ValueKey(_Panel.settings),
