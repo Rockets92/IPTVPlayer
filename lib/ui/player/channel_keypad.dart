@@ -155,24 +155,13 @@ class _ChannelKeypadState extends State<ChannelKeypad> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        GridView.count(
-                          crossAxisCount: 3,
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          mainAxisSpacing: 10,
-                          crossAxisSpacing: 10,
-                          childAspectRatio: 1.6,
-                          children: [
-                            for (var i = 0; i < _keys.length; i++)
-                              PadKey(
-                                label: _keys[i],
-                                focused: i == _sel,
-                                onTap: () {
-                                  setState(() => _sel = i);
-                                  _press(i);
-                                },
-                              ),
-                          ],
+                        PadGrid(
+                          keys: _keys,
+                          selected: _sel,
+                          onTap: (i) {
+                            setState(() => _sel = i);
+                            _press(i);
+                          },
                         ),
                         const SizedBox(height: 12),
                         const Wrap(

@@ -230,24 +230,13 @@ class _PinDialogState extends State<PinDialog> {
                         ),
                       ),
                     ),
-                    GridView.count(
-                      crossAxisCount: 3,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      mainAxisSpacing: 10,
-                      crossAxisSpacing: 10,
-                      childAspectRatio: 1.6,
-                      children: [
-                        for (var i = 0; i < _keys.length; i++)
-                          PadKey(
-                            label: _keys[i],
-                            focused: i == _sel,
-                            onTap: () {
-                              setState(() => _sel = i);
-                              _press(_keys[i]);
-                            },
-                          ),
-                      ],
+                    PadGrid(
+                      keys: _keys,
+                      selected: _sel,
+                      onTap: (i) {
+                        setState(() => _sel = i);
+                        _press(_keys[i]);
+                      },
                     ),
                     const SizedBox(height: 14),
                     const Wrap(
@@ -266,6 +255,81 @@ class _PinDialogState extends State<PinDialog> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Griglia 3 colonne del tastierino a schermo. L'evidenziazione del tasto
+/// scelto è un'unica pastiglia che scorre da un tasto all'altro, invece di
+/// spegnersi su uno e accendersi sull'altro.
+class PadGrid extends StatelessWidget {
+  const PadGrid({
+    super.key,
+    required this.keys,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final List<String> keys;
+  final int selected;
+  final void Function(int index) onTap;
+
+  /// Durata dello scorrimento tra due tasti.
+  static const slide = Duration(milliseconds: 180);
+  static const _gap = 10.0;
+  static const _ratio = 1.6;
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = (keys.length / 3).ceil();
+    return LayoutBuilder(
+      builder: (context, c) {
+        final w = (c.maxWidth - 2 * _gap) / 3;
+        final h = w / _ratio;
+        Offset at(int i) => Offset((i % 3) * (w + _gap), (i ~/ 3) * (h + _gap));
+        final sel = at(selected);
+        return SizedBox(
+          height: rows * h + (rows - 1) * _gap,
+          child: Stack(
+            children: [
+              AnimatedPositioned(
+                duration: slide,
+                curve: Curves.easeOutCubic,
+                left: sel.dx,
+                top: sel.dy,
+                width: w,
+                height: h,
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      gradient: Palette.neon,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Palette.accent.withValues(alpha: 0.4),
+                          blurRadius: 16,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              for (var i = 0; i < keys.length; i++)
+                Positioned(
+                  left: at(i).dx,
+                  top: at(i).dy,
+                  width: w,
+                  height: h,
+                  child: PadKey(
+                    label: keys[i],
+                    focused: i == selected,
+                    onTap: () => onTap(i),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -297,11 +361,13 @@ class PadKey extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 140),
+          duration: PadGrid.slide,
+          curve: Curves.easeOutCubic,
+          // Il colore del tasto scelto è l'evidenziazione che scorre sotto
+          // (PadGrid): il tasto si limita a lasciarla vedere.
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            gradient: focused ? Palette.neon : null,
-            color: focused ? null : Colors.white.withValues(alpha: 0.08),
+            color: Colors.white.withValues(alpha: focused ? 0 : 0.08),
             border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
           ),
           alignment: Alignment.center,
