@@ -1,7 +1,10 @@
 package com.rockets92.iptv_player
 
 import android.app.ActivityManager
+import android.app.UiModeManager
 import android.content.Context
+import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.media.AudioManager
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -22,6 +25,20 @@ class MainActivity : FlutterActivity() {
                             "totalMem" to info.totalMem,
                             "isLowRamDevice" to am.isLowRamDevice,
                             "memoryClass" to am.memoryClass,
+                        )
+                    )
+                } else if (call.method == "formFactor") {
+                    // TV o telefono/tablet: serve a decidere se mostrare i QR
+                    // per configurare il player dallo smartphone.
+                    val pm = packageManager
+                    val ui = getSystemService(Context.UI_MODE_SERVICE) as UiModeManager
+                    result.success(
+                        mapOf(
+                            "television" to (ui.currentModeType == Configuration.UI_MODE_TYPE_TELEVISION),
+                            "leanback" to (pm.hasSystemFeature(PackageManager.FEATURE_LEANBACK) ||
+                                pm.hasSystemFeature("android.software.leanback_only")),
+                            "touchscreen" to pm.hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN),
+                            "smallestWidthDp" to resources.configuration.smallestScreenWidthDp,
                         )
                     )
                 } else {

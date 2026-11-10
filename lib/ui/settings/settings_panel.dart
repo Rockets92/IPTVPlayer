@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/brand.dart';
+import '../../core/form_factor.dart';
 import '../../core/performance.dart';
 import '../../core/theme.dart';
 import '../../data/settings_store.dart';
@@ -212,6 +213,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
   Widget build(BuildContext context) {
     final app = context.watch<AppController>();
     final perf = context.read<PerformanceProfile>();
+    final form = context.read<FormFactor>();
     final s = app.settings;
     final width = MediaQuery.sizeOf(context).width;
     final panelW = width < 600 ? width - 24 : 480.0;
@@ -328,15 +330,16 @@ class _SettingsPanelState extends State<SettingsPanel> {
                           : '${s.extraEpgSources.length} configurate',
                       onSelect: _editEpg,
                     ),
-                    _ActionRow(
-                      icon: Icons.qr_code_2_rounded,
-                      title: 'Aggiungi fonti EPG dal telefono',
-                      subtitle: 'Inquadra il codice e incolla i link',
-                      onSelect: () async {
-                        await showEpgFromPhone(context);
-                        if (mounted) setState(() {});
-                      },
-                    ),
+                    if (!form.hidesQr)
+                      _ActionRow(
+                        icon: Icons.qr_code_2_rounded,
+                        title: 'Aggiungi fonti EPG dal telefono',
+                        subtitle: 'Inquadra il codice e incolla i link',
+                        onSelect: () async {
+                          await showEpgFromPhone(context);
+                          if (mounted) setState(() {});
+                        },
+                      ),
                     _ToggleRow(
                       icon: Icons.event_note_rounded,
                       title: 'Usa la guida del provider',
@@ -402,17 +405,19 @@ class _SettingsPanelState extends State<SettingsPanel> {
                       '${perf.isLight ? 'Leggero' : 'Completo'} · ${perf.reason}',
                     ),
 
-                    const _Section('Telecomando'),
-                    _ActionRow(
-                      icon: Icons.phone_iphone_rounded,
-                      title: 'Configura telecomando',
-                      subtitle: 'Usa lo smartphone come telecomando, con elenco canali e guida',
-                      onSelect: () async {
-                        _dialogOpen = true;
-                        await showRemoteSetup(context);
-                        _dialogOpen = false;
-                      },
-                    ),
+                    if (!form.hidesQr) ...[
+                      const _Section('Telecomando'),
+                      _ActionRow(
+                        icon: Icons.phone_iphone_rounded,
+                        title: 'Configura telecomando',
+                        subtitle: 'Usa lo smartphone come telecomando, con elenco canali e guida',
+                        onSelect: () async {
+                          _dialogOpen = true;
+                          await showRemoteSetup(context);
+                          _dialogOpen = false;
+                        },
+                      ),
+                    ],
 
                     const _Section('Abbonamento'),
                     _InfoRow(

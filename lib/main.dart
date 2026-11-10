@@ -20,6 +20,7 @@ import 'player/media_kit_engine.dart';
 import 'player/playback_engine.dart';
 import 'remote/game_pads.dart';
 import 'remote/remote_server.dart';
+import 'core/form_factor.dart';
 import 'state/app_controller.dart';
 import 'state/reminder_controller.dart';
 import 'state/tuner_controller.dart';
@@ -35,6 +36,7 @@ Future<void> main() async {
 
   final settings = await SettingsStore.open();
   final perf = await PerformanceProfile.resolve(settings.performanceMode);
+  final formFactor = await FormFactor.resolve();
 
   // Profilo light: elenchi e cache grandi si caricano uno alla volta.
   HeavyWork.serialize = perf.isLight;
@@ -95,6 +97,7 @@ Future<void> main() async {
     MultiProvider(
       providers: [
         Provider<PerformanceProfile>.value(value: perf),
+        Provider<FormFactor>.value(value: formFactor),
         Provider<PlaybackEngine>.value(value: engine),
         ChangeNotifierProvider<AppController>.value(value: app),
         ChangeNotifierProvider<TunerController>.value(value: tuner),
