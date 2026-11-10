@@ -1,0 +1,2232 @@
+{
+  "schemaVersion": 1,
+  "id": "sky-italia",
+  "name": "Ordine Sky Italia",
+  "revision": "2026-11-07",
+  "description": "Numerazione ispirata alla guida Sky Italia, usata per i test. Modificabile o sostituibile con un file remoto.",
+  "logoBaseUrl": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/italy/",
+  "epgSources": [
+    {
+      "id": "epgshare-it",
+      "name": "EPGShare Italia",
+      "url": "https://epgshare01.online/epgshare01/epg_ripper_IT1.xml.gz"
+    }
+  ],
+  "preferredSources": [
+    "hermes +",
+    "hermes"
+  ],
+  "dynamicGroups": [
+    {
+      "name": "Disney",
+      "startNumber": 760,
+      "keywords": [
+        "disney"
+      ]
+    },
+    {
+      "name": "Eventi",
+      "startNumber": 2000,
+      "keywords": [
+        "dazn",
+        "eventi",
+        "event"
+      ]
+    },
+    {
+      "name": "Vetrina",
+      "startNumber": 3000,
+      "keywords": [
+        "vetrina"
+      ]
+    }
+  ],
+  "unmappedChannels": {
+    "show": false,
+    "startNumber": 10000
+  },
+  "channels": [
+    {
+      "number": 100,
+      "name": "Sky TG24",
+      "group": "News",
+      "logo": "sky-tg24-it.png",
+      "epgId": "Sky.TG24.it",
+      "aliases": [
+        "TG24"
+      ]
+    },
+    {
+      "number": 101,
+      "name": "Rai 1",
+      "group": "Intrattenimento",
+      "logo": "rai-1-it.png",
+      "epgId": "Rai.1.it",
+      "aliases": [
+        "Rai Uno",
+        "Rai1"
+      ]
+    },
+    {
+      "number": 102,
+      "name": "Rai 2",
+      "group": "Intrattenimento",
+      "logo": "rai-2-it.png",
+      "epgId": "Rai.2.it",
+      "aliases": [
+        "Rai Due",
+        "Rai2"
+      ]
+    },
+    {
+      "number": 103,
+      "name": "Rai 3",
+      "group": "Intrattenimento",
+      "logo": "rai-3-it.png",
+      "epgId": "Rai.3.it",
+      "aliases": [
+        "Rai Tre",
+        "Rai3"
+      ]
+    },
+    {
+      "number": 104,
+      "name": "Rete 4",
+      "group": "Intrattenimento",
+      "logo": "rete4-it.png",
+      "epgId": "Rete.4.it",
+      "aliases": [
+        "Rete4",
+        "Rete Quattro"
+      ]
+    },
+    {
+      "number": 105,
+      "name": "Canale 5",
+      "group": "Intrattenimento",
+      "logo": "canale5-it.png",
+      "epgId": "Canale.5.it",
+      "aliases": [
+        "Canale5"
+      ]
+    },
+    {
+      "number": 106,
+      "name": "Italia 1",
+      "group": "Intrattenimento",
+      "logo": "italia1-it.png",
+      "epgId": "Italia.1.it",
+      "aliases": [
+        "Italia1",
+        "Italia Uno"
+      ]
+    },
+    {
+      "number": 107,
+      "name": "La7",
+      "group": "Intrattenimento",
+      "logo": "la7-it.png",
+      "epgId": "La7.it",
+      "aliases": [
+        "La 7"
+      ]
+    },
+    {
+      "number": 108,
+      "name": "Sky Uno",
+      "group": "Intrattenimento",
+      "logo": "sky-uno-it.png",
+      "epgId": "Sky.Uno.it"
+    },
+    {
+      "number": 109,
+      "name": "Sky Uno +1",
+      "group": "Intrattenimento",
+      "logo": "sky-uno-plus-it.png",
+      "epgId": "Sky.Uno.Plus1.it",
+      "aliases": [
+        "Sky Uno +"
+      ]
+    },
+    {
+      "number": 110,
+      "name": "Sky Cinema Uno",
+      "group": "Cinema",
+      "sameAs": 301
+    },
+    {
+      "number": 111,
+      "name": "Sky Atlantic",
+      "group": "Intrattenimento",
+      "logo": "sky-atlantic-it.png",
+      "epgId": "Sky.Atlantic.it"
+    },
+    {
+      "number": 112,
+      "name": "Sky Serie",
+      "group": "Intrattenimento",
+      "logo": "sky-serie-it.png",
+      "epgId": "Sky.Serie.it"
+    },
+    {
+      "number": 113,
+      "name": "Sky Investigation",
+      "group": "Intrattenimento",
+      "logo": "sky-investigation-it.png",
+      "epgId": "Sky.Investigation.it"
+    },
+    {
+      "number": 114,
+      "name": "Sky Collection",
+      "group": "Intrattenimento",
+      "logo": "sky-collection-it.png",
+      "epgId": "Sky.Collection.it",
+      "logoMatch": [
+        "skycollection"
+      ]
+    },
+    {
+      "number": 115,
+      "name": "Sky Crime",
+      "group": "Intrattenimento",
+      "logo": "sky-crime-it.png",
+      "epgId": "Sky.Crime.it"
+    },
+    {
+      "number": 116,
+      "name": "History",
+      "group": "Documentari",
+      "logo": "history-channel-it.png",
+      "epgId": "History.it",
+      "aliases": [
+        "History Channel",
+        "History HD"
+      ]
+    },
+    {
+      "number": 117,
+      "name": "Sky Documentaries",
+      "group": "Documentari",
+      "logo": "sky-documentaries-it.png",
+      "epgId": "Sky.Documentaries.it"
+    },
+    {
+      "number": 118,
+      "name": "Sky Voices",
+      "group": "Intrattenimento",
+      "logo": "asset:sky-voices.png",
+      "epgId": "Sky.Voices.it"
+    },
+    {
+      "number": 119,
+      "name": "Sky Nature",
+      "group": "Documentari",
+      "logo": "sky-nature-it.png",
+      "epgId": "Sky.Nature.it"
+    },
+    {
+      "number": 120,
+      "name": "Sky Arte",
+      "group": "Documentari",
+      "logo": "sky-arte-it.png",
+      "epgId": "Sky.Arte.it"
+    },
+    {
+      "number": 121,
+      "name": "Sky Classica",
+      "group": "Musica",
+      "logo": "sky-classica-it.png",
+      "epgId": "Sky.Classica.it",
+      "aliases": [
+        "Classica"
+      ]
+    },
+    {
+      "number": 122,
+      "name": "Sky Adventure",
+      "group": "Documentari",
+      "logo": "sky-adventure-it.png",
+      "epgId": "Sky.Adventure.it"
+    },
+    {
+      "number": 123,
+      "name": "Discovery Channel",
+      "group": "Documentari",
+      "logo": "discovery-channel-it.png",
+      "epgId": "Discovery.Channel.it",
+      "aliases": [
+        "Discovery",
+        "Discovery Italy"
+      ]
+    },
+    {
+      "number": 124,
+      "name": "Crime+Investigation",
+      "group": "Intrattenimento",
+      "logo": "crime-and-investigation-it.png",
+      "epgId": "Crime.Investigation.it",
+      "aliases": [
+        "Crime Investigation",
+        "Crime and Investigation",
+        "CI"
+      ]
+    },
+    {
+      "number": 125,
+      "name": "TV8",
+      "group": "Intrattenimento",
+      "logo": "tv8-it.png",
+      "epgId": "TV8.it",
+      "aliases": [
+        "TV 8"
+      ]
+    },
+    {
+      "number": 126,
+      "name": "Cielo",
+      "group": "Intrattenimento",
+      "logo": "cielo-it.png",
+      "epgId": "Cielo.it"
+    },
+    {
+      "number": 127,
+      "name": "Blaze",
+      "group": "Intrattenimento",
+      "logo": "blaze-it.png",
+      "epgId": "Blaze.it"
+    },
+    {
+      "number": 128,
+      "name": "Rai Storia",
+      "group": "Documentari",
+      "sameAs": 805
+    },
+    {
+      "number": 129,
+      "name": "Comedy Central",
+      "group": "Intrattenimento",
+      "epgId": "Comedy.Central.it"
+    },
+    {
+      "number": 131,
+      "name": "MTV",
+      "group": "Musica",
+      "logo": "mtv-it.png",
+      "epgId": "MTV.it"
+    },
+    {
+      "number": 133,
+      "name": "Gambero Rosso",
+      "group": "Intrattenimento",
+      "logo": "gambero-rosso-it.png",
+      "epgId": "Gambero.Rosso.it"
+    },
+    {
+      "number": 148,
+      "name": "TV8",
+      "group": "Intrattenimento",
+      "sameAs": 125
+    },
+    {
+      "number": 149,
+      "name": "NOVE",
+      "group": "Intrattenimento",
+      "logo": "nove-it.png",
+      "epgId": "NOVE.it",
+      "aliases": [
+        "Nove",
+        "Canale Nove"
+      ]
+    },
+    {
+      "number": 151,
+      "name": "20 Mediaset",
+      "group": "Intrattenimento",
+      "logo": "20-it.png",
+      "epgId": "20.Mediaset.it",
+      "aliases": [
+        "20",
+        "Venti"
+      ]
+    },
+    {
+      "number": 156,
+      "name": "Cielo",
+      "group": "Intrattenimento",
+      "sameAs": 126
+    },
+    {
+      "number": 157,
+      "name": "TV2000",
+      "group": "Intrattenimento",
+      "epgId": "TV2000.it",
+      "aliases": [
+        "TV 2000"
+      ]
+    },
+    {
+      "number": 158,
+      "name": "Twentyseven",
+      "group": "Intrattenimento",
+      "logo": "twenty-seven-it.png",
+      "epgId": "Twentyseven.it",
+      "aliases": [
+        "27 Twentyseven",
+        "27"
+      ]
+    },
+    {
+      "number": 159,
+      "name": "La5",
+      "group": "Intrattenimento",
+      "logo": "la5-it.png",
+      "epgId": "La5.it",
+      "aliases": [
+        "La 5"
+      ]
+    },
+    {
+      "number": 160,
+      "name": "Real Time",
+      "group": "Intrattenimento",
+      "logo": "real-time-it.png",
+      "epgId": "Real.Time.it",
+      "aliases": [
+        "RealTime",
+        "Realtime"
+      ]
+    },
+    {
+      "number": 161,
+      "name": "La7 Cinema",
+      "group": "Cinema",
+      "logo": "la7-cinema-it.png",
+      "epgId": "La7.Cinema.it",
+      "aliases": [
+        "La7Cinema"
+      ]
+    },
+    {
+      "number": 163,
+      "name": "Mediaset Extra",
+      "group": "Intrattenimento",
+      "logo": "mediaset-extra-it.png",
+      "epgId": "Mediaset.Extra.it"
+    },
+    {
+      "number": 167,
+      "name": "Giallo",
+      "group": "Intrattenimento",
+      "logo": "giallo-it.png",
+      "epgId": "Giallo.it"
+    },
+    {
+      "number": 168,
+      "name": "Top Crime",
+      "group": "Intrattenimento",
+      "logo": "top-crime-it.png",
+      "epgId": "Top.Crime.it",
+      "aliases": [
+        "TopCrime"
+      ]
+    },
+    {
+      "number": 170,
+      "name": "DMAX",
+      "group": "Intrattenimento",
+      "epgId": "DMAX.it",
+      "aliases": [
+        "Dmax Italia"
+      ]
+    },
+    {
+      "number": 175,
+      "name": "Italia 2",
+      "group": "Intrattenimento",
+      "logo": "italia2-it.png",
+      "epgId": "Italia.2.it",
+      "aliases": [
+        "Mediaset Italia 2",
+        "Italia2",
+        "Mediaset Italia2"
+      ]
+    },
+    {
+      "number": 176,
+      "name": "Explorer",
+      "group": "Documentari",
+      "logo": "explorer-it.png",
+      "epgId": "Explorer.it",
+      "aliases": [
+        "Explorer HD Channel"
+      ]
+    },
+    {
+      "number": 180,
+      "name": "Class TV Moda",
+      "group": "Intrattenimento",
+      "logo": "class-tv-moda-it.png",
+      "epgId": "Class.TV.Moda.it",
+      "aliases": [
+        "Class Moda"
+      ]
+    },
+    {
+      "number": 200,
+      "name": "Sky Sport 24",
+      "group": "Sport",
+      "logo": "sky-sport-24-it.png",
+      "epgId": "Sky.Sport.24.it",
+      "aliases": [
+        "Sport 24",
+        "Sky Sport24"
+      ]
+    },
+    {
+      "number": 201,
+      "name": "Sky Sport Uno",
+      "group": "Sport",
+      "logo": "sky-sport-uno-it.png",
+      "epgId": "Sky.Sport.Uno.it",
+      "aliases": [
+        "Sky Sport 1"
+      ]
+    },
+    {
+      "number": 202,
+      "name": "Sky Sport Calcio",
+      "group": "Sport",
+      "logo": "sky-sport-calcio-it.png",
+      "epgId": "Sky.Sport.Calcio.it"
+    },
+    {
+      "number": 203,
+      "name": "Sky Sport Tennis",
+      "group": "Sport",
+      "logo": "sky-sport-tennis-it.png",
+      "epgId": "Sky.Sport.Tennis.it"
+    },
+    {
+      "number": 204,
+      "name": "Sky Sport Arena",
+      "group": "Sport",
+      "logo": "sky-sport-arena-it.png",
+      "epgId": "Sky.Sport.Arena.it"
+    },
+    {
+      "number": 205,
+      "name": "Sky Sport Basket",
+      "group": "Sport",
+      "epgId": "Sky.Sport.Basket.it"
+    },
+    {
+      "number": 206,
+      "name": "Sky Sport Max",
+      "group": "Sport",
+      "logo": "sky-sport-max-it.png",
+      "epgId": "Sky.Sport.Max.it"
+    },
+    {
+      "number": 207,
+      "name": "Sky Sport F1",
+      "group": "Sport",
+      "logo": "sky-sport-f1-it.png",
+      "epgId": "Sky.Sport.F1.it",
+      "aliases": [
+        "Sky Sport Formula 1"
+      ]
+    },
+    {
+      "number": 208,
+      "name": "Sky Sport MotoGP",
+      "group": "Sport",
+      "logo": "sky-sport-motogp-it.png",
+      "epgId": "Sky.Sport.MotoGP.it",
+      "aliases": [
+        "Sky Sport Moto GP"
+      ]
+    },
+    {
+      "number": 209,
+      "name": "Sky Sport Golf",
+      "group": "Sport",
+      "logo": "sky-sport-golf-it.png",
+      "epgId": "Sky.Sport.Golf.it"
+    },
+    {
+      "number": 210,
+      "name": "Sky Sport Legend",
+      "group": "Sport",
+      "logo": "sky-sport-legend-it.png",
+      "epgId": "Sky.Sport.Legend.it"
+    },
+    {
+      "number": 211,
+      "name": "Sky Sport Mix",
+      "group": "Sport",
+      "logo": "sky-sport-mix-it.png",
+      "epgId": "Sky.Sport.Mix.it"
+    },
+    {
+      "number": 212,
+      "name": "SuperTennis",
+      "group": "Sport",
+      "logo": "super-tennis-it.png",
+      "epgId": "SuperTennis.it",
+      "aliases": [
+        "Super Tennis"
+      ]
+    },
+    {
+      "number": 213,
+      "name": "Sky Sport 4K",
+      "group": "Sport",
+      "epgId": "Sky.Sport.4K.it"
+    },
+    {
+      "number": 214,
+      "name": "DAZN 1",
+      "group": "Sport",
+      "epgId": "DAZN.1.it"
+    },
+    {
+      "number": 215,
+      "name": "DAZN 2",
+      "group": "Sport",
+      "epgId": "DAZN.2.it"
+    },
+    {
+      "number": 216,
+      "name": "Sky Sport NBA",
+      "group": "Sport",
+      "logo": "sky-sport-nba-it.png",
+      "epgId": "Sky.Sport.NBA.it"
+    },
+    {
+      "number": 217,
+      "name": "Eurosport",
+      "group": "Sport",
+      "epgId": "Eurosport.it",
+      "aliases": [
+        "Eurosport 1"
+      ]
+    },
+    {
+      "number": 218,
+      "name": "Eurosport 2",
+      "group": "Sport",
+      "epgId": "Eurosport.2.it"
+    },
+    {
+      "number": 219,
+      "name": "Zona DAZN",
+      "group": "Sport",
+      "logo": "zona-dazn-it.png",
+      "epgId": "Zona.DAZN.it",
+      "aliases": [
+        "Zona DAZN 1"
+      ]
+    },
+    {
+      "number": 220,
+      "name": "EquTV",
+      "group": "Sport",
+      "logo": "equ-tv-it.png",
+      "epgId": "EquTV.it",
+      "aliases": [
+        "Equ TV"
+      ]
+    },
+    {
+      "number": 221,
+      "name": "Horse TV",
+      "group": "Sport",
+      "logo": "horse-tv-it.png",
+      "epgId": "Horse.TV.it"
+    },
+    {
+      "number": 222,
+      "name": "Bike",
+      "group": "Sport",
+      "epgId": "Bike.it",
+      "aliases": [
+        "Bike Channel"
+      ]
+    },
+    {
+      "number": 227,
+      "name": "Rai Sport",
+      "group": "Sport",
+      "logo": "rai-sport-it.png",
+      "epgId": "Rai.Sport.it",
+      "aliases": [
+        "Rai Sport HD",
+        "RaiSport"
+      ]
+    },
+    {
+      "number": 228,
+      "name": "ACI Sport TV",
+      "group": "Sport",
+      "logo": "aci-sport-tv-it.png",
+      "epgId": "ACI.Sport.TV.it",
+      "aliases": [
+        "ACISport TV"
+      ]
+    },
+    {
+      "number": 229,
+      "name": "MS Motor TV",
+      "group": "Sport",
+      "logo": "ms-motor-tv-it.png",
+      "epgId": "MS.Motor.TV.it"
+    },
+    {
+      "number": 230,
+      "name": "Milan TV",
+      "group": "Sport",
+      "logo": "milan-tv-it.png",
+      "epgId": "Milan.TV.it"
+    },
+    {
+      "number": 232,
+      "name": "Inter TV",
+      "group": "Sport",
+      "logo": "inter-tv-it.png",
+      "epgId": "Inter.TV.it"
+    },
+    {
+      "number": 233,
+      "name": "Lazio Style Channel",
+      "group": "Sport",
+      "logo": "lazio-style-channel-it.png",
+      "epgId": "Lazio.Style.Channel.it"
+    },
+    {
+      "number": 235,
+      "name": "Sky Caccia e Pesca",
+      "group": "Sport",
+      "epgId": "Sky.Caccia.e.Pesca.it"
+    },
+    {
+      "number": 236,
+      "name": "Sky Pesca e Caccia",
+      "group": "Sport",
+      "epgId": "Sky.Pesca.e.Caccia.it"
+    },
+    {
+      "number": 239,
+      "name": "Sky Sport 24",
+      "group": "Sport",
+      "sameAs": 200
+    },
+    {
+      "number": 240,
+      "name": "Sky Sport Uno",
+      "group": "Sport",
+      "sameAs": 201
+    },
+    {
+      "number": 248,
+      "name": "Sky Sport Info",
+      "group": "Sport",
+      "epgId": "Sky.Sport.Info.it"
+    },
+    {
+      "number": 251,
+      "name": "Sky Sport 251",
+      "group": "Sport",
+      "logo": "sky-sport-it.png",
+      "epgId": "Sky.Sport.251.it",
+      "aliases": [
+        "Sky Calcio 251"
+      ]
+    },
+    {
+      "number": 252,
+      "name": "Sky Sport 252",
+      "group": "Sport",
+      "logo": "sky-sport-it.png",
+      "epgId": "Sky.Sport.252.it",
+      "aliases": [
+        "Sky Calcio 252"
+      ]
+    },
+    {
+      "number": 253,
+      "name": "Sky Sport 253",
+      "group": "Sport",
+      "logo": "sky-sport-it.png",
+      "epgId": "Sky.Sport.253.it",
+      "aliases": [
+        "Sky Calcio 253"
+      ]
+    },
+    {
+      "number": 254,
+      "name": "Sky Sport 254",
+      "group": "Sport",
+      "logo": "sky-sport-it.png",
+      "epgId": "Sky.Sport.254.it",
+      "aliases": [
+        "Sky Calcio 254"
+      ]
+    },
+    {
+      "number": 255,
+      "name": "Sky Sport 255",
+      "group": "Sport",
+      "logo": "sky-sport-it.png",
+      "epgId": "Sky.Sport.255.it",
+      "aliases": [
+        "Sky Calcio 255"
+      ]
+    },
+    {
+      "number": 256,
+      "name": "Sky Sport 256",
+      "group": "Sport",
+      "logo": "sky-sport-it.png",
+      "epgId": "Sky.Sport.256.it",
+      "aliases": [
+        "Sky Calcio 256"
+      ]
+    },
+    {
+      "number": 257,
+      "name": "Sky Sport 257",
+      "group": "Sport",
+      "logo": "sky-sport-it.png",
+      "epgId": "Sky.Sport.257.it",
+      "aliases": [
+        "Sky Calcio 257"
+      ]
+    },
+    {
+      "number": 258,
+      "name": "Sky Sport 258",
+      "group": "Sport",
+      "logo": "sky-sport-it.png",
+      "epgId": "Sky.Sport.258.it",
+      "aliases": [
+        "Sky Calcio 258"
+      ]
+    },
+    {
+      "number": 259,
+      "name": "Sky Sport 259",
+      "group": "Sport",
+      "logo": "sky-sport-it.png",
+      "epgId": "Sky.Sport.259.it",
+      "aliases": [
+        "Sky Calcio 259"
+      ]
+    },
+    {
+      "number": 301,
+      "name": "Sky Cinema Uno",
+      "group": "Cinema",
+      "logo": "sky-cinema-uno-it.png",
+      "epgId": "Sky.Cinema.Uno.it",
+      "aliases": [
+        "Sky Cinema 1"
+      ]
+    },
+    {
+      "number": 302,
+      "name": "Sky Cinema Stories",
+      "group": "Cinema",
+      "epgId": "Sky.Cinema.Stories.it"
+    },
+    {
+      "number": 303,
+      "name": "Sky Cinema Collection",
+      "group": "Cinema",
+      "logo": "sky-cinema-collection-it.png",
+      "epgId": "Sky.Cinema.Collection.it",
+      "aliases": [
+        "Sky Cinema * Collection",
+        "Sky Cinema Collection *"
+      ]
+    },
+    {
+      "number": 304,
+      "name": "Sky Cinema Family",
+      "group": "Cinema",
+      "logo": "sky-cinema-family-it.png",
+      "epgId": "Sky.Cinema.Family.it"
+    },
+    {
+      "number": 305,
+      "name": "Sky Cinema Action",
+      "group": "Cinema",
+      "logo": "sky-cinema-action-it.png",
+      "epgId": "Sky.Cinema.Action.it"
+    },
+    {
+      "number": 306,
+      "name": "Sky Cinema Suspense",
+      "group": "Cinema",
+      "logo": "sky-cinema-suspense-it.png",
+      "epgId": "Sky.Cinema.Suspense.it"
+    },
+    {
+      "number": 307,
+      "name": "Sky Cinema Romance",
+      "group": "Cinema",
+      "logo": "sky-cinema-romance-it.png",
+      "epgId": "Sky.Cinema.Romance.it"
+    },
+    {
+      "number": 308,
+      "name": "Sky Cinema Drama",
+      "group": "Cinema",
+      "logo": "sky-cinema-drama-it.png",
+      "epgId": "Sky.Cinema.Drama.it"
+    },
+    {
+      "number": 309,
+      "name": "Sky Cinema Comedy",
+      "group": "Cinema",
+      "logo": "sky-cinema-comedy-it.png",
+      "epgId": "Sky.Cinema.Comedy.it"
+    },
+    {
+      "number": 310,
+      "name": "Sky Cinema Uno +24",
+      "group": "Cinema",
+      "logo": "sky-cinema-uno-plus24-it.png",
+      "epgId": "Sky.Cinema.Uno.Plus24.it"
+    },
+    {
+      "number": 311,
+      "name": "Sky Cinema Due",
+      "group": "Cinema",
+      "logo": "sky-cinema-due-it.png",
+      "epgId": "Sky.Cinema.Due.it",
+      "aliases": [
+        "Sky Cinema 2"
+      ]
+    },
+    {
+      "number": 312,
+      "name": "Sky Cinema Due +24",
+      "group": "Cinema",
+      "logo": "sky-cinema-due-plus24-it.png",
+      "epgId": "Sky.Cinema.Due.Plus24.it"
+    },
+    {
+      "number": 321,
+      "name": "Rai Movie",
+      "group": "Cinema",
+      "logo": "rai-movie-it.png",
+      "epgId": "Rai.Movie.it",
+      "aliases": [
+        "RaiMovie"
+      ]
+    },
+    {
+      "number": 322,
+      "name": "Rai 4",
+      "group": "Cinema",
+      "logo": "rai-4-it.png",
+      "epgId": "Rai.4.it",
+      "aliases": [
+        "Rai4"
+      ]
+    },
+    {
+      "number": 324,
+      "name": "Paramount Network",
+      "group": "Cinema",
+      "logo": "paramount-network-it.png",
+      "epgId": "Paramount.Network.it"
+    },
+    {
+      "number": 325,
+      "name": "Iris",
+      "group": "Cinema",
+      "logo": "iris-it.png",
+      "epgId": "Iris.it"
+    },
+    {
+      "number": 326,
+      "name": "La7d",
+      "group": "Intrattenimento",
+      "logo": "la7d-it.png",
+      "epgId": "La7d.it",
+      "aliases": [
+        "La 7d",
+        "La7 D"
+      ]
+    },
+    {
+      "number": 327,
+      "name": "Cine34",
+      "group": "Cinema",
+      "logo": "cine34-it.png",
+      "epgId": "Cine34.it",
+      "aliases": [
+        "Cine 34"
+      ]
+    },
+    {
+      "number": 400,
+      "name": "Sky Arte",
+      "group": "Documentari",
+      "sameAs": 120
+    },
+    {
+      "number": 402,
+      "name": "Sky Documentaries",
+      "group": "Documentari",
+      "sameAs": 117
+    },
+    {
+      "number": 403,
+      "name": "Rai 5",
+      "group": "Documentari",
+      "logo": "rai-5-it.png",
+      "epgId": "Rai.5.it",
+      "aliases": [
+        "Rai5"
+      ]
+    },
+    {
+      "number": 404,
+      "name": "Sky Nature",
+      "group": "Documentari",
+      "sameAs": 119
+    },
+    {
+      "number": 405,
+      "name": "Sky Crime",
+      "group": "Intrattenimento",
+      "sameAs": 115
+    },
+    {
+      "number": 407,
+      "name": "Sky Adventure",
+      "group": "Documentari",
+      "sameAs": 122
+    },
+    {
+      "number": 409,
+      "name": "History",
+      "group": "Documentari",
+      "sameAs": 116
+    },
+    {
+      "number": 410,
+      "name": "Discovery Channel",
+      "group": "Documentari",
+      "sameAs": 123
+    },
+    {
+      "number": 411,
+      "name": "National Geographic",
+      "group": "Documentari",
+      "logo": "national-geographic-it.png",
+      "epgId": "National.Geographic.it",
+      "aliases": [
+        "Nat Geo",
+        "National Geographic Channel"
+      ]
+    },
+    {
+      "number": 412,
+      "name": "Nat Geo Wild",
+      "group": "Documentari",
+      "logo": "national-geographic-wild-it.png",
+      "epgId": "Nat.Geo.Wild.it",
+      "aliases": [
+        "National Geographic Wild"
+      ]
+    },
+    {
+      "number": 415,
+      "name": "Gambero Rosso",
+      "group": "Intrattenimento",
+      "sameAs": 133
+    },
+    {
+      "number": 416,
+      "name": "Focus",
+      "group": "Documentari",
+      "logo": "focus-it.png",
+      "epgId": "Focus.it"
+    },
+    {
+      "number": 417,
+      "name": "Food Network",
+      "group": "Intrattenimento",
+      "epgId": "Food.Network.it"
+    },
+    {
+      "number": 418,
+      "name": "HGTV",
+      "group": "Intrattenimento",
+      "epgId": "HGTV.it"
+    },
+    {
+      "number": 419,
+      "name": "Discovery Turbo",
+      "group": "Documentari",
+      "logo": "discovery-turbo-it.png",
+      "epgId": "Discovery.Turbo.it"
+    },
+    {
+      "number": 500,
+      "name": "Sky TG24",
+      "group": "News",
+      "sameAs": 100
+    },
+    {
+      "number": 501,
+      "name": "Sky TG24 Primo Piano",
+      "group": "News",
+      "logo": "sky-tg24-primo-piano-it.png",
+      "epgId": "Sky.TG24.Primo.Piano.it",
+      "aliases": [
+        "TG24 Primo Piano",
+        "TG24PrimoPiano"
+      ]
+    },
+    {
+      "number": 502,
+      "name": "Sky Meteo24",
+      "group": "News",
+      "logo": "sky-meteo-24-it.png",
+      "epgId": "Sky.Meteo24.it",
+      "aliases": [
+        "Sky Meteo 24"
+      ]
+    },
+    {
+      "number": 503,
+      "name": "Sky Sport 24",
+      "group": "News",
+      "sameAs": 200
+    },
+    {
+      "number": 507,
+      "name": "Class CNBC",
+      "group": "News",
+      "logo": "class-cnbc-it.png",
+      "epgId": "Class.CNBC.it"
+    },
+    {
+      "number": 508,
+      "name": "Rai News 24",
+      "group": "News",
+      "logo": "rai-news-24-it.png",
+      "epgId": "Rai.News.24.it",
+      "aliases": [
+        "RaiNews24",
+        "Rai News"
+      ]
+    },
+    {
+      "number": 509,
+      "name": "TGCom24",
+      "group": "News",
+      "logo": "tgcom24-it.png",
+      "epgId": "TGCom24.it",
+      "aliases": [
+        "TGCom 24"
+      ]
+    },
+    {
+      "number": 510,
+      "name": "TG Norba 24",
+      "group": "News",
+      "logo": "tg-norba-24-it.png",
+      "epgId": "TG.Norba.24.it"
+    },
+    {
+      "number": 515,
+      "name": "Vatican Media",
+      "group": "News",
+      "epgId": "Vatican.Media.it",
+      "aliases": [
+        "Vatican Media Europa"
+      ]
+    },
+    {
+      "number": 519,
+      "name": "TRM h24",
+      "group": "News",
+      "logo": "trm-h24-it.png",
+      "epgId": "TRM.h24.it",
+      "aliases": [
+        "TRM"
+      ]
+    },
+    {
+      "number": 521,
+      "name": "Euronews",
+      "group": "News",
+      "epgId": "Euronews.it",
+      "aliases": [
+        "Euronews Italian",
+        "Euronews Italiano"
+      ]
+    },
+    {
+      "number": 522,
+      "name": "Sky News",
+      "group": "News",
+      "epgId": "Sky.News.it",
+      "aliases": [
+        "Sky News International"
+      ]
+    },
+    {
+      "number": 524,
+      "name": "Camera dei Deputati",
+      "group": "News",
+      "logo": "camera-dei-deputati-it.png",
+      "epgId": "Camera.dei.Deputati.it",
+      "aliases": [
+        "Camera Deputati"
+      ]
+    },
+    {
+      "number": 525,
+      "name": "Senato",
+      "group": "News",
+      "epgId": "Senato.it",
+      "aliases": [
+        "Senato TV"
+      ]
+    },
+    {
+      "number": 526,
+      "name": "CNN International",
+      "group": "News",
+      "epgId": "CNN.International.it",
+      "aliases": [
+        "CNN Intl",
+        "CNN"
+      ]
+    },
+    {
+      "number": 528,
+      "name": "CNBC",
+      "group": "News",
+      "epgId": "CNBC.it",
+      "aliases": [
+        "CNBC Europe"
+      ]
+    },
+    {
+      "number": 529,
+      "name": "Bloomberg",
+      "group": "News",
+      "epgId": "Bloomberg.it",
+      "aliases": [
+        "Bloomberg TV"
+      ]
+    },
+    {
+      "number": 531,
+      "name": "France 24 English",
+      "group": "News",
+      "epgId": "France.24.English.it",
+      "aliases": [
+        "France 24 In English",
+        "France 24 EN"
+      ]
+    },
+    {
+      "number": 532,
+      "name": "Al Jazeera English",
+      "group": "News",
+      "epgId": "Al.Jazeera.English.it"
+    },
+    {
+      "number": 533,
+      "name": "NHK World Japan",
+      "group": "News",
+      "epgId": "NHK.World.Japan.it",
+      "aliases": [
+        "NHK World"
+      ]
+    },
+    {
+      "number": 534,
+      "name": "Arirang World",
+      "group": "News",
+      "epgId": "Arirang.World.it",
+      "aliases": [
+        "Arirang"
+      ]
+    },
+    {
+      "number": 535,
+      "name": "CGTN",
+      "group": "News",
+      "epgId": "CGTN.it"
+    },
+    {
+      "number": 538,
+      "name": "Euronews English",
+      "group": "News",
+      "epgId": "Euronews.English.it"
+    },
+    {
+      "number": 541,
+      "name": "France 24 Français",
+      "group": "News",
+      "epgId": "France.24.Francais.it",
+      "aliases": [
+        "France 24 En Francais",
+        "France 24 FR",
+        "France 24 Francais"
+      ]
+    },
+    {
+      "number": 543,
+      "name": "DW English",
+      "group": "News",
+      "epgId": "DW.English.it",
+      "aliases": [
+        "DW",
+        "Deutsche Welle"
+      ]
+    },
+    {
+      "number": 550,
+      "name": "San Marino RTV",
+      "group": "News",
+      "epgId": "San.Marino.RTV.it",
+      "aliases": [
+        "San Marino TV",
+        "SMRTV"
+      ]
+    },
+    {
+      "number": 552,
+      "name": "TVP Polonia",
+      "group": "News",
+      "epgId": "TVP.Polonia.it"
+    },
+    {
+      "number": 558,
+      "name": "TVR International",
+      "group": "News",
+      "epgId": "TVR.International.it",
+      "aliases": [
+        "TVRi"
+      ]
+    },
+    {
+      "number": 560,
+      "name": "Al Jazeera",
+      "group": "News",
+      "epgId": "Al.Jazeera.it",
+      "aliases": [
+        "Al Jazeera Arabic"
+      ]
+    },
+    {
+      "number": 561,
+      "name": "Al Arabiya",
+      "group": "News",
+      "epgId": "Al.Arabiya.it"
+    },
+    {
+      "number": 562,
+      "name": "BBC Arabic",
+      "group": "News",
+      "epgId": "BBC.Arabic.it"
+    },
+    {
+      "number": 563,
+      "name": "Sky News Arabia",
+      "group": "News",
+      "epgId": "Sky.News.Arabia.it"
+    },
+    {
+      "number": 568,
+      "name": "ESC Al Masriyah",
+      "group": "News",
+      "epgId": "ESC.Al.Masriyah.it",
+      "aliases": [
+        "Al Masriyah"
+      ]
+    },
+    {
+      "number": 569,
+      "name": "Tunis 7",
+      "group": "News",
+      "epgId": "Tunis.7.it",
+      "aliases": [
+        "Tunisie 7",
+        "Watania 1"
+      ]
+    },
+    {
+      "number": 571,
+      "name": "Record TV Europa",
+      "group": "News",
+      "epgId": "Record.TV.Europa.it",
+      "aliases": [
+        "Record Europa"
+      ]
+    },
+    {
+      "number": 601,
+      "name": "DeA Kids",
+      "group": "Bambini",
+      "logo": "dea-kids-it.png",
+      "epgId": "DeA.Kids.it"
+    },
+    {
+      "number": 602,
+      "name": "Nick Jr",
+      "group": "Bambini",
+      "logo": "nick-jr-it.png",
+      "epgId": "Nick.Jr.it",
+      "aliases": [
+        "Nick Junior"
+      ]
+    },
+    {
+      "number": 603,
+      "name": "Nickelodeon",
+      "group": "Bambini",
+      "logo": "nickelodeon-it.png",
+      "epgId": "Nickelodeon.it"
+    },
+    {
+      "number": 604,
+      "name": "Disney Jr",
+      "group": "Bambini",
+      "epgId": "Disney.Jr.it",
+      "aliases": [
+        "Disney Junior"
+      ]
+    },
+    {
+      "number": 605,
+      "name": "DeA Junior",
+      "group": "Bambini",
+      "logo": "dea-junior-it.png",
+      "epgId": "DeA.Junior.it"
+    },
+    {
+      "number": 606,
+      "name": "Cartoon Network",
+      "group": "Bambini",
+      "logo": "cartoon-network-it.png",
+      "epgId": "Cartoon.Network.it"
+    },
+    {
+      "number": 607,
+      "name": "Boomerang",
+      "group": "Bambini",
+      "logo": "boomerang-it.png",
+      "epgId": "Boomerang.it"
+    },
+    {
+      "number": 612,
+      "name": "Rai Yoyo",
+      "group": "Bambini",
+      "logo": "rai-yoyo-it.png",
+      "epgId": "Rai.Yoyo.it",
+      "aliases": [
+        "Rai YoYo"
+      ]
+    },
+    {
+      "number": 613,
+      "name": "Boing",
+      "group": "Bambini",
+      "logo": "boing-it.png",
+      "epgId": "Boing.it"
+    },
+    {
+      "number": 614,
+      "name": "Cartoonito",
+      "group": "Bambini",
+      "logo": "cartoonito-it.png",
+      "epgId": "Cartoonito.it"
+    },
+    {
+      "number": 615,
+      "name": "Frisbee",
+      "group": "Bambini",
+      "logo": "frisbee-it.png",
+      "epgId": "Frisbee.it"
+    },
+    {
+      "number": 616,
+      "name": "K2",
+      "group": "Bambini",
+      "logo": "k2-it.png",
+      "epgId": "K2.it"
+    },
+    {
+      "number": 625,
+      "name": "Super!",
+      "group": "Bambini",
+      "logo": "super-it.png",
+      "epgId": "Super!.it",
+      "aliases": [
+        "Super"
+      ]
+    },
+    {
+      "number": 704,
+      "name": "MTV Music",
+      "group": "Musica",
+      "logo": "mtv-music-it.png",
+      "epgId": "MTV.Music.it"
+    },
+    {
+      "number": 714,
+      "name": "Deejay TV",
+      "group": "Musica",
+      "logo": "deejay-tv-it.png",
+      "epgId": "Deejay.TV.it",
+      "aliases": [
+        "Radio Deejay TV",
+        "Deejay TV DTT"
+      ]
+    },
+    {
+      "number": 716,
+      "name": "Radio Monte Carlo",
+      "group": "Musica",
+      "logo": "radio-monte-carlo-it.png",
+      "epgId": "Radio.Monte.Carlo.it",
+      "aliases": [
+        "RMC TV"
+      ]
+    },
+    {
+      "number": 717,
+      "name": "Virgin Radio TV",
+      "group": "Musica",
+      "epgId": "Virgin.Radio.TV.it",
+      "aliases": [
+        "Virgin Radio"
+      ]
+    },
+    {
+      "number": 724,
+      "name": "RDS Social TV",
+      "group": "Musica",
+      "logo": "rds-it.png",
+      "epgId": "RDS.Social.TV.it",
+      "aliases": [
+        "RDS"
+      ]
+    },
+    {
+      "number": 725,
+      "name": "Radio Italia TV",
+      "group": "Musica",
+      "logo": "radio-italia-it.png",
+      "epgId": "Radio.Italia.TV.it",
+      "aliases": [
+        "Radio Italia"
+      ]
+    },
+    {
+      "number": 726,
+      "name": "Radio Italia Live",
+      "group": "Musica",
+      "epgId": "Radio.Italia.Live.it"
+    },
+    {
+      "number": 727,
+      "name": "Radio Kiss Kiss TV",
+      "group": "Musica",
+      "logo": "radio-kiss-kiss-tv-it.png",
+      "epgId": "Radio.Kiss.Kiss.TV.it",
+      "aliases": [
+        "Kiss Kiss TV"
+      ]
+    },
+    {
+      "number": 730,
+      "name": "Radionorba TV",
+      "group": "Musica",
+      "logo": "radio-norba-tv-it.png",
+      "epgId": "Radionorba.TV.it",
+      "aliases": [
+        "Radio Norba TV"
+      ]
+    },
+    {
+      "number": 735,
+      "name": "Radio Zeta",
+      "group": "Musica",
+      "logo": "radio-zeta-it.png",
+      "epgId": "Radio.Zeta.it"
+    },
+    {
+      "number": 736,
+      "name": "RTL 102.5",
+      "group": "Musica",
+      "logo": "rtl-1025-it.png",
+      "epgId": "RTL.102.5.it",
+      "aliases": [
+        "RTL 1025",
+        "RTL 102.5 TV"
+      ]
+    },
+    {
+      "number": 737,
+      "name": "RTL 102.5 Caliente",
+      "group": "Musica",
+      "logo": "rtl-1025-it.png",
+      "epgId": "RTL.102.5.Caliente.it"
+    },
+    {
+      "number": 738,
+      "name": "Radiofreccia",
+      "group": "Musica",
+      "logo": "radio-freccia-it.png",
+      "epgId": "Radiofreccia.it",
+      "aliases": [
+        "Radio Freccia"
+      ]
+    },
+    {
+      "number": 739,
+      "name": "Radio Deejay",
+      "group": "Radio",
+      "sameAs": 714
+    },
+    {
+      "number": 740,
+      "name": "Radio Capital",
+      "group": "Radio",
+      "epgId": "Radio.Capital.it",
+      "aliases": [
+        "Capital"
+      ]
+    },
+    {
+      "number": 741,
+      "name": "m2o",
+      "group": "Radio",
+      "epgId": "m2o.it",
+      "aliases": [
+        "M2O Radio",
+        "M Due O"
+      ]
+    },
+    {
+      "number": 742,
+      "name": "Radio Monte Carlo",
+      "group": "Radio",
+      "sameAs": 716
+    },
+    {
+      "number": 743,
+      "name": "Radio 105",
+      "group": "Radio",
+      "epgId": "Radio.105.it",
+      "aliases": [
+        "105"
+      ]
+    },
+    {
+      "number": 744,
+      "name": "Virgin Radio",
+      "group": "Radio",
+      "sameAs": 717
+    },
+    {
+      "number": 745,
+      "name": "RDS",
+      "group": "Radio",
+      "sameAs": 724
+    },
+    {
+      "number": 746,
+      "name": "Radio Italia",
+      "group": "Radio",
+      "sameAs": 725
+    },
+    {
+      "number": 747,
+      "name": "Radio Kiss Kiss",
+      "group": "Radio",
+      "sameAs": 727
+    },
+    {
+      "number": 748,
+      "name": "R101",
+      "group": "Radio",
+      "epgId": "R101.it",
+      "aliases": [
+        "Radio R101"
+      ]
+    },
+    {
+      "number": 749,
+      "name": "Radio 24",
+      "group": "Radio",
+      "epgId": "Radio.24.it"
+    },
+    {
+      "number": 750,
+      "name": "RTL 102.5",
+      "group": "Radio",
+      "sameAs": 736
+    },
+    {
+      "number": 751,
+      "name": "Radiofreccia",
+      "group": "Radio",
+      "sameAs": 738
+    },
+    {
+      "number": 752,
+      "name": "Radio Zeta",
+      "group": "Radio",
+      "sameAs": 735
+    },
+    {
+      "number": 753,
+      "name": "InBlu2000",
+      "group": "Radio",
+      "epgId": "InBlu2000.it",
+      "aliases": [
+        "InBlu 2000"
+      ]
+    },
+    {
+      "number": 754,
+      "name": "InBlu",
+      "group": "Radio",
+      "epgId": "InBlu.it"
+    },
+    {
+      "number": 755,
+      "name": "Radio Vaticana",
+      "group": "Radio",
+      "epgId": "Radio.Vaticana.it",
+      "aliases": [
+        "Radio Vaticana Europa"
+      ]
+    },
+    {
+      "number": 805,
+      "name": "Rai Storia",
+      "group": "Documentari",
+      "logo": "rai-storia-it.png",
+      "epgId": "Rai.Storia.it"
+    },
+    {
+      "number": 806,
+      "name": "Italiana",
+      "group": "Locali",
+      "epgId": "Italiana.it",
+      "aliases": [
+        "Italiana TV"
+      ]
+    },
+    {
+      "number": 807,
+      "name": "Rai Gulp",
+      "group": "Bambini",
+      "logo": "rai-gulp-it.png",
+      "epgId": "Rai.Gulp.it"
+    },
+    {
+      "number": 808,
+      "name": "Primaset",
+      "group": "Locali",
+      "epgId": "Primaset.it",
+      "aliases": [
+        "Primaset 149"
+      ]
+    },
+    {
+      "number": 809,
+      "name": "GO-TV Channel",
+      "group": "Locali",
+      "epgId": "GO.TV.Channel.it",
+      "aliases": [
+        "GO TV"
+      ]
+    },
+    {
+      "number": 812,
+      "name": "Uninettuno University TV",
+      "group": "Locali",
+      "epgId": "Uninettuno.University.TV.it",
+      "aliases": [
+        "Uninettuno"
+      ]
+    },
+    {
+      "number": 813,
+      "name": "Med TV",
+      "group": "Locali",
+      "epgId": "Med.TV.it"
+    },
+    {
+      "number": 814,
+      "name": "wedotv Movies",
+      "group": "Locali",
+      "epgId": "wedotv.Movies.it",
+      "aliases": [
+        "wedo Movies"
+      ]
+    },
+    {
+      "number": 815,
+      "name": "wedo Big Stories",
+      "group": "Locali",
+      "epgId": "wedo.Big.Stories.it",
+      "aliases": [
+        "wedotv Big Stories"
+      ]
+    },
+    {
+      "number": 819,
+      "name": "Videolina",
+      "group": "Locali",
+      "logo": "videolina-it.png",
+      "epgId": "Videolina.it"
+    },
+    {
+      "number": 821,
+      "name": "Canale Italia",
+      "group": "Locali",
+      "logo": "canale-italia-it.png",
+      "epgId": "Canale.Italia.it"
+    },
+    {
+      "number": 822,
+      "name": "Telesardegna",
+      "group": "Locali",
+      "epgId": "Telesardegna.it"
+    },
+    {
+      "number": 823,
+      "name": "Marcopolo",
+      "group": "Locali",
+      "epgId": "Marcopolo.it",
+      "aliases": [
+        "Marco Polo"
+      ]
+    },
+    {
+      "number": 824,
+      "name": "Telecupole",
+      "group": "Locali",
+      "epgId": "Telecupole.it"
+    },
+    {
+      "number": 825,
+      "name": "People TV",
+      "group": "Locali",
+      "epgId": "People.TV.it",
+      "aliases": [
+        "People TV Rete 7",
+        "Rete 7"
+      ]
+    },
+    {
+      "number": 827,
+      "name": "Canzoni Napoletane",
+      "group": "Locali",
+      "epgId": "Canzoni.Napoletane.it"
+    },
+    {
+      "number": 832,
+      "name": "TVA Vicenza",
+      "group": "Locali",
+      "epgId": "TVA.Vicenza.it"
+    },
+    {
+      "number": 850,
+      "name": "Sonlife Broadcasting Network",
+      "group": "Religiosi",
+      "epgId": "Sonlife.Broadcasting.Network.it",
+      "aliases": [
+        "SBN",
+        "Sonlife"
+      ]
+    },
+    {
+      "number": 851,
+      "name": "Daystar",
+      "group": "Religiosi",
+      "epgId": "Daystar.it"
+    },
+    {
+      "number": 852,
+      "name": "Padre Pio TV",
+      "group": "Religiosi",
+      "logo": "padre-pio-tv-it.png",
+      "epgId": "Padre.Pio.TV.it"
+    },
+    {
+      "number": 853,
+      "name": "The Word Network",
+      "group": "Religiosi",
+      "epgId": "The.Word.Network.it"
+    },
+    {
+      "number": 854,
+      "name": "Parole di Vita",
+      "group": "Religiosi",
+      "logo": "parole-di-vita-it.png",
+      "epgId": "Parole.di.Vita.it"
+    },
+    {
+      "number": 855,
+      "name": "EWTN",
+      "group": "Religiosi",
+      "epgId": "EWTN.it",
+      "aliases": [
+        "EWTN English"
+      ]
+    },
+    {
+      "number": 857,
+      "name": "Sender Neu Jerusalem",
+      "group": "Religiosi",
+      "epgId": "Sender.Neu.Jerusalem.it"
+    },
+    {
+      "number": 858,
+      "name": "Teleradiopace TV",
+      "group": "Religiosi",
+      "epgId": "Teleradiopace.TV.it",
+      "aliases": [
+        "Teleradiopace"
+      ]
+    },
+    {
+      "number": 860,
+      "name": "BeJoy Kids",
+      "group": "Bambini",
+      "epgId": "BeJoy.Kids.it",
+      "aliases": [
+        "BeJoy.kids"
+      ]
+    },
+    {
+      "number": 861,
+      "name": "Canale Italia 2",
+      "group": "Locali",
+      "logo": "canale-italia-2-it.png",
+      "epgId": "Canale.Italia.2.it"
+    },
+    {
+      "number": 863,
+      "name": "Arte Investimenti",
+      "group": "Locali",
+      "epgId": "Arte.Investimenti.it"
+    },
+    {
+      "number": 867,
+      "name": "TLC Telecampione",
+      "group": "Locali",
+      "epgId": "TLC.Telecampione.it",
+      "aliases": [
+        "Telecampione",
+        "Orler TV"
+      ]
+    },
+    {
+      "number": 913,
+      "name": "Canale Italia 83",
+      "group": "Locali",
+      "logo": "canale-italia-83-it.png",
+      "epgId": "Canale.Italia.83.it"
+    },
+    {
+      "number": 937,
+      "name": "Canale Italia 84",
+      "group": "Locali",
+      "logo": "canale-italia-84-it.png",
+      "epgId": "Canale.Italia.84.it"
+    },
+    {
+      "number": 8820,
+      "name": "Rai Radio 1",
+      "group": "Radio",
+      "epgId": "Rai.Radio.1.it"
+    },
+    {
+      "number": 8822,
+      "name": "Rai Radio 2",
+      "group": "Radio",
+      "logo": "rai-radio-2-it.png",
+      "epgId": "Rai.Radio.2.it"
+    },
+    {
+      "number": 8824,
+      "name": "Rai Radio 3",
+      "group": "Radio",
+      "epgId": "Rai.Radio.3.it"
+    },
+    {
+      "number": 8825,
+      "name": "Rai Radio 1 Sport",
+      "group": "Radio",
+      "epgId": "Rai.Radio.1.Sport.it"
+    },
+    {
+      "number": 8826,
+      "name": "Rai Radio 3 Classica",
+      "group": "Radio",
+      "epgId": "Rai.Radio.3.Classica.it"
+    },
+    {
+      "number": 8828,
+      "name": "Rai Radio Tutta Italiana",
+      "group": "Radio",
+      "epgId": "Rai.Radio.Tutta.Italiana.it"
+    },
+    {
+      "number": 8829,
+      "name": "No Name Radio",
+      "group": "Radio",
+      "epgId": "No.Name.Radio.it"
+    },
+    {
+      "number": 8830,
+      "name": "Rai GR Parlamento",
+      "group": "Radio",
+      "epgId": "Rai.GR.Parlamento.it",
+      "aliases": [
+        "GR Parlamento"
+      ]
+    },
+    {
+      "number": 8831,
+      "name": "Rai Radio Kids",
+      "group": "Radio",
+      "epgId": "Rai.Radio.Kids.it"
+    },
+    {
+      "number": 8833,
+      "name": "Rai Radio Live Napoli",
+      "group": "Radio",
+      "epgId": "Rai.Radio.Live.Napoli.it"
+    },
+    {
+      "number": 8834,
+      "name": "Rai Isoradio",
+      "group": "Radio",
+      "epgId": "Rai.Isoradio.it",
+      "aliases": [
+        "Isoradio"
+      ]
+    },
+    {
+      "number": 8835,
+      "name": "Rai Radio Techetè",
+      "group": "Radio",
+      "epgId": "Rai.Radio.Techete.it",
+      "aliases": [
+        "Rai Radio Techete"
+      ]
+    },
+    {
+      "number": 8836,
+      "name": "Radio Margherita",
+      "group": "Radio",
+      "epgId": "Radio.Margherita.it"
+    },
+    {
+      "number": 8837,
+      "name": "San Marino Radio",
+      "group": "Radio",
+      "epgId": "San.Marino.Radio.it",
+      "aliases": [
+        "SMTv San Marino Radio"
+      ]
+    },
+    {
+      "number": 8838,
+      "name": "Anni 60",
+      "group": "Radio",
+      "epgId": "Anni.60.it"
+    },
+    {
+      "number": 8840,
+      "name": "Radio Maria",
+      "group": "Radio",
+      "epgId": "Radio.Maria.it"
+    },
+    {
+      "number": 8842,
+      "name": "Radio Radicale",
+      "group": "Radio",
+      "epgId": "Radio.Radicale.it"
+    },
+    {
+      "number": 8844,
+      "name": "Radio Sportiva",
+      "group": "Radio",
+      "epgId": "Radio.Sportiva.it"
+    },
+    {
+      "number": 8856,
+      "name": "Dimensione Suono Roma",
+      "group": "Radio",
+      "epgId": "Dimensione.Suono.Roma.it",
+      "aliases": [
+        "DimSuono Roma"
+      ]
+    },
+    {
+      "number": 8857,
+      "name": "Dimensione Suono Soft",
+      "group": "Radio",
+      "epgId": "Dimensione.Suono.Soft.it",
+      "aliases": [
+        "Dimsuono Soft"
+      ]
+    },
+    {
+      "number": 8858,
+      "name": "Discoradio",
+      "group": "Radio",
+      "epgId": "Discoradio.it"
+    },
+    {
+      "number": 8859,
+      "name": "Radio Cusano Campus",
+      "group": "Radio",
+      "epgId": "Radio.Cusano.Campus.it"
+    },
+    {
+      "number": 8860,
+      "name": "Radio Subasio",
+      "group": "Radio",
+      "epgId": "Radio.Subasio.it"
+    },
+    {
+      "number": 8864,
+      "name": "Radio Iglesias",
+      "group": "Radio",
+      "epgId": "Radio.Iglesias.it"
+    },
+    {
+      "number": 8865,
+      "name": "Radio Number One",
+      "group": "Radio",
+      "epgId": "Radio.Number.One.it"
+    },
+    {
+      "number": 8866,
+      "name": "Radio Onda d'Urto",
+      "group": "Radio",
+      "epgId": "Radio.Onda.d.Urto.it"
+    },
+    {
+      "number": 8867,
+      "name": "Radio Dimensione Stereo",
+      "group": "Radio",
+      "epgId": "Radio.Dimensione.Stereo.it"
+    },
+    {
+      "number": 8868,
+      "name": "Radio Padre Pio",
+      "group": "Radio",
+      "epgId": "Radio.Padre.Pio.it",
+      "aliases": [
+        "Radio PadrePio"
+      ]
+    },
+    {
+      "number": 8870,
+      "name": "Radio Popolare",
+      "group": "Radio",
+      "epgId": "Radio.Popolare.it"
+    },
+    {
+      "number": 8874,
+      "name": "Radio Zeta",
+      "group": "Radio",
+      "sameAs": 735
+    },
+    {
+      "number": 8876,
+      "name": "BBC World Service",
+      "group": "Radio",
+      "epgId": "BBC.World.Service.it",
+      "aliases": [
+        "BBC English"
+      ]
+    },
+    {
+      "number": 8880,
+      "name": "RFI",
+      "group": "Radio",
+      "epgId": "RFI.it",
+      "aliases": [
+        "RFI Francais",
+        "RFI Français"
+      ]
+    },
+    {
+      "number": 8882,
+      "name": "Rete Uno",
+      "group": "Radio",
+      "epgId": "Rete.Uno.it",
+      "aliases": [
+        "RSI Rete Uno"
+      ]
+    },
+    {
+      "number": 8884,
+      "name": "Rete Due",
+      "group": "Radio",
+      "epgId": "Rete.Due.it",
+      "aliases": [
+        "RSI Rete Due"
+      ]
+    },
+    {
+      "number": 8886,
+      "name": "Rete Tre",
+      "group": "Radio",
+      "epgId": "Rete.Tre.it",
+      "aliases": [
+        "RSI Rete Tre"
+      ]
+    },
+    {
+      "number": 8888,
+      "name": "Swiss Classic",
+      "group": "Radio",
+      "epgId": "Swiss.Classic.it",
+      "aliases": [
+        "Radio Swiss Classic"
+      ]
+    },
+    {
+      "number": 8890,
+      "name": "Swiss Jazz",
+      "group": "Radio",
+      "epgId": "Swiss.Jazz.it",
+      "aliases": [
+        "Radio Swiss Jazz"
+      ]
+    },
+    {
+      "number": 8892,
+      "name": "Swiss Pop",
+      "group": "Radio",
+      "epgId": "Swiss.Pop.it",
+      "aliases": [
+        "Radio Swiss Pop"
+      ]
+    }
+  ]
+}

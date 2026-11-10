@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#07060f">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Controller sala giochi · B&amp;B IPTV Player</title>
+<style>
+  :root {
+    --bg: #07060f; --panel: #12102a; --edge: #2e2a55; --dim: #6e6a99;
+    --white: #f4f1ff; --yellow: #ffe14d; --cyan: #3df2ff; --magenta: #ff3dcb;
+    --green: #4dff7a; --orange: #ff8a3d; --p: var(--cyan);
+  }
+  /* touch-action non si eredita: va su ogni elemento, così il doppio tocco
+     o il pizzico non ingrandiscono mai il controller. */
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: none; }
+  #join, #join * { touch-action: manipulation; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--white); overflow: hidden; touch-action: none; overscroll-behavior: none; }
+  body { font-family: ui-monospace, "SF Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace; font-weight: 800; letter-spacing: .08em; }
+  .glow { text-shadow: 0 0 8px currentColor; }
+  /* Righe di scansione come un vecchio televisore. */
+  body::after { content: ""; position: fixed; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(0deg, rgba(0,0,0,.22) 0 1px, transparent 1px 3px); }
+
+  #join { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 24px; text-align: center; touch-action: auto; }
+  #join h1 { margin: 0; font-size: 30px; color: var(--green); }
+  #join p { margin: 0; color: var(--dim); font-size: 13px; line-height: 1.6; max-width: 340px; }
+  #join input { font: inherit; font-size: 20px; text-align: center; text-transform: uppercase; width: min(320px, 90vw); padding: 14px; border-radius: 10px; border: 2px solid var(--edge); background: var(--panel); color: var(--white); outline: none; user-select: text; -webkit-user-select: text; }
+  #join input:focus { border-color: var(--cyan); }
+  .btn { font: inherit; font-size: 18px; padding: 14px 30px; border-radius: 12px; border: 3px solid var(--yellow); background: rgba(255,225,77,.12); color: var(--yellow); }
+  .btn:active { background: rgba(255,225,77,.3); }
+  #msg { color: var(--magenta); min-height: 1.2em; font-size: 13px; }
+
+  #pad { position: fixed; inset: 0; display: none; }
+  #bar { position: absolute; top: max(10px, env(safe-area-inset-top)); left: 0; right: 0; display: flex; justify-content: center; gap: 14px; align-items: baseline; font-size: 14px; padding: 0 16px; }
+  #who { color: var(--p); }
+  #game { color: var(--yellow); }
+  #status { position: absolute; top: 40px; left: 0; right: 0; text-align: center; font-size: 12px; color: var(--dim); padding: 0 16px; }
+
+  #dpad { position: absolute; left: max(4vw, env(safe-area-inset-left)); bottom: 8vh; width: min(46vh, 42vw); height: min(46vh, 42vw); border-radius: 50%; background: radial-gradient(circle, #1b1840 0 55%, #12102a 56%); border: 3px solid var(--edge); }
+  .arm { position: absolute; background: #24204e; border: 2px solid var(--edge); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--dim); font-size: 22px; transition: background .05s; }
+  .arm.on { background: var(--p); color: var(--bg); box-shadow: 0 0 18px var(--p); }
+  #u { left: 34%; top: 6%; width: 32%; height: 34%; }
+  #d { left: 34%; bottom: 6%; width: 32%; height: 34%; }
+  #l { top: 34%; left: 6%; width: 34%; height: 32%; }
+  #r { top: 34%; right: 6%; width: 34%; height: 32%; }
+
+  #buttons { position: absolute; right: max(5vw, env(safe-area-inset-right)); bottom: 10vh; width: min(50vh, 40vw); height: min(40vh, 34vw); }
+  .round { position: absolute; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; border: 4px solid; }
+  #a { width: 58%; aspect-ratio: 1; right: 0; top: 0; color: var(--magenta); border-color: var(--magenta); background: rgba(255,61,203,.12); }
+  #b { width: 40%; aspect-ratio: 1; left: 0; bottom: 0; color: var(--cyan); border-color: var(--cyan); background: rgba(61,242,255,.10); font-size: 22px; }
+  .round.on { background: currentColor; box-shadow: 0 0 26px currentColor; }
+  .round.on span { color: var(--bg); text-shadow: none; }
+  .hint { position: absolute; font-size: 10px; color: var(--dim); width: 100%; text-align: center; bottom: -18px; }
+
+  #rotate { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; text-align: center; padding: 30px; color: var(--yellow); font-size: 18px; line-height: 1.6; background: var(--bg); z-index: 5; }
+  @media (orientation: portrait) {
+    body.playing #rotate { display: flex; }
+  }
+</style>
+</head>
+<body>
+<div id="join">
+  <h1 class="glow">SALA GIOCHI</h1>
+  <p>Scegli un nome e premi ENTRA: questo telefono diventa il tuo controller.</p>
+  <input id="name" maxlength="12" placeholder="IL TUO NOME" autocomplete="off" autocapitalize="characters">
+  <button class="btn glow" id="go">ENTRA</button>
+  <div id="msg"></div>
+</div>
+
+<div id="pad">
+  <div id="bar"><span id="who" class="glow">GIOCATORE</span><span id="game" class="glow"></span></div>
+  <div id="status"></div>
+  <div id="dpad">
+    <div class="arm" id="u">▲</div>
+    <div class="arm" id="d">▼</div>
+    <div class="arm" id="l">◀</div>
+    <div class="arm" id="r">▶</div>
+  </div>
+  <div id="buttons">
+    <div class="round glow" id="b"><span>B</span></div>
+    <div class="round glow" id="a"><span>A</span></div>
+  </div>
+</div>
+
+<div id="rotate">GIRA IL TELEFONO<br>IN ORIZZONTALE ⟳</div>
+
+<script>
+const G = '{{GTOKEN}}';
+const COLORS = ['#4dff7a', '#ff3dcb', '#ffe14d', '#3df2ff'];
+const $ = (id) => document.getElementById(id);
+let ws = null, joined = false, name = '', retry = 0;
+
+try { $('name').value = localStorage.getItem('pad.name') || ''; } catch (e) {}
+
+function send(m) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(m)); }
+
+function connect() {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  ws = new WebSocket(`${proto}://${location.host}/pad/ws?g=${G}`);
+  ws.onopen = () => { retry = 0; send({ t: 'hello', name }); };
+  ws.onmessage = (e) => {
+    let m; try { m = JSON.parse(e.data); } catch (_) { return; }
+    if (m.t === 'welcome') {
+      joined = true;
+      const c = COLORS[(m.player - 1) % COLORS.length];
+      document.documentElement.style.setProperty('--p', c);
+      $('who').textContent = `G${m.player} · ${name || 'GIOCATORE ' + m.player}`;
+      $('join').style.display = 'none';
+      $('pad').style.display = 'block';
+      document.body.classList.add('playing');
+      buzz(60);
+    } else if (m.t === 'full') {
+      $('msg').textContent = 'CI SONO GIÀ 4 GIOCATORI: ASPETTA CHE QUALCUNO ESCA.';
+    } else if (m.t === 'state') {
+      $('game').textContent = m.game ? m.game : 'SALA GIOCHI';
+      $('status').textContent = m.message || (m.game ? '' : 'SCEGLI UN GIOCO SULLA TV');
+    } else if (m.t === 'buzz') {
+      buzz(m.ms || 120);
+    }
+  };
+  ws.onclose = () => {
+    ws = null;
+    if (!joined && retry > 2) { $('msg').textContent = 'TV NON RAGGIUNGIBILE: SEI SULLA STESSA RETE WI-FI?'; return; }
+    $('status').textContent = 'RICONNESSIONE…';
+    setTimeout(connect, Math.min(4000, 500 * ++retry));
+  };
+}
+
+// Niente zoom: Safari su iPhone ignora user-scalable=no, quindi si
+// bloccano a mano pizzico e doppio tocco.
+for (const ev of ['gesturestart', 'gesturechange', 'gestureend']) {
+  document.addEventListener(ev, (e) => e.preventDefault(), { passive: false });
+}
+document.addEventListener('dblclick', (e) => e.preventDefault(), { passive: false });
+document.addEventListener('touchstart', (e) => {
+  if (e.touches.length > 1 && !e.target.closest('#dpad, #buttons')) e.preventDefault();
+}, { passive: false });
+let lastTouchEnd = 0;
+document.addEventListener('touchend', (e) => {
+  const now = Date.now();
+  if (now - lastTouchEnd < 350 && !e.target.closest('#join input')) e.preventDefault();
+  lastTouchEnd = now;
+}, { passive: false });
+// Se nonostante tutto la pagina risulta ingrandita, la si riporta a 1.
+const vp = document.querySelector('meta[name=viewport]');
+function unzoom() {
+  if (!window.visualViewport || visualViewport.scale <= 1.01) return;
+  vp.setAttribute('content', 'width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover,minimum-scale=1');
+  window.scrollTo(0, 0);
+  setTimeout(() => vp.setAttribute('content', 'width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover'), 300);
+}
+if (window.visualViewport) visualViewport.addEventListener('resize', unzoom);
+
+function buzz(ms) { try { navigator.vibrate && navigator.vibrate(ms); } catch (_) {} }
+
+$('go').onclick = () => {
+  name = $('name').value.trim().toUpperCase().slice(0, 12);
+  try { localStorage.setItem('pad.name', name); } catch (e) {}
+  $('msg').textContent = 'COLLEGAMENTO…';
+  try { document.documentElement.requestFullscreen && document.documentElement.requestFullscreen().catch(() => {}); } catch (_) {}
+  try { screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape').catch(() => {}); } catch (_) {}
+  connect();
+};
+$('name').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('go').click(); });
+
+// Croce direzionale: il dito può scivolare da una direzione all'altra.
+const dpad = $('dpad');
+const arms = { up: $('u'), down: $('d'), left: $('l'), right: $('r') };
+const held = new Set();
+let dpadPointer = null;
+function setDir(dir) {
+  for (const k of ['up', 'down', 'left', 'right']) {
+    const on = k === dir;
+    if (on && !held.has(k)) { held.add(k); arms[k].classList.add('on'); send({ t: 'k', k, d: true }); buzz(8); }
+    if (!on && held.has(k)) { held.delete(k); arms[k].classList.remove('on'); send({ t: 'k', k, d: false }); }
+  }
+}
+function dirAt(x, y) {
+  const r = dpad.getBoundingClientRect();
+  const dx = x - (r.left + r.width / 2), dy = y - (r.top + r.height / 2);
+  if (Math.hypot(dx, dy) < r.width * 0.12) return null;
+  return Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up');
+}
+dpad.addEventListener('pointerdown', (e) => { e.preventDefault(); dpadPointer = e.pointerId; dpad.setPointerCapture(e.pointerId); setDir(dirAt(e.clientX, e.clientY)); });
+dpad.addEventListener('pointermove', (e) => { if (e.pointerId === dpadPointer) setDir(dirAt(e.clientX, e.clientY)); });
+const dpadUp = (e) => { if (e.pointerId === dpadPointer) { dpadPointer = null; setDir(null); } };
+dpad.addEventListener('pointerup', dpadUp);
+dpad.addEventListener('pointercancel', dpadUp);
+
+for (const [id, k] of [['a', 'a'], ['b', 'b']]) {
+  const el = $(id);
+  const up = (e) => { if (!el.classList.contains('on')) return; el.classList.remove('on'); send({ t: 'k', k, d: false }); };
+  el.addEventListener('pointerdown', (e) => { e.preventDefault(); el.setPointerCapture(e.pointerId); el.classList.add('on'); send({ t: 'k', k, d: true }); buzz(12); });
+  el.addEventListener('pointerup', up);
+  el.addEventListener('pointercancel', up);
+}
+document.addEventListener('contextmenu', (e) => e.preventDefault());
+// Se la pagina va in secondo piano si rilascia tutto.
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { setDir(null); for (const id of ['a', 'b']) { const el = $(id); if (el.classList.contains('on')) { el.classList.remove('on'); send({ t: 'k', k: id, d: false }); } } }
+});
+</script>
+</body>
+</html>
