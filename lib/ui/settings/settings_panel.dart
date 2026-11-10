@@ -35,6 +35,7 @@ class SettingsPanel extends StatefulWidget {
 class _SettingsPanelState extends State<SettingsPanel> {
   bool _dialogOpen = false;
   final _first = FocusNode(debugLabel: 'settings-first');
+  final _scroll = ScrollController();
 
   @override
   void initState() {
@@ -45,6 +46,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
   @override
   void dispose() {
     _first.dispose();
+    _scroll.dispose();
     super.dispose();
   }
 
@@ -206,7 +208,34 @@ class _SettingsPanelState extends State<SettingsPanel> {
       widget.onClose();
       return KeyEventResult.handled;
     }
+    if (k == LogicalKeyboardKey.arrowDown || k == LogicalKeyboardKey.arrowUp) {
+      final down = k == LogicalKeyboardKey.arrowDown;
+      final moved = FocusManager.instance.primaryFocus?.focusInDirection(
+        down ? TraversalDirection.down : TraversalDirection.up,
+      );
+      // Oltre l'ultima (o prima) voce selezionabile c'è ancora qualcosa da
+      // vedere (logo e versione in fondo, titolo in cima): la lista scorre
+      // fino al bordo invece di restare ferma.
+      if (moved != true) _scrollToEdge(down);
+      return KeyEventResult.handled;
+    }
     return KeyEventResult.ignored;
+  }
+
+  void _scrollToEdge(bool end) {
+    if (!_scroll.hasClients) return;
+    final pos = _scroll.position;
+    final target = end ? pos.maxScrollExtent : pos.minScrollExtent;
+    if ((pos.pixels - target).abs() < 1) return;
+    if (context.read<PerformanceProfile>().isLight) {
+      pos.jumpTo(target);
+    } else {
+      pos.animateTo(
+        target,
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+      );
+    }
   }
 
   @override
@@ -233,253 +262,264 @@ class _SettingsPanelState extends State<SettingsPanel> {
               child: Glass(
                 strong: true,
                 radius: 30,
-                child: ListView(
+                // Tutte le voci costruite subito (niente lista "pigra"): il
+                // focus del telecomando trova sempre la voce successiva,
+                // anche quando è ancora fuori dallo schermo.
+                child: SingleChildScrollView(
+                  controller: _scroll,
                   padding: const EdgeInsets.fromLTRB(14, 26, 14, 26),
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: _Row.inset,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: _Row.inset,
+                        ),
+                        child: Text(
+                          'Impostazioni',
+                          style: AppText.display.copyWith(fontSize: 26),
+                        ),
                       ),
-                      child: Text(
-                        'Impostazioni',
-                        style: AppText.display.copyWith(fontSize: 26),
+                      const _Section('Lista canali'),
+                      _InfoRow(
+                        'In uso',
+                        mapping == null
+                            ? '—'
+                            : '${mapping.name} · ${mapping.origin}',
                       ),
-                    ),
-                    const _Section('Lista canali'),
-                    _InfoRow(
-                      'In uso',
-                      mapping == null
-                          ? '—'
-                          : '${mapping.name} · ${mapping.origin}',
-                    ),
-                    _InfoRow('Canali', '${app.channels.length}'),
-                    _ActionRow(
-                      focusNode: _first,
-                      icon: Icons.link_rounded,
-                      title: 'Sorgente lista',
-                      subtitle: s.mappingSource.isEmpty
-                          ? 'Integrata (ordine Sky)'
-                          : s.mappingSource,
-                      onSelect: _editMapping,
-                    ),
-                    _ToggleRow(
-                      icon: Icons.playlist_add_rounded,
-                      title: 'Mostra canali non in lista',
-                      subtitle:
-                          'Gli altri canali del provider, dal numero ${mapping?.unmappedStartNumber ?? 1000}',
-                      value: s.showUnmapped ?? mapping?.showUnmapped ?? false,
-                      onChanged: (v) async {
-                        await s.setShowUnmapped(v);
-                        await app.applyMapping();
-                        if (mounted) setState(() {});
-                      },
-                    ),
-                    _ChoiceRow<AdultMode>(
-                      icon: Icons.no_adult_content_rounded,
-                      title: 'Abilita contenuti per adulti',
-                      value: s.adultMode,
-                      options: const {
-                        AdultMode.off: 'No',
-                        AdultMode.on: 'Sì',
-                        AdultMode.pin: 'Sì con PIN',
-                      },
-                      onChanged: _setAdult,
-                    ),
-                    if (s.adultMode == AdultMode.pin)
+                      _InfoRow('Canali', '${app.channels.length}'),
                       _ActionRow(
-                        icon: Icons.lock_reset_rounded,
-                        title: 'Cambia PIN',
+                        focusNode: _first,
+                        icon: Icons.link_rounded,
+                        title: 'Sorgente lista',
+                        subtitle: s.mappingSource.isEmpty
+                            ? 'Integrata (ordine Sky)'
+                            : s.mappingSource,
+                        onSelect: _editMapping,
+                      ),
+                      _ToggleRow(
+                        icon: Icons.playlist_add_rounded,
+                        title: 'Mostra canali non in lista',
                         subtitle:
-                            'Canali XXX dal 9000, film e serie per adulti',
-                        onSelect: _changePin,
-                      ),
-                    _ActionRow(
-                      icon: Icons.refresh_rounded,
-                      title: 'Aggiorna canali dal provider',
-                      onSelect: () async {
-                        widget.onToast('Aggiornamento canali…');
-                        await app.reloadChannels();
-                        widget.onToast('${app.channels.length} canali');
-                      },
-                    ),
-
-                    const _Section('Guida TV'),
-                    _InfoRow(
-                      'Stato',
-                      app.epgLoading
-                          ? (app.epgStatus ?? 'Aggiornamento…')
-                          : app.epg.isEmpty
-                          ? 'Non disponibile'
-                          : '${app.epg.channelCount} canali · ${hm(app.epg.fetchedAt ?? DateTime.now())}',
-                    ),
-                    for (final r in app.epgReports.where((r) => !r.ok))
-                      _InfoRow('Errore fonte', _shortUrl(r.source), warn: true),
-                    _ActionRow(
-                      icon: Icons.sync_rounded,
-                      title: 'Aggiorna guida ora',
-                      onSelect: () {
-                        widget.onToast('Aggiornamento guida…');
-                        app.refreshEpg();
-                      },
-                    ),
-                    _ActionRow(
-                      icon: Icons.playlist_add_rounded,
-                      title: 'Fonti EPG aggiuntive',
-                      subtitle: s.extraEpgSources.isEmpty
-                          ? 'Nessuna'
-                          : '${s.extraEpgSources.length} configurate',
-                      onSelect: _editEpg,
-                    ),
-                    if (!form.hidesQr)
-                      _ActionRow(
-                        icon: Icons.qr_code_2_rounded,
-                        title: 'Aggiungi fonti EPG dal telefono',
-                        subtitle: 'Inquadra il codice e incolla i link',
-                        onSelect: () async {
-                          await showEpgFromPhone(context);
+                            'Gli altri canali del provider, dal numero ${mapping?.unmappedStartNumber ?? 1000}',
+                        value: s.showUnmapped ?? mapping?.showUnmapped ?? false,
+                        onChanged: (v) async {
+                          await s.setShowUnmapped(v);
+                          await app.applyMapping();
                           if (mounted) setState(() {});
                         },
                       ),
-                    _ToggleRow(
-                      icon: Icons.event_note_rounded,
-                      title: 'Usa la guida del provider',
-                      subtitle:
-                          'Completa i canali non coperti dalle fonti esterne',
-                      value: s.useProviderEpg,
-                      onChanged: (v) async {
-                        await s.setUseProviderEpg(v);
-                        setState(() {});
-                      },
-                    ),
-
-                    const _Section('Riproduzione'),
-                    _ChoiceRow<StreamFormat>(
-                      icon: Icons.stream_rounded,
-                      title: 'Formato stream',
-                      value: s.streamFormat,
-                      options: const {
-                        StreamFormat.ts: 'MPEG-TS',
-                        StreamFormat.hls: 'HLS',
-                      },
-                      onChanged: (v) async {
-                        await s.setStreamFormat(v);
-                        setState(() {});
-                        widget.onToast(
-                          'Formato ${v.label}: attivo dal prossimo cambio canale',
-                        );
-                      },
-                    ),
-                    _ChoiceRow<PerformanceMode>(
-                      icon: Icons.speed_rounded,
-                      title: 'Prestazioni',
-                      value: s.performanceMode,
-                      options: const {
-                        PerformanceMode.auto: 'Auto',
-                        PerformanceMode.full: 'Complete',
-                        PerformanceMode.light: 'Leggere',
-                      },
-                      onChanged: (v) async {
-                        await s.setPerformanceMode(v);
-                        setState(() {});
-                        widget.onToast('Applicato al prossimo avvio');
-                      },
-                    ),
-                    _ChoiceRow<UiScale>(
-                      icon: Icons.format_size_rounded,
-                      title: 'Dimensione interfaccia',
-                      value: s.uiScale,
-                      options: const {
-                        UiScale.auto: 'Auto',
-                        UiScale.large: 'Grande',
-                        UiScale.medium: 'Media',
-                        UiScale.small: 'Piccola',
-                      },
-                      onChanged: (v) async {
-                        await s.setUiScale(v);
-                        app.settingsChanged();
-                        setState(() {});
-                      },
-                    ),
-                    _InfoRow(
-                      'Profilo attivo',
-                      '${perf.isLight ? 'Leggero' : 'Completo'} · ${perf.reason}',
-                    ),
-
-                    if (!form.hidesQr) ...[
-                      const _Section('Telecomando'),
+                      _ChoiceRow<AdultMode>(
+                        icon: Icons.no_adult_content_rounded,
+                        title: 'Abilita contenuti per adulti',
+                        value: s.adultMode,
+                        options: const {
+                          AdultMode.off: 'No',
+                          AdultMode.on: 'Sì',
+                          AdultMode.pin: 'Sì con PIN',
+                        },
+                        onChanged: _setAdult,
+                      ),
+                      if (s.adultMode == AdultMode.pin)
+                        _ActionRow(
+                          icon: Icons.lock_reset_rounded,
+                          title: 'Cambia PIN',
+                          subtitle:
+                              'Canali XXX dal 9000, film e serie per adulti',
+                          onSelect: _changePin,
+                        ),
                       _ActionRow(
-                        icon: Icons.phone_iphone_rounded,
-                        title: 'Configura telecomando',
-                        subtitle: 'Usa lo smartphone come telecomando, con elenco canali e guida',
+                        icon: Icons.refresh_rounded,
+                        title: 'Aggiorna canali dal provider',
                         onSelect: () async {
-                          _dialogOpen = true;
-                          await showRemoteSetup(context);
-                          _dialogOpen = false;
+                          widget.onToast('Aggiornamento canali…');
+                          await app.reloadChannels();
+                          widget.onToast('${app.channels.length} canali');
                         },
                       ),
-                    ],
 
-                    const _Section('Abbonamento'),
-                    _InfoRow(
-                      'Tipo',
-                      app.credentials?.isM3u ?? false
-                          ? 'Playlist M3U'
-                          : 'Xtream Codes',
-                    ),
-                    _InfoRow(
-                      app.credentials?.isM3u ?? false ? 'Playlist' : 'Server',
-                      app.credentials?.serverUrl ?? '—',
-                    ),
-                    if (!(app.credentials?.isM3u ?? false))
-                      _InfoRow('Utente', app.credentials?.username ?? '—'),
-                    if (acct != null && !(app.credentials?.isM3u ?? false))
+                      const _Section('Guida TV'),
                       _InfoRow(
-                        'Scadenza',
-                        acct.expiresAt == null
-                            ? 'Illimitato'
-                            : '${dayLong(acct.expiresAt!)} ${acct.expiresAt!.year}',
+                        'Stato',
+                        app.epgLoading
+                            ? (app.epgStatus ?? 'Aggiornamento…')
+                            : app.epg.isEmpty
+                            ? 'Non disponibile'
+                            : '${app.epg.channelCount} canali · ${hm(app.epg.fetchedAt ?? DateTime.now())}',
                       ),
-                    if (acct?.maxConnections != null &&
-                        !(app.credentials?.isM3u ?? false))
-                      _InfoRow('Connessioni', '${acct!.maxConnections} max'),
-                    _ActionRow(
-                      icon: Icons.logout_rounded,
-                      title: 'Cambia account',
-                      subtitle: 'Torna alla schermata di configurazione',
-                      onSelect: () async {
-                        widget.onClose();
-                        await app.logout();
-                      },
-                    ),
+                      for (final r in app.epgReports.where((r) => !r.ok))
+                        _InfoRow(
+                          'Errore fonte',
+                          _shortUrl(r.source),
+                          warn: true,
+                        ),
+                      _ActionRow(
+                        icon: Icons.sync_rounded,
+                        title: 'Aggiorna guida ora',
+                        onSelect: () {
+                          widget.onToast('Aggiornamento guida…');
+                          app.refreshEpg();
+                        },
+                      ),
+                      _ActionRow(
+                        icon: Icons.playlist_add_rounded,
+                        title: 'Fonti EPG aggiuntive',
+                        subtitle: s.extraEpgSources.isEmpty
+                            ? 'Nessuna'
+                            : '${s.extraEpgSources.length} configurate',
+                        onSelect: _editEpg,
+                      ),
+                      if (!form.hidesQr)
+                        _ActionRow(
+                          icon: Icons.qr_code_2_rounded,
+                          title: 'Aggiungi fonti EPG dal telefono',
+                          subtitle: 'Inquadra il codice e incolla i link',
+                          onSelect: () async {
+                            await showEpgFromPhone(context);
+                            if (mounted) setState(() {});
+                          },
+                        ),
+                      _ToggleRow(
+                        icon: Icons.event_note_rounded,
+                        title: 'Usa la guida del provider',
+                        subtitle:
+                            'Completa i canali non coperti dalle fonti esterne',
+                        value: s.useProviderEpg,
+                        onChanged: (v) async {
+                          await s.setUseProviderEpg(v);
+                          setState(() {});
+                        },
+                      ),
 
-                    const _Section('Comandi'),
-                    const _Shortcuts(),
-                    const SizedBox(height: 18),
-                    Center(
-                      child: Column(
-                        children: [
-                          Image.asset(
-                            Brand.logo,
-                            width: 150,
-                            cacheWidth: Brand.decodeSize(
-                              150,
-                              MediaQuery.devicePixelRatioOf(context),
-                              Brand.logoWidth,
-                            ),
-                            semanticLabel: Brand.name,
-                            filterQuality: FilterQuality.medium,
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            '${Brand.name} 0.1',
-                            style: AppText.label.copyWith(
-                              color: Palette.textTertiary,
-                            ),
-                          ),
-                        ],
+                      const _Section('Riproduzione'),
+                      _ChoiceRow<StreamFormat>(
+                        icon: Icons.stream_rounded,
+                        title: 'Formato stream',
+                        value: s.streamFormat,
+                        options: const {
+                          StreamFormat.ts: 'MPEG-TS',
+                          StreamFormat.hls: 'HLS',
+                        },
+                        onChanged: (v) async {
+                          await s.setStreamFormat(v);
+                          setState(() {});
+                          widget.onToast(
+                            'Formato ${v.label}: attivo dal prossimo cambio canale',
+                          );
+                        },
                       ),
-                    ),
-                  ],
+                      _ChoiceRow<PerformanceMode>(
+                        icon: Icons.speed_rounded,
+                        title: 'Prestazioni',
+                        value: s.performanceMode,
+                        options: const {
+                          PerformanceMode.auto: 'Auto',
+                          PerformanceMode.full: 'Complete',
+                          PerformanceMode.light: 'Leggere',
+                        },
+                        onChanged: (v) async {
+                          await s.setPerformanceMode(v);
+                          setState(() {});
+                          widget.onToast('Applicato al prossimo avvio');
+                        },
+                      ),
+                      _ChoiceRow<UiScale>(
+                        icon: Icons.format_size_rounded,
+                        title: 'Dimensione interfaccia',
+                        value: s.uiScale,
+                        options: const {
+                          UiScale.auto: 'Auto',
+                          UiScale.large: 'Grande',
+                          UiScale.medium: 'Media',
+                          UiScale.small: 'Piccola',
+                        },
+                        onChanged: (v) async {
+                          await s.setUiScale(v);
+                          app.settingsChanged();
+                          setState(() {});
+                        },
+                      ),
+                      _InfoRow(
+                        'Profilo attivo',
+                        '${perf.isLight ? 'Leggero' : 'Completo'} · ${perf.reason}',
+                      ),
+
+                      if (!form.hidesQr) ...[
+                        const _Section('Telecomando'),
+                        _ActionRow(
+                          icon: Icons.phone_iphone_rounded,
+                          title: 'Configura telecomando',
+                          subtitle: 'Usa lo smartphone come telecomando, con elenco canali e guida',
+                          onSelect: () async {
+                            _dialogOpen = true;
+                            await showRemoteSetup(context);
+                            _dialogOpen = false;
+                          },
+                        ),
+                      ],
+
+                      const _Section('Abbonamento'),
+                      _InfoRow(
+                        'Tipo',
+                        app.credentials?.isM3u ?? false
+                            ? 'Playlist M3U'
+                            : 'Xtream Codes',
+                      ),
+                      _InfoRow(
+                        app.credentials?.isM3u ?? false ? 'Playlist' : 'Server',
+                        app.credentials?.serverUrl ?? '—',
+                      ),
+                      if (!(app.credentials?.isM3u ?? false))
+                        _InfoRow('Utente', app.credentials?.username ?? '—'),
+                      if (acct != null && !(app.credentials?.isM3u ?? false))
+                        _InfoRow(
+                          'Scadenza',
+                          acct.expiresAt == null
+                              ? 'Illimitato'
+                              : '${dayLong(acct.expiresAt!)} ${acct.expiresAt!.year}',
+                        ),
+                      if (acct?.maxConnections != null &&
+                          !(app.credentials?.isM3u ?? false))
+                        _InfoRow('Connessioni', '${acct!.maxConnections} max'),
+                      _ActionRow(
+                        icon: Icons.logout_rounded,
+                        title: 'Cambia account',
+                        subtitle: 'Torna alla schermata di configurazione',
+                        onSelect: () async {
+                          widget.onClose();
+                          await app.logout();
+                        },
+                      ),
+
+                      const _Section('Comandi'),
+                      const _Shortcuts(),
+                      const SizedBox(height: 18),
+                      Center(
+                        child: Column(
+                          children: [
+                            Image.asset(
+                              Brand.logo,
+                              width: 150,
+                              cacheWidth: Brand.decodeSize(
+                                150,
+                                MediaQuery.devicePixelRatioOf(context),
+                                Brand.logoWidth,
+                              ),
+                              semanticLabel: Brand.name,
+                              filterQuality: FilterQuality.medium,
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              '${Brand.name} 0.1',
+                              style: AppText.label.copyWith(
+                                color: Palette.textTertiary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -860,10 +900,17 @@ class _Shortcuts extends StatelessWidget {
                       endIndent: 16,
                       color: Colors.white.withValues(alpha: 0.06),
                     ),
-                  _ShortcutRow(
-                    keys: items[i].$1,
-                    text: items[i].$2,
-                    note: items[i].$3,
+                  // Ogni comando prende il focus (senza azione): così col
+                  // telecomando si scende a leggerli tutti.
+                  FocusTile(
+                    padding: EdgeInsets.zero,
+                    radius: 14,
+                    revealMargin: _Row.reveal,
+                    child: _ShortcutRow(
+                      keys: items[i].$1,
+                      text: items[i].$2,
+                      note: items[i].$3,
+                    ),
                   ),
                 ],
               ],
