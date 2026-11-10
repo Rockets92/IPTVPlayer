@@ -214,7 +214,7 @@ class AppController extends ChangeNotifier {
       if (preferCache) {
         final cached = await _readStreamCache();
         if (cached != null) {
-          _rebuild(cached.$1, cached.$2);
+          await _rebuild(cached.$1, cached.$2);
           if (channels.isNotEmpty) {
             phase = AppPhase.ready;
             _notify();
@@ -238,7 +238,7 @@ class AppController extends ChangeNotifier {
       final streams = results[1] as List<XtreamLiveStream>;
       final catMap = {for (final c in cats) c.id: c.name};
       _noteM3uEpg(client);
-      _rebuild(streams, catMap);
+      await _rebuild(streams, catMap);
       unawaited(_writeStreamCache(streams, catMap));
       if (channels.isEmpty) {
         throw const XtreamException(
@@ -264,20 +264,51 @@ class AppController extends ChangeNotifier {
     }
   }
 
-  void _rebuild(List<XtreamLiveStream> streams, Map<String, String> cats) {
+  int _rebuildGen = 0;
+
+  /// Abbina gli stream del provider alla lista canali. Con migliaia di stream
+  /// richiede secondi sui box più lenti: si fa in un isolate, così il thread
+  /// dell'interfaccia resta libero (prima bloccava l'avvio fino all'ANR).
+  /// Restituisce false se nel frattempo è partito un abbinamento più recente.
+  Future<bool> _rebuild(
+    List<XtreamLiveStream> streams,
+    Map<String, String> cats,
+  ) async {
+    final gen = ++_rebuildGen;
+    final built = await _matchInIsolate(
+      mapping!,
+      streams,
+      cats,
+      preferLighter: perf.preferLighterStreams,
+      showUnmapped: settings.showUnmapped,
+      includeAdult: settings.adultMode != AdultMode.off,
+    );
+    if (gen != _rebuildGen) return false;
     _directUrls = {
       for (final s in streams)
         if (s.url != null) s.streamId: s.url!,
     };
-    channels = ChannelMatcher(preferLighterStreams: perf.preferLighterStreams)
-        .build(
-          mapping: mapping!,
-          streams: streams,
-          categoryNames: cats,
-          showUnmapped: settings.showUnmapped,
-          includeAdult: settings.adultMode != AdultMode.off,
-        );
+    channels = built;
+    return true;
   }
+
+  // Statico: la chiusura inviata all'isolate non deve catturare il controller.
+  static Future<List<Channel>> _matchInIsolate(
+    ChannelMapping mapping,
+    List<XtreamLiveStream> streams,
+    Map<String, String> cats, {
+    required bool preferLighter,
+    required bool? showUnmapped,
+    required bool includeAdult,
+  }) => Isolate.run(
+    () => ChannelMatcher(preferLighterStreams: preferLighter).build(
+      mapping: mapping,
+      streams: streams,
+      categoryNames: cats,
+      showUnmapped: showUnmapped,
+      includeAdult: includeAdult,
+    ),
+  );
 
   Future<void> _refreshStreamsQuietly() async {
     try {
@@ -292,7 +323,7 @@ class AppController extends ChangeNotifier {
       final catMap = {for (final c in cats) c.id: c.name};
       if (streams.isEmpty) return;
       _noteM3uEpg(client);
-      _rebuild(streams, catMap);
+      if (!await _rebuild(streams, catMap)) return;
       _notify();
       await _writeStreamCache(streams, catMap);
     } catch (_) {
@@ -305,7 +336,7 @@ class AppController extends ChangeNotifier {
     try {
       mapping = await _mappingRepo.load(source: settings.mappingSource);
       final cached = await _readStreamCache();
-      if (cached != null) _rebuild(cached.$1, cached.$2);
+      if (cached != null) await _rebuild(cached.$1, cached.$2);
     } catch (_) {
       return;
     }

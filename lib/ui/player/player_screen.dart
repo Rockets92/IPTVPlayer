@@ -62,6 +62,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
   Timer? _cursorTimer;
   late final TunerController _tuner = context.read<TunerController>();
   late final AppController _app = context.read<AppController>();
+  late final PlaybackEngine _engine = context.read<PlaybackEngine>();
   String? _lastEpgStatus;
 
   @override
@@ -398,6 +399,15 @@ class _PlayerScreenState extends State<PlayerScreen> {
     );
     _exitAsked = false;
     if (yes) {
+      // Android: il video si rilascia prima di chiudere l'attività. Altrimenti
+      // la superficie video consegna ancora fotogrammi a un motore Flutter
+      // già staccato e l'app va in crash ("FlutterJNI is not attached").
+      if (!kIsWeb && Platform.isAndroid) {
+        await _engine.dispose().timeout(
+          const Duration(seconds: 2),
+          onTimeout: () {},
+        );
+      }
       await SystemNavigator.pop();
     } else if (mounted) {
       _rootFocus.requestFocus();

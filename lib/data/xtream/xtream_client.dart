@@ -137,8 +137,20 @@ class XtreamClient implements LiveSource {
   @override
   Future<List<XtreamLiveStream>> liveStreams() => HeavyWork.run(() async {
     final body = await _getBytes(_api({'action': 'get_live_streams'}));
-    return Isolate.run(() => _parseStreams(body));
+    return _parseStreamsInIsolate(body);
   });
+
+  // Le chiusure passate a Isolate.run nascono in metodi statici: dentro un
+  // metodo dell'istanza catturerebbero anche il client HTTP, che non si può
+  // inviare a un isolate ("object is unsendable").
+  static Future<List<XtreamLiveStream>> _parseStreamsInIsolate(
+    Uint8List body,
+  ) => Isolate.run(() => _parseStreams(body));
+
+  static Future<List<VodItem>> _parseItemsInIsolate(
+    Uint8List body, {
+    required bool series,
+  }) => Isolate.run(() => _parseItems(body, series: series));
 
   static List<XtreamLiveStream> _parseStreams(Uint8List body) {
     final out = <XtreamLiveStream>[];
@@ -173,12 +185,12 @@ class XtreamClient implements LiveSource {
   /// fuori dal thread UI.
   Future<List<VodItem>> vodStreams() => HeavyWork.run(() async {
     final body = await _getBytes(_api({'action': 'get_vod_streams'}));
-    return Isolate.run(() => _parseItems(body, series: false));
+    return _parseItemsInIsolate(body, series: false);
   });
 
   Future<List<VodItem>> series() => HeavyWork.run(() async {
     final body = await _getBytes(_api({'action': 'get_series'}));
-    return Isolate.run(() => _parseItems(body, series: true));
+    return _parseItemsInIsolate(body, series: true);
   });
 
   static List<VodItem> _parseItems(Uint8List body, {required bool series}) {

@@ -84,6 +84,13 @@ Future<void> main() async {
   app.start();
   unawaited(remote.start());
 
+  // Android chiude l'attività (uscita, memoria, standby): il video va fermato
+  // prima che il motore Flutter si stacchi, o i fotogrammi in arrivo fanno
+  // chiudere l'app con "FlutterJNI is not attached to native".
+  if (!kIsWeb && Platform.isAndroid) {
+    AppLifecycleListener(onDetach: () => unawaited(engine.dispose()));
+  }
+
   runApp(
     MultiProvider(
       providers: [
