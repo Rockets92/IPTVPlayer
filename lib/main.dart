@@ -8,6 +8,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'app.dart';
@@ -25,6 +26,9 @@ import 'state/app_controller.dart';
 import 'state/reminder_controller.dart';
 import 'state/tuner_controller.dart';
 import 'state/vod_controller.dart';
+import 'sync/account_config.dart';
+import 'sync/account_controller.dart';
+import 'sync/sync_engine.dart';
 import 'ui/widgets/focus_tile.dart';
 
 Future<void> main() async {
@@ -83,8 +87,31 @@ Future<void> main() async {
     reminders: reminders,
     vod: vod,
   );
+  final account = AccountController(
+    client: await _initSupabase(),
+    prefs: settings.prefs,
+    formFactor: formFactor,
+    engineFor: (backend) => SyncEngine(
+      backend: backend,
+      prefs: settings.prefs,
+      reminders: reminders,
+      settings: settings,
+      vod: vod,
+      onPrefsApplied: (keys) async {
+        app.settingsChanged();
+        if (keys.contains(SettingsStore.keyMapping)) {
+          await app.applyMapping();
+        } else if (keys.contains(SettingsStore.keyExtraEpg) ||
+            keys.contains(SettingsStore.keyProviderEpg)) {
+          await app.refreshEpg();
+        }
+      },
+    ),
+  );
+  remote.account = account;
   app.start();
   unawaited(remote.start());
+  unawaited(account.start());
 
   // Android chiude l'attività (uscita, memoria, standby): il video va fermato
   // prima che il motore Flutter si stacchi, o i fotogrammi in arrivo fanno
@@ -104,9 +131,28 @@ Future<void> main() async {
         ChangeNotifierProvider<ReminderController>.value(value: reminders),
         ChangeNotifierProvider<VodController>.value(value: vod),
         ChangeNotifierProvider<RemoteServer>.value(value: remote),
+        ChangeNotifierProvider<AccountController>.value(value: account),
         ChangeNotifierProvider<GamePads>.value(value: remote.pads),
       ],
       child: const IptvApp(),
     ),
   );
+}
+
+/// Servizio dell'account: se non parte (es. niente rete al primo avvio)
+/// l'app funziona comunque, solo senza sincronizzazione.
+Future<SupabaseClient?> _initSupabase() async {
+  if (!AccountConfig.enabled) return null;
+  try {
+    final s = await Supabase.initialize(
+      url: AccountConfig.url,
+      publishableKey: AccountConfig.publishableKey,
+      authOptions: const FlutterAuthClientOptions(detectSessionInUri: false),
+      debug: false,
+    ).timeout(const Duration(seconds: 8));
+    return s.client;
+  } catch (e) {
+    debugPrint('account: servizio non disponibile ($e)');
+    return null;
+  }
 }

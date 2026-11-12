@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:convert';
 
+import 'package:crypto/crypto.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/performance.dart';
@@ -19,9 +21,20 @@ enum AdultMode { off, on, pin }
 /// Dimensione dell'interfaccia: su TV "auto" la riduce come su un decoder.
 enum UiScale { auto, large, medium, small }
 
+/// Preferenza personale da sincronizzare: valore salvato (stringa, bool o
+/// lista di stringhe; null = tolta) e ultima modifica in millisecondi epoch.
+typedef SyncedPref = ({Object? value, int updatedAt});
+
 /// Preferenze persistenti.
+///
+/// Si dividono in personali ([syncedKeys]: seguono l'account su tutti i
+/// dispositivi) e del dispositivo (scala dell'interfaccia, profilo light,
+/// ultimo canale, dati della lista, codici del telecomando), che restano
+/// locali.
 class SettingsStore {
-  SettingsStore(this._prefs);
+  SettingsStore(this._prefs) {
+    _migrateAdultPin();
+  }
 
   static Future<SettingsStore> open() async =>
       SettingsStore(await SharedPreferences.getInstance());
@@ -32,6 +45,12 @@ class SettingsStore {
   SharedPreferences get prefs => _prefs;
 
   static const _kCreds = 'xtream.credentials';
+
+  /// Chiavi pubbliche di alcune preferenze personali, per reagire quando
+  /// arrivano da un altro dispositivo.
+  static const keyMapping = _kMapping;
+  static const keyExtraEpg = _kExtraEpg;
+  static const keyProviderEpg = _kProviderEpg;
   static const _kAccount = 'xtream.account';
   static const _kLastChannel = 'tuner.lastChannel';
   static const _kMapping = 'mapping.source';
@@ -43,7 +62,108 @@ class SettingsStore {
   static const _kSources = 'tuner.sourceChoices';
   static const _kAdult = 'channels.adultMode';
   static const _kUiScale = 'ui.scale';
-  static const _kAdultPin = 'channels.adultPin';
+
+  /// Vecchio PIN in chiaro: alla prima apertura diventa [_kAdultPinHash].
+  static const _kAdultPinLegacy = 'channels.adultPin';
+  static const _kAdultPinHash = 'channels.adultPinHash';
+  static const _kSyncStamps = 'sync.prefsUpdated.v1';
+
+  /// Preferenze personali, uguali su tutti i dispositivi dell'account.
+  /// Il formato dello stream resta per dispositivo: alcuni decoder vanno
+  /// meglio con HLS, altri con MPEG-TS.
+  static const syncedKeys = {
+    _kMapping,
+    _kExtraEpg,
+    _kProviderEpg,
+    _kShowUnmapped,
+    _kSources,
+    _kAdult,
+    _kAdultPinHash,
+  };
+
+  /// Orologio, sostituibile nei test.
+  int Function() clock = () => DateTime.now().millisecondsSinceEpoch;
+
+  /// Chiamato quando cambia una preferenza personale su questo dispositivo.
+  void Function()? onLocalChange;
+
+  Map<String, int> get _stamps {
+    try {
+      final m = jsonDecode(_prefs.getString(_kSyncStamps) ?? '{}');
+      if (m is Map) {
+        return {
+          for (final e in m.entries)
+            if (e.value is num) '${e.key}': (e.value as num).toInt(),
+        };
+      }
+    } catch (_) {}
+    return {};
+  }
+
+  Future<void> _stamp(String key) async {
+    final m = _stamps..[key] = clock();
+    await _prefs.setString(_kSyncStamps, jsonEncode(m));
+    onLocalChange?.call();
+  }
+
+  Object? _raw(String key) {
+    final v = _prefs.get(key);
+    return v is List ? v.map((e) => '$e').toList() : v;
+  }
+
+  /// Preferenze personali con la data dell'ultima modifica, da inviare
+  /// agli altri dispositivi. Quelle mai toccate hanno data 0.
+  Map<String, SyncedPref> get syncedPrefs {
+    final st = _stamps;
+    return {
+      for (final k in syncedKeys) k: (value: _raw(k), updatedAt: st[k] ?? 0),
+    };
+  }
+
+  /// Applica le preferenze arrivate da un altro dispositivo, solo se più
+  /// recenti di quelle locali. Restituisce le chiavi cambiate.
+  Future<Set<String>> applyRemotePrefs(Map<String, SyncedPref> remote) async {
+    final st = _stamps;
+    final changed = <String>{};
+    for (final e in remote.entries) {
+      if (!syncedKeys.contains(e.key)) continue;
+      if (e.value.updatedAt <= (st[e.key] ?? 0)) continue;
+      final v = e.value.value;
+      switch (v) {
+        case null:
+          await _prefs.remove(e.key);
+        case String():
+          await _prefs.setString(e.key, v);
+        case bool():
+          await _prefs.setBool(e.key, v);
+        case List():
+          await _prefs.setStringList(e.key, [for (final x in v) '$x']);
+        default:
+          continue;
+      }
+      st[e.key] = e.value.updatedAt;
+      changed.add(e.key);
+    }
+    if (changed.isNotEmpty) {
+      await _prefs.setString(_kSyncStamps, jsonEncode(st));
+    }
+    return changed;
+  }
+
+  /// Impronta del PIN: sul dispositivo e sul server non resta il PIN in
+  /// chiaro. Con 4 cifre non è una protezione forte: serve a non mostrarlo
+  /// a chi guarda i dati salvati.
+  static String hashPin(String pin) =>
+      sha256.convert(utf8.encode('bb-iptv-player/pin:$pin')).toString();
+
+  void _migrateAdultPin() {
+    final old = _prefs.getString(_kAdultPinLegacy);
+    if (old == null) return;
+    if (_prefs.getString(_kAdultPinHash) == null) {
+      unawaited(_prefs.setString(_kAdultPinHash, hashPin(old)));
+    }
+    unawaited(_prefs.remove(_kAdultPinLegacy));
+  }
 
   XtreamCredentials? get credentials {
     final raw = _prefs.getString(_kCreds);
@@ -83,22 +203,33 @@ class SettingsStore {
 
   /// Sorgente della mappatura: vuoto = integrata, altrimenti URL o percorso.
   String get mappingSource => _prefs.getString(_kMapping) ?? '';
-  Future<void> setMappingSource(String v) =>
-      _prefs.setString(_kMapping, v.trim());
+  Future<void> setMappingSource(String v) async {
+    await _prefs.setString(_kMapping, v.trim());
+    await _stamp(_kMapping);
+  }
 
   List<String> get extraEpgSources =>
       _prefs.getStringList(_kExtraEpg) ?? const [];
-  Future<void> setExtraEpgSources(List<String> v) => _prefs.setStringList(
-    _kExtraEpg,
-    v.map((e) => e.trim()).where((e) => e.isNotEmpty).toList(),
-  );
+  Future<void> setExtraEpgSources(List<String> v) async {
+    await _prefs.setStringList(
+      _kExtraEpg,
+      v.map((e) => e.trim()).where((e) => e.isNotEmpty).toList(),
+    );
+    await _stamp(_kExtraEpg);
+  }
 
   bool get useProviderEpg => _prefs.getBool(_kProviderEpg) ?? true;
-  Future<void> setUseProviderEpg(bool v) => _prefs.setBool(_kProviderEpg, v);
+  Future<void> setUseProviderEpg(bool v) async {
+    await _prefs.setBool(_kProviderEpg, v);
+    await _stamp(_kProviderEpg);
+  }
 
   /// `null` = segue l'impostazione della mappatura.
   bool? get showUnmapped => _prefs.getBool(_kShowUnmapped);
-  Future<void> setShowUnmapped(bool v) => _prefs.setBool(_kShowUnmapped, v);
+  Future<void> setShowUnmapped(bool v) async {
+    await _prefs.setBool(_kShowUnmapped, v);
+    await _stamp(_kShowUnmapped);
+  }
 
   PerformanceMode get performanceMode => PerformanceMode.values.firstWhere(
     (m) => m.name == _prefs.getString(_kPerf),
@@ -130,14 +261,15 @@ class SettingsStore {
 
   String? sourceChoice(String channelId) => sourceChoices[channelId];
 
-  Future<void> setSourceChoice(String channelId, String? label) {
+  Future<void> setSourceChoice(String channelId, String? label) async {
     final m = Map<String, String>.of(sourceChoices);
     if (label == null) {
       m.remove(channelId);
     } else {
       m[channelId] = label;
     }
-    return _prefs.setString(_kSources, jsonEncode(m));
+    await _prefs.setString(_kSources, jsonEncode(m));
+    await _stamp(_kSources);
   }
 
   UiScale get uiScale => UiScale.values.firstWhere(
@@ -152,19 +284,24 @@ class SettingsStore {
     orElse: () => AdultMode.off,
   );
 
-  /// PIN del parental control (solo in modalità [AdultMode.pin]).
-  String? get adultPin => _prefs.getString(_kAdultPin);
+  /// Impronta del PIN del parental control (solo in modalità
+  /// [AdultMode.pin]).
+  String? get _adultPinHash => _prefs.getString(_kAdultPinHash);
 
   Future<void> setAdultMode(AdultMode m, {String? pin}) async {
     await _prefs.setString(_kAdult, m.name);
+    await _stamp(_kAdult);
     if (m == AdultMode.pin && pin != null) {
-      await _prefs.setString(_kAdultPin, pin);
+      await _prefs.setString(_kAdultPinHash, hashPin(pin));
+      await _stamp(_kAdultPinHash);
     } else if (m != AdultMode.pin) {
-      await _prefs.remove(_kAdultPin);
+      await _prefs.remove(_kAdultPinHash);
+      await _stamp(_kAdultPinHash);
     }
   }
 
-  bool checkAdultPin(String pin) => pin.isNotEmpty && pin == adultPin;
+  bool checkAdultPin(String pin) =>
+      pin.isNotEmpty && hashPin(pin) == _adultPinHash;
 
   Future<void> clearAccount() async {
     await _prefs.remove(_kCreds);

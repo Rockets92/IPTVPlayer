@@ -10,11 +10,13 @@ import '../../data/settings_store.dart';
 import '../../state/app_controller.dart';
 import '../../state/tuner_controller.dart';
 import '../../state/vod_controller.dart';
+import '../../sync/account_controller.dart';
 import '../format.dart';
 import '../widgets/focus_tile.dart';
 import '../widgets/glass.dart';
 import '../widgets/glass_field.dart';
 import '../widgets/pin_dialog.dart';
+import 'account_dialog.dart';
 import 'epg_phone_dialog.dart';
 import 'remote_setup_dialog.dart';
 
@@ -280,6 +282,30 @@ class _SettingsPanelState extends State<SettingsPanel> {
                           style: AppText.display.copyWith(fontSize: 26),
                         ),
                       ),
+                      const _Section('Account'),
+                      Builder(
+                        builder: (context) {
+                          final acc = context.watch<AccountController>();
+                          final inside = acc.stage == AccountStage.signedIn;
+                          return _ActionRow(
+                            focusNode: _first,
+                            icon: inside
+                                ? Icons.cloud_done_rounded
+                                : Icons.account_circle_rounded,
+                            title: inside
+                                ? (acc.email ?? 'Account')
+                                : 'Accedi o registrati',
+                            subtitle: inside
+                                ? 'Promemoria e preferenze sincronizzati · dispositivi collegati'
+                                : 'Ritrova promemoria e preferenze su tutti i dispositivi',
+                            onSelect: () async {
+                              _dialogOpen = true;
+                              await showAccountDialog(context);
+                              _dialogOpen = false;
+                            },
+                          );
+                        },
+                      ),
                       const _Section('Lista canali'),
                       _InfoRow(
                         'In uso',
@@ -289,7 +315,6 @@ class _SettingsPanelState extends State<SettingsPanel> {
                       ),
                       _InfoRow('Canali', '${app.channels.length}'),
                       _ActionRow(
-                        focusNode: _first,
                         icon: Icons.link_rounded,
                         title: 'Sorgente lista',
                         subtitle: s.mappingSource.isEmpty

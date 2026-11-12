@@ -33,7 +33,21 @@ class Reminder {
     this.repeat = ReminderRepeat.once,
     this.days = const [],
     this.snooze,
-  });
+    String? id,
+    this.updatedAt = 0,
+  }) : _id = id; // ignore: prefer_initializing_formals
+
+  final String? _id;
+
+  /// Identità stabile per la sincronizzazione tra dispositivi: nasce dal
+  /// canale e dall'orario della prima prenotazione e non cambia quando un
+  /// ricorrente passa alla volta successiva. Lo stesso programma prenotato
+  /// su due dispositivi ha quindi lo stesso id.
+  String get id => _id ?? '$channelId@$start';
+
+  /// Ultima modifica (millisecondi epoch): tra due dispositivi vince la più
+  /// recente. 0 = dato salvato prima della sincronizzazione.
+  final int updatedAt;
 
   /// Giorni della settimana per la ripetizione settimanale
   /// (1 = lunedì … 7 = domenica, come [DateTime.weekday]).
@@ -79,7 +93,10 @@ class Reminder {
     ReminderRepeat? repeat,
     List<int>? days,
     int? Function()? snooze,
+    int? updatedAt,
   }) => Reminder(
+    id: id,
+    updatedAt: updatedAt ?? this.updatedAt,
     channelId: channelId,
     channelNumber: channelNumber,
     channelName: channelName,
@@ -149,6 +166,8 @@ class Reminder {
     if (recurring) 'r': repeat.name,
     if (days.isNotEmpty) 'd': days,
     'z': ?snooze,
+    'id': id,
+    'u': updatedAt,
   };
 
   static Reminder? fromJson(Object? j) {
@@ -166,6 +185,8 @@ class Reminder {
           ? (j['d'] as List).whereType<num>().map((e) => e.toInt()).toList()
           : const [],
       snooze: (j['z'] as num?)?.toInt(),
+      id: j['id'] is String ? j['id'] as String : null,
+      updatedAt: (j['u'] as num?)?.toInt() ?? 0,
     );
   }
 }
@@ -181,10 +202,30 @@ class ReminderController extends ChangeNotifier {
 
   static const lead = Duration(minutes: 5);
   static const _key = 'reminders.v1';
+  static const _kDeleted = 'reminders.deleted.v1';
+
+  /// Per quanto si ricorda una cancellazione: un dispositivo rimasto spento
+  /// più a lungo potrebbe riproporre un promemoria già cancellato.
+  static const tombstoneTtl = Duration(days: 60);
 
   final SharedPreferences _prefs;
   final List<Reminder> _items = [];
   Timer? _timer;
+
+  /// Promemoria cancellati: id → quando (millisecondi epoch).
+  final Map<String, int> _deleted = {};
+
+  /// Chiamato a ogni modifica fatta su questo dispositivo (non per quelle
+  /// arrivate da altri dispositivi con [mergeRemote]): la sincronizzazione
+  /// la usa per inviare le novità.
+  VoidCallback? onLocalChange;
+
+  /// Orologio, sostituibile nei test.
+  @visibleForTesting
+  int Function() clock = () => DateTime.now().millisecondsSinceEpoch;
+
+  /// Cancellazioni ancora da ricordare (id → millisecondi epoch).
+  Map<String, int> get deletions => Map.unmodifiable(_deleted);
 
   /// Promemoria da mostrare adesso (uno alla volta).
   Reminder? due;
@@ -200,7 +241,7 @@ class ReminderController extends ChangeNotifier {
       (r) => r.channelId == c.id && r.start == p.start,
     );
     if (i >= 0) {
-      _items.removeAt(i);
+      _forget(_items.removeAt(i));
       _save();
       notifyListeners();
       return false;
@@ -214,6 +255,7 @@ class ReminderController extends ChangeNotifier {
           channelName: c.name,
           title: p.title,
           start: p.start,
+          updatedAt: clock(),
         ),
       )
       ..sort((a, b) => a.start.compareTo(b.start));
@@ -248,7 +290,9 @@ class ReminderController extends ChangeNotifier {
     if (d == null || !canSnooze(d, before)) return;
     final i = _items.indexWhere((r) => r.key == d.key);
     final at = d.startTime.subtract(before).millisecondsSinceEpoch ~/ 1000;
-    if (i >= 0) _items[i] = d.copyWith(snooze: () => at);
+    if (i >= 0) {
+      _items[i] = d.copyWith(snooze: () => at, updatedAt: clock());
+    }
     due = null;
     _save();
     notifyListeners();
@@ -258,7 +302,11 @@ class ReminderController extends ChangeNotifier {
   Reminder? setRepeat(Reminder r, ReminderRepeat repeat, [List<int>? days]) {
     final i = _items.indexWhere((x) => x.key == r.key);
     if (i < 0) return null;
-    var n = r.copyWith(repeat: repeat, days: days ?? r.days);
+    var n = r.copyWith(
+      repeat: repeat,
+      days: days ?? r.days,
+      updatedAt: clock(),
+    );
     // Settimanale su giorni che non comprendono quello del programma: si
     // parte dal primo giorno scelto.
     if (n.repeat == ReminderRepeat.weekly &&
@@ -276,7 +324,10 @@ class ReminderController extends ChangeNotifier {
   }
 
   void remove(Reminder r) {
-    _items.removeWhere((x) => x.key == r.key);
+    for (final x in _items.where((x) => x.key == r.key).toList()) {
+      _items.remove(x);
+      _forget(x);
+    }
     if (due?.key == r.key) due = null;
     _save();
     notifyListeners();
@@ -293,14 +344,54 @@ class ReminderController extends ChangeNotifier {
         : d.startTime;
     final next = d.nextAfter(base);
     if (next == null) {
-      _items.removeAt(i);
+      _forget(_items.removeAt(i));
     } else {
       _items[i] = d.copyWith(
         start: next.millisecondsSinceEpoch ~/ 1000,
         snooze: () => null,
+        updatedAt: clock(),
       );
       _sort();
     }
+  }
+
+  void _forget(Reminder r) => _deleted[r.id] = clock();
+
+  /// Unisce i promemoria arrivati da un altro dispositivo: per ogni id vince
+  /// la modifica più recente, e una cancellazione più recente di una modifica
+  /// la annulla. Non richiama [onLocalChange].
+  void mergeRemote({
+    Iterable<Reminder> upserts = const [],
+    Map<String, int> deletions = const {},
+  }) {
+    var changed = false;
+    for (final e in deletions.entries) {
+      if ((_deleted[e.key] ?? -1) < e.value) _deleted[e.key] = e.value;
+      final i = _items.indexWhere((r) => r.id == e.key);
+      if (i >= 0 && _items[i].updatedAt <= e.value) {
+        final r = _items.removeAt(i);
+        if (due?.id == r.id) due = null;
+        changed = true;
+      }
+    }
+    for (final r in upserts) {
+      if ((_deleted[r.id] ?? -1) >= r.updatedAt) continue;
+      final i = _items.indexWhere((x) => x.id == r.id);
+      if (i < 0) {
+        _items.add(r);
+        changed = true;
+      } else if (_items[i].updatedAt < r.updatedAt) {
+        _items[i] = r;
+        if (due?.id == r.id) due = null;
+        changed = true;
+      }
+      _deleted.remove(r.id);
+    }
+    if (!changed) return;
+    _sort();
+    _save(local: false);
+    notifyListeners();
+    _check();
   }
 
   void _sort() => _items.sort((a, b) => a.start.compareTo(b.start));
@@ -345,11 +436,27 @@ class ReminderController extends ChangeNotifier {
         _items.sort((a, b) => a.start.compareTo(b.start));
       }
     } catch (_) {}
+    try {
+      final m = jsonDecode(_prefs.getString(_kDeleted) ?? '{}');
+      if (m is Map) {
+        final oldest = clock() - tombstoneTtl.inMilliseconds;
+        for (final e in m.entries) {
+          final t = (e.value as num?)?.toInt();
+          if (t != null && t >= oldest) _deleted['${e.key}'] = t;
+        }
+      }
+    } catch (_) {}
   }
 
-  void _save() => unawaited(
-    _prefs.setString(_key, jsonEncode([for (final r in _items) r.toJson()])),
-  );
+  void _save({bool local = true}) {
+    final oldest = clock() - tombstoneTtl.inMilliseconds;
+    _deleted.removeWhere((_, t) => t < oldest);
+    unawaited(
+      _prefs.setString(_key, jsonEncode([for (final r in _items) r.toJson()])),
+    );
+    unawaited(_prefs.setString(_kDeleted, jsonEncode(_deleted)));
+    if (local) onLocalChange?.call();
+  }
 
   @override
   void dispose() {

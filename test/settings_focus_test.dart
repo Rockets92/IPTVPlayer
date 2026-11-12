@@ -5,6 +5,7 @@ import 'package:iptv_player/core/form_factor.dart';
 import 'package:iptv_player/core/performance.dart';
 import 'package:iptv_player/data/settings_store.dart';
 import 'package:iptv_player/state/app_controller.dart';
+import 'package:iptv_player/sync/account_controller.dart';
 import 'package:iptv_player/ui/settings/settings_panel.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -45,6 +46,14 @@ void main() {
               ChangeNotifierProvider.value(value: app),
               Provider.value(value: perf),
               Provider.value(value: form),
+              ChangeNotifierProvider.value(
+                value: AccountController(
+                  client: null,
+                  prefs: settings.prefs,
+                  formFactor: form,
+                  engineFor: (_) => throw UnimplementedError(),
+                ),
+              ),
             ],
             child: MaterialApp(
               home: Scaffold(
