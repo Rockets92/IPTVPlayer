@@ -13,4 +13,10 @@ abstract final class AccountConfig {
   );
 
   static bool get enabled => url.isNotEmpty && publishableKey.isNotEmpty;
+
+  /// Telecomando unico sul telefono (GitHub Pages del repository).
+  static const remoteWebUrl = String.fromEnvironment(
+    'REMOTE_WEB_URL',
+    defaultValue: 'https://rockets92.github.io/IPTVPlayer/',
+  );
 }

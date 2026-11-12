@@ -39,9 +39,12 @@ class _GuideOverlayState extends State<GuideOverlay> {
   int _group = 0;
 
   /// Voce evidenziata mentre si scorrono le categorie con ←→ (indice nella
-  /// striscia: 0 = "I tuoi promemoria", 1 = "Tutti", poi le categorie;
-  /// null: si è nell'elenco).
+  /// striscia: 0 = "Preferiti", 1 = "I tuoi promemoria", 2 = "Tutti", poi
+  /// le categorie; null: si è nell'elenco).
   int? _groupCursor;
+
+  /// Vista "Preferiti": solo i canali segnati come preferiti.
+  bool _favView = false;
 
   /// Sezione "I tuoi promemoria" al posto dei canali.
   bool _remView = false;
@@ -53,19 +56,54 @@ class _GuideOverlayState extends State<GuideOverlay> {
   int _dayCursor = 0;
 
   /// Voce della striscia corrispondente alla vista attuale.
-  int get _stripIndex => _remView ? 0 : _group + 1;
+  int get _stripIndex => _favView
+      ? 0
+      : _remView
+      ? 1
+      : _group + 2;
 
   void _setStrip(int i) {
     if (i == 0) {
+      final current = context.read<TunerController>().current;
       setState(() {
+        _favView = true;
+        _remView = false;
+        _editRow = null;
+        final idx = current == null ? -1 : _channels.indexOf(current);
+        _ch = idx < 0 ? 0 : idx;
+        _prog = 0;
+        _inProgrammes = false;
+      });
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _revealChannel(animate: false),
+      );
+      final list = _channels;
+      if (list.isNotEmpty) context.read<AppController>().ensureEpg(list[_ch]);
+    } else if (i == 1) {
+      setState(() {
+        _favView = false;
         _remView = true;
         _rem = 0;
         _editRow = null;
       });
     } else {
       if (_remView) setState(() => _remView = false);
-      _setGroup(i - 1);
+      _setGroup(i - 2);
     }
+  }
+
+  /// Segna o toglie come preferito il canale evidenziato.
+  Future<void> _toggleFavorite() async {
+    final list = _channels;
+    if (list.isEmpty) return;
+    final c = list[_ch.clamp(0, list.length - 1)];
+    await context.read<AppController>().toggleFavorite(c);
+    if (!mounted) return;
+    final n = _channels.length;
+    setState(() {
+      if (_ch >= n) _ch = n == 0 ? 0 : n - 1;
+      if (n == 0) _inProgrammes = false;
+    });
   }
 
   List<Reminder> get _reminders => context.read<ReminderController>().items;
@@ -128,14 +166,14 @@ class _GuideOverlayState extends State<GuideOverlay> {
     if (_editRow == null) {
       if (k == LogicalKeyboardKey.arrowUp) {
         if (_rem == 0 || n == 0) {
-          setState(() => _groupCursor = 0);
+          setState(() => _groupCursor = 1);
         } else {
           setState(() => _rem--);
         }
       } else if (k == LogicalKeyboardKey.arrowDown) {
         if (n > 0) setState(() => _rem = (_rem + 1).clamp(0, n - 1));
       } else if (k == LogicalKeyboardKey.arrowLeft) {
-        setState(() => _groupCursor = 0);
+        setState(() => _groupCursor = 1);
       } else if (k == LogicalKeyboardKey.arrowRight || isSelectKey(k)) {
         if (n == 0) return KeyEventResult.handled;
         final r = items[_rem.clamp(0, n - 1)];
@@ -187,6 +225,7 @@ class _GuideOverlayState extends State<GuideOverlay> {
 
   /// Canali della categoria scelta (0 = tutti).
   List<Channel> get _channels {
+    if (_favView) return context.read<AppController>().favoriteChannels;
     final all = context.read<AppController>().channels;
     if (_group == 0 || _group > _groups.length) return all;
     final g = _groups[_group - 1];
@@ -195,6 +234,7 @@ class _GuideOverlayState extends State<GuideOverlay> {
 
   /// Nelle categorie "vista" (Vetrina) i canali collegati sono rientrati.
   bool _isLinked(Channel c) {
+    if (_favView) return false;
     if (_group == 0 || _group > _groups.length) return false;
     final g = _groups[_group - 1];
     return c.group != g && !c.extraGroups.contains(g);
@@ -204,6 +244,7 @@ class _GuideOverlayState extends State<GuideOverlay> {
     final count = _groups.length + 1;
     final current = context.read<TunerController>().current;
     setState(() {
+      _favView = false;
       _group = (g % count + count) % count;
       final i = current == null ? -1 : _channels.indexOf(current);
       _ch = i < 0 ? 0 : i;
@@ -337,7 +378,7 @@ class _GuideOverlayState extends State<GuideOverlay> {
     final k = e.logicalKey;
     // Categorie: ←→ scorrono e applicano, OK/↓/Indietro tornano ai canali.
     if (_groupCursor != null) {
-      final count = _groups.length + 2;
+      final count = _groups.length + 3;
       if (k == LogicalKeyboardKey.arrowLeft ||
           k == LogicalKeyboardKey.arrowRight) {
         final next =
@@ -357,6 +398,12 @@ class _GuideOverlayState extends State<GuideOverlay> {
       if (k == LogicalKeyboardKey.arrowUp) return KeyEventResult.handled;
       setState(() => _groupCursor = null);
     }
+    if (!_remView &&
+        (k == LogicalKeyboardKey.keyF ||
+            k == LogicalKeyboardKey.colorF1Green)) {
+      _toggleFavorite();
+      return KeyEventResult.handled;
+    }
     if (_remView) return _onRemindersKey(k);
     if (k == LogicalKeyboardKey.arrowUp) {
       _inProgrammes ? _moveProgramme(-1) : _moveChannel(-1);
@@ -374,16 +421,16 @@ class _GuideOverlayState extends State<GuideOverlay> {
       if (_inProgrammes) {
         setState(() => _inProgrammes = false);
       } else {
-        // Dall'elenco dei canali si sale sulle categorie, partendo da "Tutti"
-        // (a sinistra c'è ancora "I tuoi promemoria").
-        setState(() => _groupCursor = 1);
+        // Dall'elenco dei canali si sale sulle categorie, partendo da
+        // quella in uso.
+        setState(() => _groupCursor = _stripIndex);
       }
     } else if (k == LogicalKeyboardKey.keyC ||
         k == LogicalKeyboardKey.colorF2Yellow) {
       _setGroup(_group + 1);
     } else if (k == LogicalKeyboardKey.keyR ||
         k == LogicalKeyboardKey.colorF0Red) {
-      _setStrip(0);
+      _setStrip(1);
     } else if (isSelectKey(k)) {
       _select();
     } else if (isBackKey(k)) {
@@ -408,11 +455,15 @@ class _GuideOverlayState extends State<GuideOverlay> {
     final tuner = context.watch<TunerController>();
     final channels = _channels;
     final groups = app.groups;
-    if (channels.isEmpty) return const SizedBox.shrink();
-    if (_ch >= channels.length) _ch = channels.length - 1;
+    if (channels.isEmpty && !_favView && app.channels.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    if (_ch >= channels.length) {
+      _ch = channels.isEmpty ? 0 : channels.length - 1;
+    }
     final size = MediaQuery.sizeOf(context);
     final narrow = size.width < 900;
-    final selected = channels[_ch];
+    final selected = channels.isEmpty ? null : channels[_ch];
 
     return Focus(
       focusNode: _focus,
@@ -459,8 +510,16 @@ class _GuideOverlayState extends State<GuideOverlay> {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(18, 0, 18, 14),
                   child: GroupStrip(
-                    groups: ['I tuoi promemoria', 'Tutti', ...groups],
-                    icons: const {0: Icons.notifications_rounded},
+                    groups: [
+                      'Preferiti',
+                      'I tuoi promemoria',
+                      'Tutti',
+                      ...groups,
+                    ],
+                    icons: const {
+                      0: Icons.star_rounded,
+                      1: Icons.notifications_rounded,
+                    },
                     selected: _stripIndex,
                     focused: _groupCursor,
                     onSelect: (g) {
@@ -513,6 +572,37 @@ class _GuideOverlayState extends State<GuideOverlay> {
                           _rem = 0;
                         });
                       },
+                    ),
+                  )
+                else if (selected == null)
+                  Expanded(
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(32),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.star_outline_rounded,
+                              size: 44,
+                              color: Palette.textTertiary,
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              'Nessun canale preferito',
+                              style: AppText.title,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'In "Tutti" o in una categoria premi il tasto '
+                              'verde (o F) su un canale, oppure scegli la '
+                              'stella nel menu del banner.',
+                              textAlign: TextAlign.center,
+                              style: AppText.body,
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   )
                 else
@@ -599,6 +689,12 @@ class _GuideOverlayState extends State<GuideOverlay> {
                             KeyHint('↑↓', 'Canale'),
                             KeyHint('→', 'Palinsesto'),
                             KeyHint('←', 'Categoria'),
+                            KeyHint(
+                              'F',
+                              app.isFavorite(selected?.id ?? '')
+                                  ? 'Togli preferito'
+                                  : 'Preferito',
+                            ),
                             KeyHint(
                               'OK',
                               _inProgrammes && _prog > 0

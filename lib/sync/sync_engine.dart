@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../data/game_scores.dart';
 import '../data/settings_store.dart';
 import '../state/reminder_controller.dart';
 import '../state/vod_controller.dart';
@@ -19,6 +20,7 @@ class SyncEngine extends ChangeNotifier {
     required this.reminders,
     required this.settings,
     this.vod,
+    this.games,
     this.onPrefsApplied,
     this.pushDelay = const Duration(seconds: 2),
     this.pollEvery = const Duration(minutes: 5),
@@ -29,6 +31,7 @@ class SyncEngine extends ChangeNotifier {
   final ReminderController reminders;
   final SettingsStore settings;
   final VodController? vod;
+  final GameScores? games;
 
   /// Chiamato con le chiavi delle preferenze arrivate da un altro
   /// dispositivo (es. per ricaricare l'EPG).
@@ -69,6 +72,7 @@ class SyncEngine extends ChangeNotifier {
     reminders.onLocalChange = _schedulePush;
     settings.onLocalChange = _schedulePush;
     vod?.onLocalChange = _schedulePush;
+    if (games != null) GameScores.onLocalChange = _schedulePush;
     _sub = backend.changes.listen(
       (r) => unawaited(_apply([r])),
       onError: (Object _) {},
@@ -82,6 +86,7 @@ class SyncEngine extends ChangeNotifier {
     reminders.onLocalChange = null;
     settings.onLocalChange = null;
     vod?.onLocalChange = null;
+    if (games != null) GameScores.onLocalChange = null;
     _pushTimer?.cancel();
     _poll?.cancel();
     await _sub?.cancel();
@@ -169,9 +174,23 @@ class SyncEngine extends ChangeNotifier {
             data: {'v': e.value.value},
           ),
       ...?_vodRecords(since),
+      for (final e
+          in games?.all.entries ??
+              const <MapEntry<String, ({int best, int at})>>[])
+        if (e.value.at > since)
+          // Per i record la "versione" è il punteggio stesso: il server
+          // (che tiene la versione più alta) conserva così il record migliore.
+          SyncRecord(
+            table: SyncTable.games,
+            id: e.key,
+            updatedAt: e.value.best,
+            data: {'best': e.value.best},
+          ),
     ];
     if (out.isNotEmpty) await backend.push(out);
-    await prefs.setInt(_kPushed, now);
+    // Un millisecondo indietro: una modifica fatta nello stesso istante
+    // dell'invio partirà al giro dopo invece di andare persa.
+    await prefs.setInt(_kPushed, now - 1);
   }
 
   List<SyncRecord>? _vodRecords(int since) {
@@ -225,6 +244,12 @@ class SyncEngine extends ChangeNotifier {
               d is Map ? {...d, 't': r.updatedAt ~/ 1000} : d,
             );
             if (w != null) vodUp.add(w);
+          }
+        case SyncTable.games:
+          final d = r.data;
+          final b = d is Map ? d['best'] : null;
+          if (!r.deleted && b is num) {
+            await games?.mergeRemote(r.id, b.toInt(), 0);
           }
         case SyncTable.prefs:
           final d = r.data;

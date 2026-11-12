@@ -108,13 +108,23 @@ class ZapBanner extends StatelessWidget {
   }
 }
 
-enum BannerAction { list, guide, keypad, home, settings, sources, plusOne }
+enum BannerAction {
+  list,
+  guide,
+  keypad,
+  favorite,
+  home,
+  settings,
+  sources,
+  plusOne,
+}
 
 /// Azioni mostrate nel banner, nell'ordine in cui le si percorre con ←→.
 List<BannerAction> bannerActions(TunerController t) => [
   BannerAction.list,
   BannerAction.guide,
   BannerAction.keypad,
+  if (t.current != null) BannerAction.favorite,
   BannerAction.home,
   if (t.canTogglePlusOne) BannerAction.plusOne,
   if (t.activeSources.length > 1) BannerAction.sources,
@@ -595,6 +605,17 @@ class _ActionRow extends StatelessWidget {
               tooltip: 'Tastierino',
               focused: menuIndex == i,
               onTap: () => onAction(BannerAction.keypad),
+            ),
+            BannerAction.favorite => _RoundAction(
+              icon:
+                  context.select<AppController, bool>(
+                    (a) => a.isFavorite(tuner.current?.id ?? ''),
+                  )
+                  ? Icons.star_rounded
+                  : Icons.star_outline_rounded,
+              tooltip: 'Preferito',
+              focused: menuIndex == i,
+              onTap: () => onAction(BannerAction.favorite),
             ),
             BannerAction.plusOne => _RoundAction(
               label: onPlusOne ? 'LIVE' : '+1',

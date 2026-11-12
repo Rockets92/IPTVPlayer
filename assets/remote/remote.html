@@ -480,7 +480,10 @@ let views = {};
 let state = null, channels = [], groups = [], group = null, guideId = null, tab = 'remote';
 let online = null, failures = 0;
 
+// Telecomando unico (pagina pubblicata online): i comandi passano dal cloud
+// al dispositivo scelto. In rete locale si parla direttamente col player.
 const api = async (path, body) => {
+  if (window.CLOUD) return window.CLOUD.request(path, body);
   const url = path + (path.includes('?') ? '&' : '?') + 't=' + encodeURIComponent(T);
   const r = await fetch(url, body === undefined ? {cache: 'no-store'} : {
     method: 'POST', cache: 'no-store',
@@ -888,12 +891,12 @@ if (!standalone && !noInstall) {
   $('install').hidden = false;
 }
 if ('serviceWorker' in navigator && window.isSecureContext) {
-  navigator.serviceWorker.register('/sw.js').catch(() => {});
+  navigator.serviceWorker.register(window.CLOUD ? 'sw.js' : '/sw.js').catch(() => {});
 }
 
 // --- Avvio ---------------------------------------------------------------------
 poll();
-setInterval(poll, 1500);
+setInterval(poll, window.CLOUD ? 4000 : 1500);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) poll(); });
 </script>
 </body>

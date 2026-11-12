@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/data/epg/epg_models.dart';
+import 'package:iptv_player/data/game_scores.dart';
 import 'package:iptv_player/data/settings_store.dart';
 import 'package:iptv_player/data/xtream/xtream_client.dart';
 import 'package:iptv_player/data/xtream/xtream_models.dart';
@@ -288,6 +289,59 @@ void main() {
     await engB.stop();
     remA.dispose();
     remB.dispose();
+    await cloud.close();
+  });
+
+  test('preferiti e ultimo canale seguono l\'account', () async {
+    final a = SettingsStore(await freshPrefs());
+    a.clock = () => 1000;
+    expect(await a.toggleFavorite('m101'), isTrue);
+    expect(await a.toggleFavorite('m201'), isTrue);
+    expect(await a.toggleFavorite('m101'), isFalse);
+    expect(a.favorites, ['m201']);
+    // Il canale ripreso all'accensione non conta come scelta.
+    await a.setLastChannelId('m5', chosen: false);
+    expect(a.syncedPrefs['tuner.lastWatched']!.updatedAt, 0);
+    await a.setLastChannelId('m7');
+    expect(a.lastWatched?.channelId, 'm7');
+
+    final b = SettingsStore(await freshPrefs({'tuner.lastChannel': 'm1'}));
+    expect(b.lastChannelId, 'm1');
+    final keys = await b.applyRemotePrefs(a.syncedPrefs);
+    expect(keys, containsAll(['channels.favorites', 'tuner.lastWatched']));
+    expect(b.isFavorite('m201'), isTrue);
+    expect(b.lastChannelId, 'm7');
+  });
+
+  test('record dei giochi: tra due dispositivi vince il più alto', () async {
+    final cloud = MemorySyncBackend();
+    Future<(SyncEngine, GameScores)> device() async {
+      final prefs = await freshPrefs();
+      final g = GameScores(prefs);
+      final e = SyncEngine(
+        backend: cloud,
+        prefs: prefs,
+        reminders: ReminderController(prefs),
+        settings: SettingsStore(prefs),
+        games: g,
+        pushDelay: Duration.zero,
+      );
+      return (e, g);
+    }
+
+    final (ea, ga) = await device();
+    expect(await ga.submit('snake', 500), isTrue);
+    expect(await ga.submit('snake', 300), isFalse);
+    await ea.start();
+    await ea.stop();
+
+    final (eb, gb) = await device();
+    await gb.submit('snake', 300);
+    await gb.submit('racer', 80);
+    await eb.start();
+    expect(gb.best('snake'), 500);
+    expect(gb.best('racer'), 80);
+    await eb.stop();
     await cloud.close();
   });
 }

@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../core/form_factor.dart';
 import '../../core/theme.dart';
 import '../../remote/remote_server.dart';
+import '../../sync/account_config.dart';
 import '../../sync/account_controller.dart';
 import '../../sync/sync_engine.dart';
 import '../format.dart';
@@ -70,8 +71,11 @@ class _AccountDialogState extends State<_AccountDialog> {
       AccountStage.signedOut => _emailStep(a),
     };
 
-    final qrUrl = a.stage == AccountStage.signedIn || form.hidesQr
+    final inside = a.stage == AccountStage.signedIn;
+    final qrUrl = form.hidesQr
         ? null
+        : inside
+        ? AccountConfig.remoteWebUrl
         : remote.accountUrl;
     final qr = qrUrl == null
         ? null
@@ -83,7 +87,10 @@ class _AccountDialogState extends State<_AccountDialog> {
               SizedBox(
                 width: 200,
                 child: Text(
-                  form.qrProminent
+                  inside
+                      ? 'Telecomando unico: inquadra col telefono e accedi '
+                            'con lo stesso account'
+                      : form.qrProminent
                       ? 'Inquadra col telefono: scrivi lì email e codice'
                       : 'Oppure accedi dal telefono',
                   textAlign: TextAlign.center,

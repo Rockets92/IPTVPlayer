@@ -10,6 +10,9 @@ enum SyncTable {
 
   /// Preferenze personali (id = chiave della preferenza).
   prefs,
+
+  /// Record dei giochi (id = gioco): vince il punteggio più alto.
+  games,
 }
 
 /// Una riga sincronizzata: il contenuto è il JSON già usato in locale.

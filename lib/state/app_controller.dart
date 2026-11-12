@@ -138,6 +138,25 @@ class AppController extends ChangeNotifier {
     return out;
   }
 
+  /// Canali preferiti, in ordine di numero.
+  List<Channel> get favoriteChannels {
+    final fav = settings.favorites.toSet();
+    if (fav.isEmpty) return const [];
+    return [
+      for (final c in channels)
+        if (fav.contains(c.id)) c,
+    ];
+  }
+
+  bool isFavorite(String channelId) => settings.isFavorite(channelId);
+
+  /// Aggiunge o toglie un preferito; true se ora è preferito.
+  Future<bool> toggleFavorite(Channel c) async {
+    final on = await settings.toggleFavorite(c.id);
+    _notify();
+    return on;
+  }
+
   /// Un'impostazione che cambia l'aspetto (es. dimensione interfaccia).
   void settingsChanged() => _notify();
 

@@ -257,6 +257,19 @@ class RemoteServer extends ChangeNotifier {
     }
     lastSeen = DateTime.now();
 
+    if (remotePaths.contains(path)) {
+      final body = r.method == 'POST'
+          ? await _body(r)
+          : const <String, Object?>{};
+      final out = await remoteApi(
+        r.method,
+        path,
+        query: r.uri.queryParameters,
+        body: body,
+      );
+      if (out != null) return _json(res, out);
+    }
+
     switch ((r.method, path)) {
       case ('GET', '/' || '/remote'):
         return _html(res, 'assets/remote/remote.html');
@@ -288,14 +301,39 @@ class RemoteServer extends ChangeNotifier {
         return _json(res, _accountState());
       case ('GET', '/manifest.webmanifest'):
         return _json(res, _manifest(), type: 'application/manifest+json');
+      case ('POST', '/api/setup'):
+        return _json(res, await _setup(await _body(r)));
+      case ('GET', '/api/info'):
+        return _json(res, {
+          'phase': app.phase.name,
+          'setup': setupHandler != null,
+        });
+    }
+    res.statusCode = HttpStatus.notFound;
+    return _text(res, 'Non trovato', ContentType.text);
+  }
+
+  /// Comandi del telecomando: usati dal server in rete locale e dal
+  /// telecomando unico via cloud. null = percorso sconosciuto.
+  Future<Object?> remoteApi(
+    String method,
+    String path, {
+    Map<String, String> query = const {},
+    Map<String, Object?> body = const {},
+  }) async {
+    lastSeen = DateTime.now();
+    switch ((method, path)) {
+      case ('POST', '/api/favorite'):
+        final c = _byId('${body['id']}');
+        if (c == null) return {'error': 'Canale non trovato'};
+        return {'favorite': await app.toggleFavorite(c)};
       case ('GET', '/api/state'):
-        return _json(res, _state());
+        return (_state());
       case ('GET', '/api/channels'):
-        return _json(res, _channels());
+        return (_channels());
       case ('GET', '/api/epg'):
-        return _json(res, _epg(r.uri.queryParameters['id']));
+        return (_epg(query['id']));
       case ('POST', '/api/key'):
-        final body = await _body(r);
         final k = '${body['key'] ?? ''}';
         if (k == 'volup' || k == 'voldown' || k == 'mute') {
           // Il volume vale anche con un pannello aperto.
@@ -307,11 +345,10 @@ class RemoteServer extends ChangeNotifier {
         } else {
           dispatchRemoteKey(k);
         }
-        return _json(res, _state());
+        return (_state());
       case ('GET', '/api/vod'):
-        return _json(res, _vodState());
+        return (_vodState());
       case ('POST', '/api/vod/resume'):
-        final body = await _body(r);
         final key = '${body['key'] ?? ''}';
         final hit = vod
             ?.resumeAll(limit: 50)
@@ -320,28 +357,22 @@ class RemoteServer extends ChangeNotifier {
         final item = hit == null ? null : vod!.itemFor(hit.$1, hit.$2);
         final open = RemoteHooks.resume;
         if (hit == null || item == null || open == null) {
-          return _json(res, {
-            ..._vodState(),
-            'error': 'Titolo non disponibile',
-          });
+          return ({..._vodState(), 'error': 'Titolo non disponibile'});
         }
         open(hit.$1, item);
-        return _json(res, _vodState());
+        return (_vodState());
       case ('POST', '/api/search'):
-        final body = await _body(r);
         final search = RemoteHooks.search;
         if (search == null) {
-          return _json(res, {'ok': false});
+          return ({'ok': false});
         }
         search('${body['q'] ?? ''}');
-        return _json(res, {'ok': true});
+        return ({'ok': true});
       case ('POST', '/api/tune'):
-        final body = await _body(r);
         final c = _byId('${body['id']}');
         if (c != null) tuner.tuneTo(c);
-        return _json(res, _state());
+        return (_state());
       case ('POST', '/api/reminder'):
-        final body = await _body(r);
         final c = _byId('${body['id']}');
         final start = body['start'];
         final p = c == null
@@ -351,20 +382,16 @@ class RemoteServer extends ChangeNotifier {
                   .where((p) => p.start == start)
                   .firstOrNull;
         if (c == null || p == null) {
-          return _json(res, {'error': 'Programma non trovato'});
+          return ({'error': 'Programma non trovato'});
         }
         final on = reminders.toggle(c, p);
-        return _json(res, {'reminded': on});
+        return ({'reminded': on});
       case ('GET', '/api/reminders'):
-        return _json(res, _reminders());
+        return (_reminders());
       case ('POST', '/api/reminders'):
-        final body = await _body(r);
         final rem = reminders.byKey('${body['key']}');
         if (rem == null) {
-          return _json(res, {
-            ..._reminders(),
-            'error': 'Promemoria non trovato',
-          });
+          return ({..._reminders(), 'error': 'Promemoria non trovato'});
         }
         if (body['delete'] == true) {
           reminders.remove(rem);
@@ -378,18 +405,27 @@ class RemoteServer extends ChangeNotifier {
                 : null,
           );
         }
-        return _json(res, _reminders());
-      case ('POST', '/api/setup'):
-        return _json(res, await _setup(await _body(r)));
-      case ('GET', '/api/info'):
-        return _json(res, {
-          'phase': app.phase.name,
-          'setup': setupHandler != null,
-        });
+        return (_reminders());
     }
-    res.statusCode = HttpStatus.notFound;
-    return _text(res, 'Non trovato', ContentType.text);
+    return null;
   }
+
+  /// Categoria dei preferiti nell'elenco canali del telefono.
+  static const favoritesGroup = '★ Preferiti';
+
+  static const remotePaths = {
+    '/api/state',
+    '/api/channels',
+    '/api/epg',
+    '/api/key',
+    '/api/vod',
+    '/api/vod/resume',
+    '/api/search',
+    '/api/tune',
+    '/api/reminder',
+    '/api/reminders',
+    '/api/favorite',
+  };
 
   Channel? _byId(String id) =>
       app.channels.where((c) => c.id == id).firstOrNull;
@@ -463,11 +499,13 @@ class RemoteServer extends ChangeNotifier {
   Map<String, Object?> _channels() {
     final now = DateTime.now();
     final direct = {for (final c in app.channels) c.group};
+    final fav = app.favoriteChannels;
     return {
-      'groups': app.groups,
+      'groups': [if (fav.isNotEmpty) favoritesGroup, ...app.groups],
       // Categorie "vista" (Vetrina): canali nell'ordine in cui compaiono,
       // ogni vetrina seguita dai suoi canali collegati.
       'views': {
+        if (fav.isNotEmpty) favoritesGroup: [for (final c in fav) c.id],
         for (final g in app.groups)
           if (!direct.contains(g)) g: [for (final c in app.channelsIn(g)) c.id],
       },

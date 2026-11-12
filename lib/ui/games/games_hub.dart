@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../data/game_scores.dart';
 import '../../core/performance.dart';
 
 import '../widgets/focus_tile.dart';
@@ -389,11 +390,8 @@ class _GamesHubState extends State<GamesHub>
                           for (var i = 0; i < _games.length; i++)
                             _Cartridge(
                               entry: _games[i],
-                              best:
-                                  widget.prefs.getInt(
-                                    'games.best.${_games[i].make().id}',
-                                  ) ??
-                                  0,
+                              best: GameScores(widget.prefs)
+                                  .best(_games[i].make().id),
                               selected: i == _sel,
                               compact: compact,
                               onTap: () => i == _sel

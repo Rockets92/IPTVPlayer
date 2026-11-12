@@ -51,6 +51,7 @@ class _ChannelRowState extends State<ChannelRow> {
     final c = widget.channel;
     final prog = widget.showProgramme ? epg.nowOn(c.id, widget.now) : null;
     final f = widget.focused;
+    final fav = context.select<AppController, bool>((a) => a.isFavorite(c.id));
 
     final row = MouseRegion(
       cursor: SystemMouseCursors.click,
@@ -127,6 +128,14 @@ class _ChannelRowState extends State<ChannelRow> {
                                 ),
                               ),
                             ),
+                            if (fav) ...[
+                              const SizedBox(width: 6),
+                              const Icon(
+                                Icons.star_rounded,
+                                size: 15,
+                                color: Color(0xFFFFD166),
+                              ),
+                            ],
                             if (widget.onAir) ...[
                               const SizedBox(width: 8),
                               Container(

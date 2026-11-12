@@ -226,9 +226,13 @@ class TunerController extends ChangeNotifier {
     if (!_disposed) notifyListeners();
   }
 
+  DateTime? _startedAt;
+  int _tunes = 0;
+
   /// Avvio: riprende l'ultimo canale visto, come un decoder.
   void start() {
     if (channels.isEmpty) return;
+    _startedAt = DateTime.now();
     final lastId = app.settings.lastChannelId;
     var idx = lastId == null ? -1 : channels.indexWhere((c) => c.id == lastId);
     if (idx < 0) idx = 0;
@@ -484,7 +488,25 @@ class TunerController extends ChangeNotifier {
     _notify();
   }
 
+  /// L'account ha appena portato l'ultimo canale visto su un altro
+  /// dispositivo: subito dopo l'accensione, se non si è ancora cambiato
+  /// canale, si riprende da lì (come accendere il decoder di un'altra
+  /// stanza). Più tardi non si interrompe ciò che si sta guardando.
+  bool resumeFromAccount(String channelId) {
+    final t = _startedAt;
+    if (t == null || _tunes > 1) return false;
+    if (DateTime.now().difference(t) > const Duration(seconds: 90)) {
+      return false;
+    }
+    if (current?.id == channelId) return false;
+    final idx = channels.indexWhere((c) => c.id == channelId);
+    if (idx < 0) return false;
+    _tune(idx, showBanner: true);
+    return true;
+  }
+
   void _tune(int idx, {bool showBanner = false}) {
+    _tunes++;
     _zapTimer?.cancel();
     _pending = null;
     _browse = null;
@@ -506,7 +528,7 @@ class TunerController extends ChangeNotifier {
     timeshift = false;
     _resetSources(c);
     _retries = 0;
-    unawaited(app.settings.setLastChannelId(c.id));
+    unawaited(app.settings.setLastChannelId(c.id, chosen: _tunes > 1));
     unawaited(app.ensureEpg(c));
     if (!c.adult) _adultUnlocked = false;
     locked = _needsPin(c);

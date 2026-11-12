@@ -6,6 +6,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../data/game_scores.dart';
 import '../../remote/game_pads.dart';
 import 'sfx.dart';
 
@@ -218,12 +219,12 @@ class _GameShellState extends State<GameShell>
   bool _newBest = false;
 
   RetroGame get g => widget.game;
-  String get _bestKey => 'games.best.${g.id}';
+  late final _scores = GameScores(widget.prefs);
 
   @override
   void initState() {
     super.initState();
-    _best = widget.prefs.getInt(_bestKey) ?? 0;
+    _best = _scores.best(g.id);
     g.onSound = (s) => widget.sfx?.play(s);
     g.onBuzz = (p, ms) => widget.pads?.buzz(p, ms);
     widget.pads?.onInput = _onPad;
@@ -266,7 +267,7 @@ class _GameShellState extends State<GameShell>
     _newBest = g.score > _best;
     if (_newBest) {
       _best = g.score;
-      widget.prefs.setInt(_bestKey, _best);
+      _scores.submit(g.id, _best);
     }
     for (final p in g.pads) {
       p.clear();
