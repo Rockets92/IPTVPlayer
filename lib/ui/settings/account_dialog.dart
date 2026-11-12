@@ -97,6 +97,27 @@ class _AccountDialogState extends State<_AccountDialog> {
                   style: AppText.label.copyWith(color: Palette.textTertiary),
                 ),
               ),
+              if (inside && a.relay != null)
+                ValueListenableBuilder<String>(
+                  valueListenable: a.relay!.status,
+                  builder: (context, st, _) => st.isEmpty
+                      ? const SizedBox.shrink()
+                      : SizedBox(
+                          width: 220,
+                          child: Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Text(
+                              st,
+                              textAlign: TextAlign.center,
+                              style: AppText.label.copyWith(
+                                color: st.endsWith('attivo')
+                                    ? Palette.textSecondary
+                                    : const Color(0xFFFFB3B3),
+                              ),
+                            ),
+                          ),
+                        ),
+                ),
             ],
           );
 

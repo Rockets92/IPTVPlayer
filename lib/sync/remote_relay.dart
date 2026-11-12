@@ -25,6 +25,21 @@ class RemoteRelay {
 
   bool get running => _mine != null;
 
+  /// Stato del collegamento, mostrato in Impostazioni → Account.
+  final status = ValueNotifier<String>('');
+
+  void _status(String what, RealtimeSubscribeStatus s, Object? error) {
+    status.value = switch (s) {
+      RealtimeSubscribeStatus.subscribed => 'Telecomando unico attivo',
+      RealtimeSubscribeStatus.timedOut =>
+        'Telecomando unico: il cloud non risponde, riprovo…',
+      RealtimeSubscribeStatus.channelError =>
+        'Telecomando unico non disponibile ($what): ${error ?? 'errore'}',
+      RealtimeSubscribeStatus.closed => '',
+    };
+    if (error != null) debugPrint('telecomando cloud $what: $s $error');
+  }
+
   Future<void> start(
     SupabaseClient c, {
     required String deviceId,
@@ -35,6 +50,10 @@ class RemoteRelay {
     final uid = c.auth.currentUser?.id;
     if (uid == null) return;
     _client = c;
+    status.value = 'Telecomando unico: collegamento…';
+    // I canali privati vogliono il token dell'utente già al primo ingresso.
+    final token = c.auth.currentSession?.accessToken;
+    if (token != null) await c.realtime.setAuth(token);
     final lobby = c.channel(
       'remote:$uid',
       opts: RealtimeChannelConfig(private: true, key: deviceId),
@@ -47,9 +66,8 @@ class RemoteRelay {
               .track({'device': deviceId, 'name': name, 'kind': kind})
               .catchError((Object _) => ChannelResponse.error),
         );
-      } else if (error != null) {
-        debugPrint('telecomando cloud: $status $error');
       }
+      _status('presenza', status, error);
     });
     final mine = c.channel(
       'remote:$uid:$deviceId',
@@ -58,7 +76,11 @@ class RemoteRelay {
     _mine = mine;
     mine
         .onBroadcast(event: 'req', callback: (m) => unawaited(_onRequest(m)))
-        .subscribe();
+        .subscribe((s, error) {
+          if (s != RealtimeSubscribeStatus.subscribed) {
+            _status('comandi', s, error);
+          }
+        });
   }
 
   Future<void> _onRequest(Map<String, dynamic> m) async {
@@ -103,5 +125,6 @@ class RemoteRelay {
     _lobby = null;
     _mine = null;
     _client = null;
+    status.value = '';
   }
 }

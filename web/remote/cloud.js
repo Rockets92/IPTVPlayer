@@ -33,6 +33,8 @@
     border:1px solid var(--stroke);background:rgba(255,255,255,.06);color:var(--t1);font:inherit;font-size:16px;text-align:left}
   .cl-dev.on{border-color:rgba(229,61,245,.6);background:rgba(255,255,255,.12)}
   .cl-dev .i{font-size:22px}
+  .cl-st{margin-left:auto;font-size:12px;color:var(--t3)}
+  .cl-st.on{color:#3ccf7a}
   .cl-pick{margin-left:auto;border:1px solid var(--stroke);background:rgba(255,255,255,.08);color:var(--t1);
     font:inherit;font-size:13px;border-radius:999px;padding:6px 12px;max-width:55%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   `;
@@ -99,22 +101,40 @@
   };
 
   // --- Dispositivi ---------------------------------------------------------------
+  // Elenco dall'account (tabella devices) più la presenza in tempo reale:
+  // così i dispositivi compaiono anche se la presenza tarda ad arrivare.
+  let registered = [];
+  let online = new Set();
+  let cloudErr = '';
+  const setName = (t) => { const n = document.getElementById('name'); if (n) n.textContent = t; };
+
+  const loadRegistered = async () => {
+    const {data, error} = await sb.from('devices').select('id,name,kind,last_seen').order('last_seen', {ascending: false});
+    if (!error && data) registered = data.map((d) => ({device: d.id, name: d.name, kind: d.kind, seen: d.last_seen}));
+  };
+
   const readDevices = () => {
     const state = lobby ? lobby.presenceState() : {};
-    const out = new Map();
+    const live = new Map();
     for (const metas of Object.values(state)) {
-      for (const m of metas) if (m.device) out.set(m.device, m);
+      for (const m of metas) if (m.device) live.set(m.device, m);
     }
-    devices = [...out.values()].sort((a, b) => String(a.name).localeCompare(b.name));
+    online = new Set(live.keys());
+    const out = new Map(registered.map((d) => [d.device, d]));
+    for (const [k, m] of live) out.set(k, {...out.get(k), ...m});
+    devices = [...out.values()].sort((a, b) =>
+      (online.has(b.device) - online.has(a.device)) || String(a.name).localeCompare(b.name));
   };
 
   const showDevices = () => {
     readDevices();
     const list = devices.length
       ? devices.map((d) => `<button class="cl-dev ${target && target.device === d.device ? 'on' : ''}" data-d="${esc(d.device)}">
-          <span class="i">${KIND_ICON[d.kind] || '📺'}</span><span>${esc(d.name)}</span></button>`).join('')
-      : '<p>Nessun dispositivo acceso con questo account. Accendi il player e accedi da Impostazioni → Account.</p>';
-    show(`<h2>Quale dispositivo?</h2><p>Dispositivi accesi adesso.</p>${list}
+          <span class="i">${KIND_ICON[d.kind] || '📺'}</span><span>${esc(d.name)}</span>
+          <span class="cl-st ${online.has(d.device) ? 'on' : ''}">${online.has(d.device) ? 'acceso' : ''}</span></button>`).join('')
+      : '<p>Nessun dispositivo collegato a questo account. Accendi il player e accedi da Impostazioni → Account.</p>';
+    show(`<h2>Quale dispositivo?</h2><p>I dispositivi del tuo account: scegli quello da comandare.</p>${list}
+      <div class="cl-err">${esc(cloudErr)}</div>
       <button class="cl-btn ghost" id="cl-out">Esci dall'account</button>`);
     card.querySelectorAll('[data-d]').forEach((b) => (b.onclick = () => {
       const d = devices.find((x) => x.device === b.dataset.d);
@@ -131,37 +151,62 @@
     try { localStorage.setItem('cloudTarget', d.device); } catch (_) {}
     pick.textContent = (KIND_ICON[d.kind] || '📺') + ' ' + d.name;
     hide();
+    setName('Connessione a ' + d.name + '…');
     if (chan) { await sb.removeChannel(chan); chan = null; }
-    chan = sb.channel(`remote:${uid}:${d.device}`, {config: {private: true}});
-    chan.on('broadcast', {event: 'res'}, (m) => {
+    const c = sb.channel(`remote:${uid}:${d.device}`, {config: {private: true}});
+    chan = c;
+    c.on('broadcast', {event: 'res'}, (m) => {
       const p = m.payload || {};
       const w = pending.get(p.id);
       if (!w) return;
       pending.delete(p.id);
       w.resolve(p.data);
     });
-    await new Promise((res) => chan.subscribe((s) => { if (s === 'SUBSCRIBED') res(); }));
-    readyResolve();
+    c.subscribe((s, err) => {
+      if (c !== chan) return;
+      if (s === 'SUBSCRIBED') readyResolve();
+      else if (s === 'CHANNEL_ERROR' || s === 'TIMED_OUT') {
+        setName('Cloud non raggiungibile' + (err && err.message ? ': ' + err.message : ''));
+      }
+    });
+  };
+
+  let decided = false;
+  const decide = () => {
+    if (decided) return;
+    decided = true;
+    readDevices();
+    let saved = null;
+    try { saved = localStorage.getItem('cloudTarget'); } catch (_) {}
+    const on = devices.filter((x) => online.has(x.device));
+    const d = devices.find((x) => x.device === saved) ||
+      (on.length === 1 ? on[0] : null) ||
+      (devices.length === 1 ? devices[0] : null);
+    if (d) choose(d); else showDevices();
   };
 
   const signedIn = async (session) => {
     if (!session) return showLogin();
     uid = session.user.id;
-    await sb.realtime.setAuth(session.access_token);
-    lobby = sb.channel(`remote:${uid}`, {config: {private: true, presence: {key: 'phone-' + Math.random().toString(36).slice(2)}}});
-    let first = true;
-    lobby.on('presence', {event: 'sync'}, () => {
-      readDevices();
-      if (!first) { if (!ov.hidden && card.querySelector('[data-d], .cl-dev') !== null) showDevices(); return; }
-      first = false;
-      let saved = null;
-      try { saved = localStorage.getItem('cloudTarget'); } catch (_) {}
-      const d = devices.find((x) => x.device === saved) || (devices.length === 1 ? devices[0] : null);
-      if (d) choose(d); else showDevices();
-    });
-    lobby.subscribe();
     hide();
     pick.textContent = 'Ricerca dispositivi…';
+    setName('Ricerca dei dispositivi…');
+    try { await sb.realtime.setAuth(session.access_token); } catch (_) {}
+    await loadRegistered();
+    lobby = sb.channel(`remote:${uid}`, {config: {private: true, presence: {key: 'phone-' + Math.random().toString(36).slice(2)}}});
+    lobby.on('presence', {event: 'sync'}, () => {
+      readDevices();
+      if (!decided) return decide();
+      if (!ov.hidden && card.querySelector('.cl-dev')) showDevices();
+    });
+    lobby.subscribe((s, err) => {
+      if (s === 'CHANNEL_ERROR' || s === 'TIMED_OUT') {
+        cloudErr = 'Presenza non disponibile: ' + ((err && err.message) || s);
+        console.warn('telecomando cloud', s, err);
+      }
+    });
+    // Se la presenza non arriva, si va avanti con l'elenco dell'account.
+    setTimeout(decide, 3500);
   };
 
   window.CLOUD = {
