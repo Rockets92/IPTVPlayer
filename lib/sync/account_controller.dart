@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/form_factor.dart';
+import 'remote_relay.dart';
 import 'supabase_sync_backend.dart';
 import 'sync_engine.dart';
 
@@ -49,6 +50,7 @@ class AccountController extends ChangeNotifier {
     required this.prefs,
     required this.formFactor,
     required this.engineFor,
+    this.relay,
   }) {
     final c = client;
     if (c == null) return;
@@ -67,6 +69,9 @@ class AccountController extends ChangeNotifier {
 
   /// Costruisce il motore di sincronizzazione per l'account.
   final SyncEngine Function(SupabaseSyncBackend backend) engineFor;
+
+  /// Telecomando unico via cloud (comandi dal telefono a questo dispositivo).
+  final RemoteRelay? relay;
 
   static const _kDeviceId = 'account.deviceId';
 
@@ -155,6 +160,7 @@ class AccountController extends ChangeNotifier {
   }
 
   Future<void> _afterSignOut() async {
+    await relay?.stop();
     await engine?.reset();
     engine?.dispose();
     engine = null;
@@ -209,6 +215,14 @@ class AccountController extends ChangeNotifier {
       debugPrint('account: $e');
     }
     engine ??= engineFor(SupabaseSyncBackend(c));
+    final id = deviceId;
+    if (id != null) {
+      unawaited(
+        relay
+            ?.start(c, deviceId: id, name: deviceName, kind: formFactor.name)
+            .catchError((Object e) => debugPrint('telecomando cloud: $e')),
+      );
+    }
     await engine!.start();
     notifyListeners();
   }
@@ -300,6 +314,7 @@ class AccountController extends ChangeNotifier {
 
   @override
   void dispose() {
+    unawaited(relay?.stop());
     unawaited(_authSub?.cancel());
     engine?.dispose();
     super.dispose();

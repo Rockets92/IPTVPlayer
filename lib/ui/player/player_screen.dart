@@ -640,6 +640,16 @@ class _PlayerScreenState extends State<PlayerScreen> {
     }
   }
 
+  Future<void> _toggleFavorite() async {
+    final c = _tuner.current;
+    if (c == null) return;
+    final on = await context.read<AppController>().toggleFavorite(c);
+    _tuner.holdBanner();
+    _showToast(
+      on ? '${c.name} aggiunto ai preferiti' : '${c.name} tolto dai preferiti',
+    );
+  }
+
   void _onBannerAction(BannerAction a) => switch (a) {
     BannerAction.list => _open(_Panel.list),
     BannerAction.guide => _open(_Panel.guide),
@@ -648,6 +658,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     BannerAction.plusOne => _plusOne(),
     BannerAction.home => _open(_Panel.home),
     BannerAction.keypad => _open(_Panel.keypad),
+    BannerAction.favorite => _toggleFavorite(),
   };
 
   @override

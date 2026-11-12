@@ -16,6 +16,7 @@ import 'core/brand.dart';
 import 'core/heavy_work.dart';
 import 'core/performance.dart';
 import 'core/theme.dart';
+import 'data/game_scores.dart';
 import 'data/settings_store.dart';
 import 'player/media_kit_engine.dart';
 import 'player/playback_engine.dart';
@@ -28,6 +29,7 @@ import 'state/tuner_controller.dart';
 import 'state/vod_controller.dart';
 import 'sync/account_config.dart';
 import 'sync/account_controller.dart';
+import 'sync/remote_relay.dart';
 import 'sync/sync_engine.dart';
 import 'ui/widgets/focus_tile.dart';
 
@@ -89,6 +91,7 @@ Future<void> main() async {
   );
   final account = AccountController(
     client: await _initSupabase(),
+    relay: RemoteRelay(remote),
     prefs: settings.prefs,
     formFactor: formFactor,
     engineFor: (backend) => SyncEngine(
@@ -97,8 +100,13 @@ Future<void> main() async {
       reminders: reminders,
       settings: settings,
       vod: vod,
+      games: GameScores(settings.prefs),
       onPrefsApplied: (keys) async {
         app.settingsChanged();
+        final last = settings.lastWatched;
+        if (keys.contains(SettingsStore.keyLastWatched) && last != null) {
+          tuner.resumeFromAccount(last.channelId);
+        }
         if (keys.contains(SettingsStore.keyMapping)) {
           await app.applyMapping();
         } else if (keys.contains(SettingsStore.keyExtraEpg) ||

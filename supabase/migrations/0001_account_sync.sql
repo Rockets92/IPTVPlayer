@@ -19,7 +19,7 @@ create index if not exists devices_user_idx on public.devices (user_id);
 -- Una riga per oggetto; "data" è lo stesso JSON salvato sul dispositivo.
 create table if not exists public.sync_rows (
   user_id    uuid not null default auth.uid() references auth.users on delete cascade,
-  table_name text not null check (table_name in ('reminders', 'vodProgress', 'prefs')),
+  table_name text not null check (table_name in ('reminders', 'vodProgress', 'prefs', 'games')),
   id         text not null,
   data       jsonb,
   deleted    boolean not null default false,

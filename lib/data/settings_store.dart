@@ -51,6 +51,8 @@ class SettingsStore {
   static const keyMapping = _kMapping;
   static const keyExtraEpg = _kExtraEpg;
   static const keyProviderEpg = _kProviderEpg;
+  static const keyFavorites = _kFavorites;
+  static const keyLastWatched = _kLastWatched;
   static const _kAccount = 'xtream.account';
   static const _kLastChannel = 'tuner.lastChannel';
   static const _kMapping = 'mapping.source';
@@ -66,6 +68,11 @@ class SettingsStore {
   /// Vecchio PIN in chiaro: alla prima apertura diventa [_kAdultPinHash].
   static const _kAdultPinLegacy = 'channels.adultPin';
   static const _kAdultPinHash = 'channels.adultPinHash';
+  static const _kFavorites = 'channels.favorites';
+
+  /// Ultimo canale visto su uno qualsiasi dei dispositivi dell'account:
+  /// `{"c": id canale, "t": millisecondi epoch}`.
+  static const _kLastWatched = 'tuner.lastWatched';
   static const _kSyncStamps = 'sync.prefsUpdated.v1';
 
   /// Preferenze personali, uguali su tutti i dispositivi dell'account.
@@ -79,6 +86,8 @@ class SettingsStore {
     _kSources,
     _kAdult,
     _kAdultPinHash,
+    _kFavorites,
+    _kLastWatched,
   };
 
   /// Orologio, sostituibile nei test.
@@ -197,9 +206,44 @@ class SettingsStore {
       ? _prefs.remove(_kAccount)
       : _prefs.setString(_kAccount, jsonEncode(a.toJson()));
 
-  String? get lastChannelId => _prefs.getString(_kLastChannel);
-  Future<void> setLastChannelId(String id) =>
-      _prefs.setString(_kLastChannel, id);
+  /// Ultimo canale visto: il più recente tra questo dispositivo e gli
+  /// altri dell'account.
+  String? get lastChannelId =>
+      lastWatched?.channelId ?? _prefs.getString(_kLastChannel);
+
+  ({String channelId, int at})? get lastWatched {
+    try {
+      final j = jsonDecode(_prefs.getString(_kLastWatched) ?? '');
+      if (j is Map && j['c'] is String && j['t'] is num) {
+        return (channelId: j['c'] as String, at: (j['t'] as num).toInt());
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// [chosen] = falso quando è il canale ripreso all'accensione: non conta
+  /// come scelta nuova, così non copre quella fatta su un altro dispositivo.
+  Future<void> setLastChannelId(String id, {bool chosen = true}) async {
+    await _prefs.setString(_kLastChannel, id);
+    if (!chosen || lastWatched?.channelId == id) return;
+    await _prefs.setString(_kLastWatched, jsonEncode({'c': id, 't': clock()}));
+    await _stamp(_kLastWatched);
+  }
+
+  /// Canali preferiti (id), nell'ordine in cui sono stati aggiunti.
+  List<String> get favorites => _prefs.getStringList(_kFavorites) ?? const [];
+
+  bool isFavorite(String channelId) => favorites.contains(channelId);
+
+  /// Aggiunge o toglie un preferito; true se ora è preferito.
+  Future<bool> toggleFavorite(String channelId) async {
+    final l = [...favorites];
+    final on = !l.remove(channelId);
+    if (on) l.add(channelId);
+    await _prefs.setStringList(_kFavorites, l);
+    await _stamp(_kFavorites);
+    return on;
+  }
 
   /// Sorgente della mappatura: vuoto = integrata, altrimenti URL o percorso.
   String get mappingSource => _prefs.getString(_kMapping) ?? '';
