@@ -37,6 +37,7 @@ class _AccountDialogState extends State<_AccountDialog> {
   final _email = TextEditingController();
   final _code = TextEditingController();
   Future<List<AccountDevice>>? _devices;
+  String? _devicesError;
 
   @override
   void dispose() {
@@ -46,7 +47,10 @@ class _AccountDialogState extends State<_AccountDialog> {
   }
 
   void _loadDevices(AccountController a) {
-    _devices = a.devices().catchError((Object _) => <AccountDevice>[]);
+    _devices = a.devices().catchError((Object e) {
+      _devicesError = '$e';
+      return <AccountDevice>[];
+    });
   }
 
   @override
@@ -271,7 +275,11 @@ class _AccountDialogState extends State<_AccountDialog> {
             }
             if (list.isEmpty) {
               return Text(
-                'Elenco non disponibile senza connessione',
+                _devicesError == null
+                    ? 'Nessun dispositivo registrato'
+                    : 'Elenco non disponibile: $_devicesError',
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
                 style: AppText.label,
               );
             }

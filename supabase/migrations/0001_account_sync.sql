@@ -48,6 +48,11 @@ create trigger sync_rows_keep_newest
   before update on public.sync_rows
   for each row execute function public.sync_rows_keep_newest();
 
+-- Accesso dall'app (ruolo "authenticated"): sui progetti nuovi le tabelle
+-- non sono esposte da sole all'API.
+grant usage on schema public to authenticated;
+grant select, insert, update, delete on public.devices   to authenticated;
+grant select, insert, update, delete on public.sync_rows to authenticated;
 -- Ognuno vede e modifica solo le proprie righe.
 alter table public.devices   enable row level security;
 alter table public.sync_rows enable row level security;
@@ -75,3 +80,5 @@ begin
   alter publication supabase_realtime add table public.sync_rows;
 exception when duplicate_object then null;
 end $$;
+
+grant execute on function public.sync_rows_prune() to authenticated;

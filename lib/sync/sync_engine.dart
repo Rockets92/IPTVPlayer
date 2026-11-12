@@ -123,12 +123,21 @@ class SyncEngine extends ChangeNotifier {
       lastSync = DateTime.now();
       error = null;
     } catch (e) {
-      error = 'Sincronizzazione non riuscita: controlla la connessione';
+      error = 'Sincronizzazione non riuscita: ${_short(e)}';
       debugPrint('sync: $e');
     } finally {
       _busy = false;
       notifyListeners();
     }
+  }
+
+  /// Messaggio d'errore breve e leggibile (es. dal server).
+  static String _short(Object e) {
+    var m = '$e';
+    final i = m.indexOf('message: ');
+    if (i >= 0) m = m.substring(i + 9);
+    m = m.split(',').first.trim();
+    return m.length > 120 ? '${m.substring(0, 120)}…' : m;
   }
 
   Future<void> _push() async {
