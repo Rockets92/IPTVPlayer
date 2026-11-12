@@ -119,7 +119,13 @@ class AccountController extends ChangeNotifier {
       return false;
     }
     final ok = await _run(() async {
-      await client!.auth.verifyOTP(email: e, token: t, type: OtpType.email);
+      try {
+        await client!.auth.verifyOTP(email: e, token: t, type: OtpType.email);
+      } on AuthException {
+        // Account appena creato: alcuni progetti verificano il primo codice
+        // come conferma di registrazione.
+        await client!.auth.verifyOTP(email: e, token: t, type: OtpType.signup);
+      }
       pendingEmail = null;
       stage = AccountStage.signedIn;
     });
