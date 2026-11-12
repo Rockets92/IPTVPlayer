@@ -3,9 +3,11 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  app_links
   media_kit_libs_windows_video
   media_kit_video
   screen_retriever_windows
+  url_launcher_windows
   window_manager
 )
 

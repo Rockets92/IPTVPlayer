@@ -27,6 +27,7 @@ dependencies:
   qr_flutter: ^4.1.0
   crypto: ^3.0.6
   flutter_soloud: ^5.2.2
+  supabase_flutter: ^2.18.3
 
 dev_dependencies:
   flutter_test:

@@ -3,9 +3,11 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  app_links_linux
   media_kit_libs_linux
   media_kit_video
   screen_retriever_linux
+  url_launcher_linux
   window_manager
 )
 

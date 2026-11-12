@@ -7,6 +7,7 @@ import 'package:iptv_player/domain/channel.dart';
 import 'package:iptv_player/state/reminder_controller.dart';
 import 'package:iptv_player/state/vod_controller.dart';
 import 'package:iptv_player/sync/sync_backend.dart';
+import 'package:iptv_player/sync/sync_engine.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const ch = Channel(
@@ -201,13 +202,13 @@ void main() {
         final b = SettingsStore(await freshPrefs());
         b.clock = () => 500;
         await b.setExtraEpgSources(['http://vecchia']);
-        expect(await b.applyRemotePrefs(out), isTrue);
+        expect(await b.applyRemotePrefs(out), contains('epg.extraSources'));
         expect(b.extraEpgSources, ['http://epg.example/it.xml']);
         expect(b.adultMode, AdultMode.pin);
         expect(b.checkAdultPin('4321'), isTrue);
         expect(b.uiScale, UiScale.auto);
         // Una seconda volta non cambia nulla.
-        expect(await b.applyRemotePrefs(out), isFalse);
+        expect(await b.applyRemotePrefs(out), isEmpty);
       },
     );
   });
@@ -235,4 +236,58 @@ void main() {
       await be.close();
     },
   );
+
+  test('due dispositivi: promemoria e preferenze viaggiano, anche le cancellazioni', () async {
+    final cloud = MemorySyncBackend();
+    final p = prog(7200);
+
+    // Dispositivo A: un promemoria salvato prima di avere l'account.
+    final prefsA = await freshPrefs();
+    final remA = ReminderController(prefsA);
+    final setA = SettingsStore(prefsA);
+    remA.toggle(ch, p);
+    await setA.setExtraEpgSources(['http://epg.example/a.xml']);
+    final engA = SyncEngine(
+      backend: cloud,
+      prefs: prefsA,
+      reminders: remA,
+      settings: setA,
+      pushDelay: Duration.zero,
+    );
+    await engA.start();
+
+    // Dispositivo B: accede dopo e ritrova tutto.
+    final prefsB = await freshPrefs();
+    final remB = ReminderController(prefsB);
+    final setB = SettingsStore(prefsB);
+    Set<String>? applied;
+    final engB = SyncEngine(
+      backend: cloud,
+      prefs: prefsB,
+      reminders: remB,
+      settings: setB,
+      pushDelay: Duration.zero,
+      onPrefsApplied: (k) async => applied = k,
+    );
+    await engB.start();
+    expect(remB.items.single.title, 'Film');
+    expect(setB.extraEpgSources, ['http://epg.example/a.xml']);
+    expect(applied, contains('epg.extraSources'));
+
+    // Cancellato su B: sparisce anche da A, in tempo reale.
+    remB.remove(remB.items.single);
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    expect(remA.items, isEmpty);
+
+    // Prenotato su A: compare su B.
+    remA.toggle(ch, prog(9000, 'Partita'));
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    expect(remB.items.single.title, 'Partita');
+
+    await engA.stop();
+    await engB.stop();
+    remA.dispose();
+    remB.dispose();
+    await cloud.close();
+  });
 }

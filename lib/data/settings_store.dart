@@ -45,6 +45,12 @@ class SettingsStore {
   SharedPreferences get prefs => _prefs;
 
   static const _kCreds = 'xtream.credentials';
+
+  /// Chiavi pubbliche di alcune preferenze personali, per reagire quando
+  /// arrivano da un altro dispositivo.
+  static const keyMapping = _kMapping;
+  static const keyExtraEpg = _kExtraEpg;
+  static const keyProviderEpg = _kProviderEpg;
   static const _kAccount = 'xtream.account';
   static const _kLastChannel = 'tuner.lastChannel';
   static const _kMapping = 'mapping.source';
@@ -115,10 +121,10 @@ class SettingsStore {
   }
 
   /// Applica le preferenze arrivate da un altro dispositivo, solo se più
-  /// recenti di quelle locali. Restituisce true se qualcosa è cambiato.
-  Future<bool> applyRemotePrefs(Map<String, SyncedPref> remote) async {
+  /// recenti di quelle locali. Restituisce le chiavi cambiate.
+  Future<Set<String>> applyRemotePrefs(Map<String, SyncedPref> remote) async {
     final st = _stamps;
-    var changed = false;
+    final changed = <String>{};
     for (final e in remote.entries) {
       if (!syncedKeys.contains(e.key)) continue;
       if (e.value.updatedAt <= (st[e.key] ?? 0)) continue;
@@ -136,9 +142,11 @@ class SettingsStore {
           continue;
       }
       st[e.key] = e.value.updatedAt;
-      changed = true;
+      changed.add(e.key);
     }
-    if (changed) await _prefs.setString(_kSyncStamps, jsonEncode(st));
+    if (changed.isNotEmpty) {
+      await _prefs.setString(_kSyncStamps, jsonEncode(st));
+    }
     return changed;
   }
 

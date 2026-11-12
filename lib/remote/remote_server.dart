@@ -15,6 +15,7 @@ import '../state/app_controller.dart';
 import '../state/reminder_controller.dart';
 import '../state/tuner_controller.dart';
 import '../state/vod_controller.dart';
+import '../sync/account_controller.dart';
 import 'game_pads.dart';
 import 'remote_hooks.dart';
 import 'remote_keys.dart';
@@ -59,6 +60,9 @@ class RemoteServer extends ChangeNotifier {
   String? error;
   late String token;
 
+  /// Account: dalla TV si accede scrivendo email e codice sul telefono.
+  AccountController? account;
+
   /// Ultima richiesta dal telefono: serve a mostrare "connesso".
   DateTime? lastSeen;
 
@@ -74,6 +78,7 @@ class RemoteServer extends ChangeNotifier {
   String? get remoteUrl => running ? '$baseUrl/remote?t=$token' : null;
   String? get setupUrl => running ? '$baseUrl/setup?t=$token' : null;
   String? get epgUrl => running ? '$baseUrl/epg?t=$token' : null;
+  String? get accountUrl => running ? '$baseUrl/account?t=$token' : null;
   String? get padUrl => running ? '$baseUrl/pad?g=$gamesToken' : null;
 
   /// Fonti EPG aggiuntive (dalle impostazioni), cambiate dal telefono.
@@ -263,6 +268,24 @@ class RemoteServer extends ChangeNotifier {
         return _json(res, await _editEpgSources(await _body(r)));
       case ('GET', '/setup'):
         return _html(res, 'assets/remote/setup.html');
+      case ('GET', '/account'):
+        return _html(res, 'assets/remote/account.html');
+      case ('GET', '/api/account'):
+        return _json(res, _accountState());
+      case ('POST', '/api/account/send'):
+        final a = account;
+        final ok =
+            a != null && await a.sendCode('${(await _body(r))['email'] ?? ''}');
+        return _json(res, {'ok': ok, 'error': ?a?.error, ..._accountState()});
+      case ('POST', '/api/account/verify'):
+        final a = account;
+        final ok =
+            a != null &&
+            await a.verifyCode('${(await _body(r))['code'] ?? ''}');
+        return _json(res, {'ok': ok, 'error': ?a?.error, ..._accountState()});
+      case ('POST', '/api/account/cancel'):
+        account?.cancelCode();
+        return _json(res, _accountState());
       case ('GET', '/manifest.webmanifest'):
         return _json(res, _manifest(), type: 'application/manifest+json');
       case ('GET', '/api/state'):
@@ -578,6 +601,15 @@ class RemoteServer extends ChangeNotifier {
   static String? _logo(String? url) {
     final asset = assetLogoPath(url);
     return asset == null ? url : '/chlogo/${asset.split('/').last}';
+  }
+
+  Map<String, Object?> _accountState() {
+    final a = account;
+    return {
+      'stage': a?.stage.name ?? 'unavailable',
+      'email': ?a?.email,
+      'pendingEmail': ?a?.pendingEmail,
+    };
   }
 
   Future<void> _html(HttpResponse res, String asset) async {
