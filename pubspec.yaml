@@ -25,6 +25,7 @@ dependencies:
   window_manager: ^0.5.2
   wakelock_plus: ^1.8.2
   qr_flutter: ^4.1.0
+  crypto: ^3.0.6
   flutter_soloud: ^5.2.2
 
 dev_dependencies:

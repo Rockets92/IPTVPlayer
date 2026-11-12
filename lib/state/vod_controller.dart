@@ -127,6 +127,7 @@ class VodController extends ChangeNotifier {
   final SharedPreferences prefs;
 
   static const _kProgress = 'vod.progress.v1';
+  static const _kForgotten = 'vod.forgotten.v1';
   static const _maxProgress = 300;
 
   XtreamClient? get client {
@@ -398,7 +399,65 @@ class VodController extends ChangeNotifier {
   /// Posizione di un film o di un episodio (`e:<id>`).
   final _episodePos = <int, Duration>{};
 
+  /// Titoli tolti da "Continua a guardare": chiave → quando (millisecondi
+  /// epoch), perché la cancellazione arrivi anche agli altri dispositivi.
+  final _forgotten = <String, int>{};
+
+  /// Chiamato a ogni modifica fatta su questo dispositivo (non per quelle
+  /// arrivate con [mergeRemote]).
+  VoidCallback? onLocalChange;
+
+  /// Titoli iniziati, per la sincronizzazione (chiave `m:`/`s:` = id; [WatchEntry.at] = ultima modifica).
+  Iterable<WatchEntry> get progressEntries => _progress.values;
+
+  /// Titoli tolti, per la sincronizzazione.
+  Map<String, int> get forgotten => Map.unmodifiable(_forgotten);
+
+  /// Unisce i progressi arrivati da un altro dispositivo: per ogni titolo
+  /// vince il più recente. Non richiama [onLocalChange].
+  void mergeRemote({
+    Iterable<WatchEntry> upserts = const [],
+    Map<String, int> deletions = const {},
+  }) {
+    var changed = false;
+    for (final e in deletions.entries) {
+      if ((_forgotten[e.key] ?? -1) < e.value) _forgotten[e.key] = e.value;
+      final w = _progress[e.key];
+      if (w != null && w.at.millisecondsSinceEpoch <= e.value) {
+        _progress.remove(e.key);
+        changed = true;
+      }
+    }
+    for (final w in upserts) {
+      final t = w.at.millisecondsSinceEpoch;
+      if ((_forgotten[w.key] ?? -1) >= t) continue;
+      final old = _progress[w.key];
+      if (old == null || old.at.millisecondsSinceEpoch < t) {
+        _progress[w.key] = w;
+        final ep = w.episodeId;
+        if (ep != null) _episodePos[ep] = w.position;
+        _forgotten.remove(w.key);
+        changed = true;
+      }
+    }
+    if (!changed) return;
+    _save(local: false);
+    notifyListeners();
+  }
+
   void _loadProgress() {
+    try {
+      final m = jsonDecode(prefs.getString(_kForgotten) ?? '{}');
+      if (m is Map) {
+        final oldest = DateTime.now()
+            .subtract(const Duration(days: 60))
+            .millisecondsSinceEpoch;
+        for (final e in m.entries) {
+          final t = (e.value as num?)?.toInt();
+          if (t != null && t >= oldest) _forgotten['${e.key}'] = t;
+        }
+      }
+    } catch (_) {}
     final raw = prefs.getString(_kProgress);
     if (raw == null) return;
     try {
@@ -420,9 +479,11 @@ class VodController extends ChangeNotifier {
 
   Timer? _saveTimer;
 
-  void _save() {
+  void _save({bool local = true}) {
+    if (local) onLocalChange?.call();
     _saveTimer?.cancel();
     _saveTimer = Timer(const Duration(seconds: 2), () {
+      unawaited(prefs.setString(_kForgotten, jsonEncode(_forgotten)));
       final sorted = _progress.values.toList()
         ..sort((a, b) => b.at.compareTo(a.at));
       final keep = sorted.take(_maxProgress);
@@ -499,6 +560,7 @@ class VodController extends ChangeNotifier {
   void remember(WatchEntry w) {
     if (w.position.inSeconds < 20 && !_progress.containsKey(w.key)) return;
     _progress[w.key] = w;
+    _forgotten.remove(w.key);
     final ep = w.episodeId;
     if (ep != null) _episodePos[ep] = w.position;
     _save();
@@ -507,6 +569,7 @@ class VodController extends ChangeNotifier {
 
   void forget(String key) {
     if (_progress.remove(key) != null) {
+      _forgotten[key] = DateTime.now().millisecondsSinceEpoch;
       _save();
       notifyListeners();
     }
