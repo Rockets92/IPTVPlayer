@@ -212,6 +212,7 @@
   };
 
   window.CLOUD = {
+    get device() { return target ? target.device : null; },
     async request(path, body) {
       await ready;
       const [p, qs] = path.split('?');
