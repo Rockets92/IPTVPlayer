@@ -255,7 +255,9 @@ body.fit .install{padding-right:40px}
    Safari calcola l'altezza senza la barra di stato e lascia una striscia
    vuota in fondo finché la pagina non diventa più lunga dello schermo. */
 @media (display-mode: standalone){
-  html:has(body.fit){height:calc(100% + env(safe-area-inset-top));overflow:hidden}
+  /* Vale per tutte le schermate (anche Canali e Guida mentre caricano). */
+  html{height:calc(100% + env(safe-area-inset-top))}
+  html:has(body.fit){overflow:hidden}
   body.fit,body.fit .app{height:100%}
 }
 
