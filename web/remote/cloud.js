@@ -156,7 +156,9 @@
     const c = sb.channel(`remote:${uid}:${d.device}`, {config: {private: true}});
     chan = c;
     c.on('broadcast', {event: 'res'}, (m) => {
-      const p = m.payload || {};
+      // supabase-js mette i dati in m.payload; le versioni del player fino
+      // alla 11 li mandano invece accanto a type/event, senza "payload".
+      const p = (m.payload && m.payload.id !== undefined) ? m.payload : (m || {});
       const w = pending.get(p.id);
       if (!w) return;
       pending.delete(p.id);

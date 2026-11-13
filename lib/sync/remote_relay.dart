@@ -109,7 +109,11 @@ class RemoteRelay {
     try {
       await _mine?.sendBroadcastMessage(
         event: 'res',
-        payload: {'id': id, 'data': out},
+        // In Dart la mappa è il messaggio intero: i dati vanno sotto
+        // "payload", come se li aspetta supabase-js sul telefono.
+        payload: {
+          'payload': {'id': id, 'data': out},
+        },
       );
     } catch (_) {}
   }
