@@ -246,6 +246,19 @@ body.fit .app{height:100dvh;min-height:0}
 .dots button.on{color:#fff;background:var(--neon-soft)}
 .dots i{width:4px;height:4px;border-radius:50%;background:var(--t3)}
 
+/* Avvisi sopra la barra in basso: non rimpiccioliscono i tasti */
+body.fit .install,body.fit .offline{position:fixed;left:16px;right:16px;bottom:calc(var(--safe-b) + 92px);z-index:6;
+  max-width:428px;margin:0 auto;background:rgba(22,16,48,.94)}
+body.fit .install{padding-right:40px}
+
+/* App sulla schermata Home di iPhone con la barra di stato trasparente:
+   Safari calcola l'altezza senza la barra di stato e lascia una striscia
+   vuota in fondo finché la pagina non diventa più lunga dello schermo. */
+@media (display-mode: standalone){
+  html:has(body.fit){height:calc(100% + env(safe-area-inset-top));overflow:hidden}
+  body.fit,body.fit .app{height:100%}
+}
+
 /* Marchio */
 .brand{display:flex;align-items:center;gap:10px;padding:0 4px 10px}
 .brand img{height:58px;width:auto;margin:-8px 0 -8px -8px}
@@ -889,6 +902,8 @@ if (!standalone && !noInstall) {
     ? 'In Safari tocca Condividi e poi "Aggiungi alla schermata Home".'
     : 'Nel menu ⋮ del browser scegli "Aggiungi a schermata Home" o "Installa app".';
   $('install').hidden = false;
+  // Copre parte dei tasti: sparisce da solo dopo qualche secondo (riappare alla prossima apertura finché non si tocca ×).
+  setTimeout(() => { $('install').hidden = true; }, 12000);
 }
 if ('serviceWorker' in navigator && window.isSecureContext) {
   navigator.serviceWorker.register(window.CLOUD ? 'sw.js' : '/sw.js').catch(() => {});
