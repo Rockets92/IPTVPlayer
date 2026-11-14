@@ -531,6 +531,7 @@ const toast = (msg) => {
 
 // --- Stato in onda --------------------------------------------------------
 const render = (s) => {
+  if (s.current && (!state || state.current !== s.current)) cacheSet('current', s.current);
   state = s;
   const c = s.channel;
   $('num').textContent = c ? c.n : '–';
@@ -553,7 +554,21 @@ const render = (s) => {
 
 const poll = async () => {
   if (document.hidden) return;
-  try { render(await api('/api/state')); setOnline(true); } catch (_) { setOnline(false); }
+  try { render(await api('/api/state')); setOnline(true); prefetch(); } catch (_) { setOnline(false); }
+};
+
+// Appena il player risponde: elenco canali e guida del canale in onda in
+// sottofondo, così Canali e Guida sono già pronte quando si aprono.
+let prefetched = false;
+const prefetch = () => {
+  if (prefetched) return;
+  prefetched = true;
+  setTimeout(async () => {
+    await loadChannels(false);
+    if (state && state.current && !cacheGet('epg:' + state.current)) {
+      try { const r = await api('/api/epg'); if (r.id) cacheSet('epg:' + r.id, r); } catch (_) {}
+    }
+  }, 600);
 };
 
 // --- Tasti ------------------------------------------------------------------
@@ -607,7 +622,10 @@ const show = (name) => {
   document.querySelectorAll('.page').forEach((p) => p.classList.toggle('on', p.id === 'p-' + name));
   document.querySelectorAll('[data-tab]').forEach((b) => b.classList.toggle('on', b.dataset.tab === name));
   window.scrollTo({top: 0});
-  if (name === 'channels') loadChannels();
+  if (name === 'channels') {
+    if (channels.length) { renderChips(); renderChannels(); }
+    loadChannels();
+  }
   if (name === 'guide') loadGuidePage();
   if (name === 'explore') loadVod();
 };
@@ -667,13 +685,48 @@ $('vform').addEventListener('submit', async (e) => {
   } catch (_) { setOnline(false); }
 });
 
+// --- Memoria sul telefono ----------------------------------------------------------
+// Elenco canali e guide già viste restano sul telefono: le schermate si aprono
+// subito con quei dati e si aggiornano appena risponde il player.
+const cacheNs = () => 'cache:' + ((window.CLOUD && window.CLOUD.device) || 'lan') + ':';
+const cacheGet = (k) => { try { return JSON.parse(localStorage.getItem(cacheNs() + k) || 'null'); } catch (_) { return null; } };
+const cacheSet = (k, v) => {
+  try { localStorage.setItem(cacheNs() + k, JSON.stringify(v)); } catch (_) {
+    // Memoria piena: si tengono solo i canali.
+    try { Object.keys(localStorage).filter((x) => x.includes(':epg:')).forEach((x) => localStorage.removeItem(x)); } catch (_) {}
+  }
+};
+
 // --- Canali -------------------------------------------------------------------
-const loadChannels = async () => {
-  try {
-    const r = await api('/api/channels');
-    channels = r.channels; groups = r.groups; views = r.views || {};
-    renderChips(); renderChannels();
-  } catch (_) { setOnline(false); }
+let channelsAt = 0, channelsReq = null;
+const applyChannels = (r) => {
+  channels = r.channels || []; groups = r.groups || []; views = r.views || {};
+  if (tab === 'channels') { renderChips(); renderChannels(); }
+};
+const loadChannels = async (force = true) => {
+  if (!channels.length) {
+    const c = cacheGet('channels');
+    if (c && c.channels) applyChannels(c);
+  }
+  if (!force && channels.length && Date.now() - channelsAt < 120000) return;
+  if (channelsReq) return channelsReq;
+  channelsReq = (async () => {
+    try {
+      // Con la versione dell'elenco già sul telefono il player manda solo i
+      // titoli in onda (i player più vecchi mandano sempre tutto).
+      const have = cacheGet('channels');
+      const v = have && have.v && channels.length ? have.v : '';
+      let r = await api('/api/channels' + (v ? '?v=' + encodeURIComponent(v) : ''));
+      if (r.same) r = {...have, current: r.current, nowById: r.nowById};
+      if (r.nowById) {
+        for (const c of r.channels || []) c.now = r.nowById[c.id] || null;
+      }
+      channelsAt = Date.now();
+      applyChannels(r);
+      cacheSet('channels', r);
+    } catch (_) { setOnline(false); } finally { channelsReq = null; }
+  })();
+  return channelsReq;
 };
 
 const renderChips = () => {
@@ -738,7 +791,7 @@ const loadGuidePage = () => { setGview(gview); loadReminders(true); };
 
 // Canale precedente / successivo nella guida, senza cambiare canale in TV.
 const stepGuide = async (d) => {
-  if (!channels.length) await loadChannels();
+  if (!channels.length) await loadChannels(false);
   if (!channels.length) return;
   let i = channels.findIndex((c) => c.id === guideShown);
   i = i < 0 ? 0 : (i + d + channels.length) % channels.length;
@@ -772,7 +825,7 @@ $('gwatch').addEventListener('click', async () => {
 }
 
 const fillPicker = async (cur) => {
-  if (!channels.length) await loadChannels();
+  if (!channels.length) await loadChannels(false);
   const sel = $('gsel');
   if (sel.options.length !== channels.length) {
     sel.innerHTML = channels.map((c) => `<option value="${esc(c.id)}">${c.n}  ${esc(c.name)}</option>`).join('');
@@ -780,9 +833,22 @@ const fillPicker = async (cur) => {
   sel.value = cur || '';
 };
 
+let guideSeq = 0;
 const loadGuide = async () => {
+  const seq = ++guideSeq;
+  const want = guideId || (state && state.current) || cacheGet('current');
+  const cached = want ? cacheGet('epg:' + want) : null;
+  if (cached) renderGuide(cached);
   try {
     const r = await api('/api/epg' + (guideId ? '?id=' + encodeURIComponent(guideId) : ''));
+    if (r.id) cacheSet('epg:' + r.id, r);
+    if (r.id && !guideId) cacheSet('current', r.id);
+    if (seq === guideSeq) renderGuide(r, !!cached);
+  } catch (_) { setOnline(false); }
+};
+
+const renderGuide = (r, keepScroll = false) => {
+  {
     guideShown = r.id || null;
     $('gnum').textContent = r.n ?? '–';
     $('gname').textContent = r.name || 'Guida TV';
@@ -803,8 +869,8 @@ const loadGuide = async () => {
     }).join('') : '<div class="empty">Guida non disponibile per questo canale</div>';
     $('glist').dataset.id = r.id || '';
     const live = $('glist').querySelector('.live');
-    if (live) live.scrollIntoView({block: 'center'});
-  } catch (_) { setOnline(false); }
+    if (live && !keepScroll) live.scrollIntoView({block: 'center'});
+  }
 };
 
 $('glist').addEventListener('click', async (e) => {
