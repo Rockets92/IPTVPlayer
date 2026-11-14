@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
+
 import 'dart:io';
 import 'dart:math';
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -330,7 +332,7 @@ class RemoteServer extends ChangeNotifier {
       case ('GET', '/api/state'):
         return (_state());
       case ('GET', '/api/channels'):
-        return (_channels());
+        return (_channels(query['v']));
       case ('GET', '/api/epg'):
         return (_epg(query['id']));
       case ('POST', '/api/key'):
@@ -496,11 +498,15 @@ class RemoteServer extends ChangeNotifier {
     ],
   };
 
-  Map<String, Object?> _channels() {
+  /// Elenco canali in due parti: quella fissa (nomi, numeri, loghi,
+  /// categorie) con la sua versione [v], e i titoli in onda. Se il telefono
+  /// ha già la versione [known], si mandano solo i titoli: è molto più
+  /// leggero, soprattutto col telecomando via cloud.
+  Map<String, Object?> _channels([String? known]) {
     final now = DateTime.now();
     final direct = {for (final c in app.channels) c.group};
     final fav = app.favoriteChannels;
-    return {
+    final fixed = <String, Object?>{
       'groups': [if (fav.isNotEmpty) favoritesGroup, ...app.groups],
       // Categorie "vista" (Vetrina): canali nell'ordine in cui compaiono,
       // ogni vetrina seguita dai suoi canali collegati.
@@ -509,7 +515,6 @@ class RemoteServer extends ChangeNotifier {
         for (final g in app.groups)
           if (!direct.contains(g)) g: [for (final c in app.channelsIn(g)) c.id],
       },
-      'current': tuner.current?.id,
       'channels': [
         for (final c in app.channels)
           {
@@ -518,10 +523,19 @@ class RemoteServer extends ChangeNotifier {
             'name': c.name,
             'g': c.group,
             'logo': _logo(c.logoUrl),
-            'now': app.epg.nowOn(c.id, now)?.title,
             if (c.adult) 'x': true,
           },
       ],
+    };
+    final v = md5.convert(utf8.encode(jsonEncode(fixed))).toString();
+    final titles = <String, String>{
+      for (final c in app.channels) c.id: ?app.epg.nowOn(c.id, now)?.title,
+    };
+    return {
+      'v': v,
+      'current': tuner.current?.id,
+      'nowById': titles,
+      if (known == v) 'same': true else ...fixed,
     };
   }
 

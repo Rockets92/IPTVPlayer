@@ -712,7 +712,15 @@ const loadChannels = async (force = true) => {
   if (channelsReq) return channelsReq;
   channelsReq = (async () => {
     try {
-      const r = await api('/api/channels');
+      // Con la versione dell'elenco già sul telefono il player manda solo i
+      // titoli in onda (i player più vecchi mandano sempre tutto).
+      const have = cacheGet('channels');
+      const v = have && have.v && channels.length ? have.v : '';
+      let r = await api('/api/channels' + (v ? '?v=' + encodeURIComponent(v) : ''));
+      if (r.same) r = {...have, current: r.current, nowById: r.nowById};
+      if (r.nowById) {
+        for (const c of r.channels || []) c.now = r.nowById[c.id] || null;
+      }
       channelsAt = Date.now();
       applyChannels(r);
       cacheSet('channels', r);
