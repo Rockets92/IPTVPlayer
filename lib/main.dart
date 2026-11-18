@@ -128,6 +128,10 @@ Future<void> main() async {
     AppLifecycleListener(onDetach: () => unawaited(engine.dispose()));
   }
 
+  // Al risveglio (standby della Chromecast, app riaperta) la guida si
+  // riscarica se manca o è vecchia, senza passare dalle impostazioni.
+  AppLifecycleListener(onResume: app.ensureEpgFresh);
+
   runApp(
     MultiProvider(
       providers: [

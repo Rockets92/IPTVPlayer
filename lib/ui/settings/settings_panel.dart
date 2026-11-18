@@ -372,6 +372,12 @@ class _SettingsPanelState extends State<SettingsPanel> {
                             ? 'Non disponibile'
                             : '${app.epg.channelCount} canali · ${hm(app.epg.fetchedAt ?? DateTime.now())}',
                       ),
+                      if (!app.epgLoading && app.epgRetryAt != null)
+                        _InfoRow(
+                          'Nuovo tentativo',
+                          'automatico alle ${hm(app.epgRetryAt!)}',
+                          warn: true,
+                        ),
                       for (final r in app.epgReports.where((r) => !r.ok))
                         _InfoRow(
                           'Errore fonte',

@@ -25,8 +25,6 @@ class EpgSourceReport {
 /// che lo copre (le fonti esterne della mappatura hanno priorità, poi
 /// l'XMLTV del provider come riempitivo).
 class EpgRepository {
-  static const cacheTtl = Duration(hours: 10);
-
   Future<File> _file() async {
     final dir = await getApplicationSupportDirectory();
     return File('${dir.path}${Platform.pathSeparator}epg_cache.json');

@@ -65,6 +65,29 @@ class AppController extends ChangeNotifier {
   List<EpgSourceReport> epgReports = const [];
   final _shortEpgTried = <String>{};
 
+  /// Firma della guida in memoria (null: nessuna o da riverificare).
+  String? _epgSig;
+
+  /// Prossimo aggiornamento automatico o nuovo tentativo.
+  Timer? _epgTimer;
+
+  /// Tentativi falliti di fila: allungano l'attesa fra un tentativo e l'altro.
+  int _epgFailures = 0;
+
+  /// Aggiornamento chiesto mentre un altro era in corso: parte subito dopo.
+  bool _epgPending = false;
+
+  /// Attese fra i tentativi quando la guida non si scarica (rete non ancora
+  /// pronta dopo l'accensione o lo standby, server lento): poi ogni 15 minuti.
+  static const epgRetryDelays = [
+    Duration(seconds: 20),
+    Duration(minutes: 1),
+    Duration(minutes: 2),
+    Duration(minutes: 5),
+    Duration(minutes: 10),
+    Duration(minutes: 15),
+  ];
+
   bool _disposed = false;
 
   // Categorie e canali per categoria si ricalcolano solo quando cambia la
@@ -208,7 +231,7 @@ class AppController extends ChangeNotifier {
     _m3uEpg = null;
     _directUrls = const {};
     channels = const [];
-    epg = EpgSchedule.empty();
+    _resetEpg();
     phase = AppPhase.setup;
     _notify();
   }
@@ -237,8 +260,15 @@ class AppController extends ChangeNotifier {
           if (channels.isNotEmpty) {
             phase = AppPhase.ready;
             _notify();
-            unawaited(_refreshEpg());
-            unawaited(_refreshStreamsQuietly());
+            // La guida salvata si mostra subito; lo scaricamento parte dopo
+            // l'aggiornamento della lista, così usa i canali definitivi e non
+            // si somma al suo picco di memoria.
+            unawaited(_showEpgCache());
+            unawaited(
+              _refreshStreamsQuietly()
+                  .timeout(const Duration(minutes: 2), onTimeout: () {})
+                  .whenComplete(() => _refreshEpg()),
+            );
             return;
           }
         }
@@ -359,8 +389,7 @@ class AppController extends ChangeNotifier {
     } catch (_) {
       return;
     }
-    _shortEpgTried.clear();
-    epg = EpgSchedule.empty();
+    _resetEpg();
     _notify();
     await _refreshEpg(force: true);
   }
@@ -390,27 +419,106 @@ class AppController extends ChangeNotifier {
     return _client?.xmltvUri?.toString();
   }
 
+  /// Aggiornamento chiesto dall'utente (o dopo aver cambiato le fonti).
   Future<void> refreshEpg() => _refreshEpg(force: true);
 
-  Future<void> _refreshEpg({bool force = false}) async {
-    if (epgLoading || channels.isEmpty) return;
+  /// Al ritorno in primo piano (anche dopo lo standby): se la guida manca,
+  /// è vecchia o l'ultimo tentativo è fallito, la si riscarica subito
+  /// invece di aspettare il prossimo tentativo programmato.
+  void ensureEpgFresh() {
+    if (epgLoading || channels.isEmpty || phase != AppPhase.ready) return;
+    final at = epg.fetchedAt;
+    final stale =
+        epg.isEmpty ||
+        at == null ||
+        _epgSig != _epgSignature ||
+        DateTime.now().difference(at) >= perf.epgRefreshEvery;
+    if (stale || _epgFailures > 0) unawaited(_refreshEpg());
+  }
+
+  void _resetEpg() {
+    _epgTimer?.cancel();
+    _epgTimer = null;
+    _epgFailures = 0;
+    _epgPending = false;
+    _epgSig = null;
+    _shortEpgTried.clear();
+    epg = EpgSchedule.empty();
+  }
+
+  /// Mostra la guida salvata, se corrisponde ai canali e alle fonti attuali.
+  Future<void> _showEpgCache() async {
+    if (channels.isEmpty) return;
     final sig = _epgSignature;
+    if (_epgSig == sig && !epg.isEmpty) return;
+    final cached = await _epgRepo.loadCache(sig);
+    if (cached == null || cached.isEmpty || sig != _epgSignature) return;
+    // Nel frattempo può essere arrivata una guida più recente.
+    final current = epg.fetchedAt;
+    if (_epgSig == sig &&
+        current != null &&
+        !current.isBefore(cached.fetchedAt!)) {
+      return;
+    }
+    epg = cached;
+    _epgSig = sig;
+    if (!epgLoading) epgStatus = 'Guida aggiornata';
+    _notify();
+  }
+
+  /// Quando partirà il prossimo tentativo dopo un errore (null se la guida
+  /// è a posto o non è previsto).
+  DateTime? get epgRetryAt => _epgFailures > 0 ? _epgTimerAt : null;
+  DateTime? _epgTimerAt;
+
+  void _scheduleEpg(Duration after) {
+    _epgTimer?.cancel();
+    if (_disposed) return;
+    _epgTimerAt = DateTime.now().add(after);
+    _epgTimer = Timer(after, () {
+      _epgTimer = null;
+      unawaited(_refreshEpg(force: true));
+    });
+  }
+
+  Future<void> _refreshEpg({bool force = false}) async {
+    if (_disposed || channels.isEmpty) return;
+    if (epgLoading) {
+      // Prima veniva ignorato: es. cambio fonti durante un download.
+      if (force) _epgPending = true;
+      return;
+    }
+    _epgTimer?.cancel();
+    _epgTimer = null;
+    var sig = _epgSignature;
     if (!force) {
-      final cached = await _epgRepo.loadCache(sig);
-      if (cached != null && !cached.isEmpty) {
-        epg = cached;
-        epgStatus = 'Guida aggiornata';
-        _notify();
-        final age = DateTime.now().difference(cached.fetchedAt!);
-        if (age < EpgRepository.cacheTtl) return;
+      await _showEpgCache();
+      sig = _epgSignature;
+      final at = epg.fetchedAt;
+      if (_epgSig == sig && !epg.isEmpty && at != null) {
+        final age = DateTime.now().difference(at);
+        if (age < perf.epgRefreshEvery) {
+          _epgFailures = 0;
+          _scheduleEpg(perf.epgRefreshEvery - age);
+          return;
+        }
       }
+      if (epgLoading) return;
+    }
+    final sources = _epgSources();
+    if (sources.isEmpty) {
+      epgStatus = epg.isEmpty ? 'Nessuna fonte per la guida' : epgStatus;
+      _notify();
+      return;
     }
     epgLoading = true;
     epgStatus = 'Aggiornamento guida…';
     _notify();
+    var ok = false;
+    var partial = false;
     try {
       final (schedule, reports) = await _epgRepo.fetch(
-        sources: _epgSources(),
+        sources: sources,
         channels: channels,
         perf: perf,
         signature: sig,
@@ -419,6 +527,7 @@ class AppController extends ChangeNotifier {
           _notify();
         },
       );
+      if (_disposed) return;
       epgReports = reports;
       if (!schedule.isEmpty) {
         // I dati "short EPG" già scaricati restano validi per i canali scoperti.
@@ -427,15 +536,39 @@ class AppController extends ChangeNotifier {
           merged.putIfAbsent(e.key, () => e.value);
         }
         epg = EpgSchedule(merged, fetchedAt: schedule.fetchedAt);
+        _epgSig = sig;
         epgStatus = 'Guida aggiornata';
-      } else {
-        epgStatus = 'Guida non disponibile';
+        ok = true;
+        partial = reports.any((r) => !r.ok);
       }
     } catch (e) {
-      epgStatus = 'Guida non disponibile';
+      debugPrint('Guida TV: $e');
     } finally {
       epgLoading = false;
-      _notify();
+    }
+    if (_disposed) return;
+    if (ok) {
+      _epgFailures = 0;
+      // Una fonte non ha risposto: la si riprova prima del solito.
+      _scheduleEpg(
+        partial && perf.epgRefreshEvery > const Duration(minutes: 30)
+            ? const Duration(minutes: 30)
+            : perf.epgRefreshEvery,
+      );
+    } else {
+      final wait =
+          epgRetryDelays[_epgFailures.clamp(0, epgRetryDelays.length - 1)];
+      _epgFailures++;
+      // Se resta la guida precedente la si continua a mostrare.
+      epgStatus = epg.isEmpty
+          ? 'Guida non disponibile'
+          : 'Guida non aggiornata';
+      _scheduleEpg(wait);
+    }
+    _notify();
+    if (_epgPending) {
+      _epgPending = false;
+      unawaited(_refreshEpg(force: true));
     }
   }
 
@@ -531,6 +664,7 @@ class AppController extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    _epgTimer?.cancel();
     _client?.close();
     super.dispose();
   }
