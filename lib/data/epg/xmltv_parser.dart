@@ -278,7 +278,9 @@ Future<Map<String, List<EpgProgramme>>> fetchAndParseXmltv(
         uri: Uri.parse(source),
       );
     }
-    return await parseXmltv(response, req);
+    // Un download che si blocca a metà (Wi-Fi che cade, standby) non deve
+    // lasciare la guida "in aggiornamento" per sempre.
+    return await parseXmltv(response.timeout(const Duration(seconds: 45)), req);
   } finally {
     client.close(force: true);
   }

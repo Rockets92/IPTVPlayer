@@ -40,6 +40,10 @@ class PerformanceProfile {
   Duration get epgAhead => Duration(hours: isLight ? 14 : 48);
   int get epgMaxDescription => isLight ? 220 : 900;
 
+  /// Ogni quanto si riscarica la guida. Più breve della finestra in avanti,
+  /// così con l'app sempre aperta (Chromecast, box) la guida non si esaurisce.
+  Duration get epgRefreshEvery => Duration(hours: isLight ? 6 : 10);
+
   /// Buffer di demuxing per libmpv.
   String get demuxerMaxBytes => isLight ? '24MiB' : '64MiB';
   int get playerBufferBytes => isLight ? 8 << 20 : 32 << 20;
